@@ -36,46 +36,108 @@ export interface CognitionResponse {
   quiz?: { question: string; options: string[]; correctAnswerLetter: string };
 }
 
-// Define the overall application state
-interface AppState {
-  prompt: string;
-  setPrompt: (prompt: string) => void;
-  activePrompt: string | null; // Add state for the prompt that generated the output
-  setActivePrompt: (prompt: string | null) => void; // Add setter
-  // Output can be the structured response, null (initial/cleared), or a string (for errors)
-  output: CognitionResponse | null | string;
-  setOutput: (output: CognitionResponse | null | string) => void;
-  addGraphExpansion: (expansionData: GraphExpansionData) => void; // New action
-  updateNodePositions: (nodesWithPositions: GraphNode[]) => void; // New action
-  isLoading: boolean;
-  setIsLoading: (loading: boolean) => void;
-  focusedNodeId: string | null; // Add state for focused node
-  setFocusedNodeId: (id: string | null) => void; // Add action for focusing
-  expandingNodeId: string | null; // Add state for node currently being expanded
-  setExpandingNodeId: (id: string | null) => void; // Add action for expansion state
+// Define the structure for items in the session list
+interface SessionListItem {
+  id: string;
+  title: string;
+  last_updated_at: string; // Comes as string from JSON
+  last_prompt: string | null;
 }
 
-// Revert to create<AppState>()(persist(...)) structure
-// but keep the explicit Pick type for partialize
+// Define the overall application state
+interface AppState {
+  // == Core Session State ==
+  sessionsList: SessionListItem[];
+  setSessionsList: (list: SessionListItem[]) => void;
+  currentSessionId: string | null;
+  setCurrentSessionId: (id: string | null) => void;
+  currentSessionTitle: string | null;
+  setCurrentSessionTitle: (title: string | null) => void;
+
+  // == Current Active Session Data ==
+  prompt: string; // Input field content
+  setPrompt: (prompt: string) => void;
+  activePrompt: string | null; // The prompt that generated the current output (part of saved data)
+  setActivePrompt: (prompt: string | null) => void;
+  output: CognitionResponse | null | string; // Main data/error (part of saved data)
+  setOutput: (output: CognitionResponse | null | string) => void;
+
+  // == UI / Loading States ==
+  isLoading: boolean; // For generating AI response
+  setIsLoading: (loading: boolean) => void;
+  isSessionListLoading: boolean;
+  setIsSessionListLoading: (loading: boolean) => void;
+  isSessionLoading: boolean; // For loading a full session
+  setIsSessionLoading: (loading: boolean) => void;
+  isSavingSession: boolean;
+  setIsSavingSession: (saving: boolean) => void;
+
+  // == Graph Interaction State (Keep as is, relates to active session) ==
+  focusedNodeId: string | null;
+  setFocusedNodeId: (id: string | null) => void;
+  expandingNodeId: string | null;
+  setExpandingNodeId: (id: string | null) => void;
+
+  // == Error State ==
+  error: string | null; // Store API or other errors
+  setError: (error: string | null) => void;
+
+  // == Actions ==
+  // Existing graph actions
+  addGraphExpansion: (expansionData: GraphExpansionData) => void;
+  updateNodePositions: (nodesWithPositions: GraphNode[]) => void;
+  // Session management actions (implementations later)
+  fetchSessions: () => Promise<void>;
+  loadSession: (sessionId: string) => Promise<void>;
+  createSession: (initialTitle?: string) => Promise<string | null>; // Returns new session ID or null on error
+  saveSession: () => Promise<void>;
+  deleteSession: (sessionId: string) => Promise<void>;
+  resetActiveSessionState: () => void; // Renamed from resetSession
+}
+
+// Define initial state values explicitly
+const initialState = {
+  sessionsList: [],
+  currentSessionId: null,
+  currentSessionTitle: null,
+  prompt: '',
+  activePrompt: null,
+  output: null,
+  isLoading: false,
+  isSessionListLoading: false,
+  isSessionLoading: false,
+  isSavingSession: false,
+  focusedNodeId: null,
+  expandingNodeId: null,
+  error: null,
+};
+
+
+// Update the create call
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      prompt: '',
-      setPrompt: (prompt) => set({ prompt }),
-      activePrompt: null, // Initialize activePrompt
-      setActivePrompt: (activePrompt) => set({ activePrompt }), // Add setter logic
-      output: null,
-      setOutput: (output) => set({ output }),
-      isLoading: false,
-      setIsLoading: (isLoading) => set({ isLoading }),
-      focusedNodeId: null, // Initialize focus state
-      setFocusedNodeId: (id) => set({ focusedNodeId: id }), // Implement focus action
-      expandingNodeId: null, // Initialize expanding node state
-      setExpandingNodeId: (id) => set({ expandingNodeId: id }), // Implement expansion state action
+      ...initialState, // Spread initial state values
 
-      // Action to merge graph expansion data (nodes, links, and knowledge cards)
+      // Simple setters
+      setSessionsList: (list) => set({ sessionsList: list }),
+      setCurrentSessionId: (id) => set({ currentSessionId: id }),
+      setCurrentSessionTitle: (title) => set({ currentSessionTitle: title }),
+      setPrompt: (prompt) => set({ prompt }),
+      setActivePrompt: (activePrompt) => set({ activePrompt }),
+      setOutput: (output) => set({ output, error: null }), // Clear error on new output
+      setIsLoading: (isLoading) => set({ isLoading }),
+      setIsSessionListLoading: (loading) => set({ isSessionListLoading: loading }),
+      setIsSessionLoading: (loading) => set({ isSessionLoading: loading }),
+      setIsSavingSession: (saving) => set({ isSavingSession: saving }),
+      setFocusedNodeId: (id) => set({ focusedNodeId: id }),
+      setExpandingNodeId: (id) => set({ expandingNodeId: id }),
+      setError: (error) => set({ error }),
+
+
+      // Graph Actions (Keep existing implementations)
       addGraphExpansion: (expansionData) => {
-        const currentOutput = get().output; // Get current state
+         const currentOutput = get().output; // Get current state
         
         // Check if currentOutput is valid and contains visualizationData
         if (typeof currentOutput === 'object' && currentOutput !== null && currentOutput.visualizationData) {
@@ -134,10 +196,8 @@ export const useAppStore = create<AppState>()(
           console.error("addGraphExpansion: Cannot add expansion data because current output is not a valid object or lacks visualizationData.");
         }
       },
-      
-      // New action to update node positions
       updateNodePositions: (nodesWithPositions) => {
-        const currentOutput = get().output;
+         const currentOutput = get().output;
         if (typeof currentOutput === 'object' && currentOutput !== null && currentOutput.visualizationData) {
             // Create a map for efficient lookup, including only necessary props + fx, fy, fz
             const positionMap = new Map(nodesWithPositions.map(node => [
@@ -181,17 +241,206 @@ export const useAppStore = create<AppState>()(
              console.warn("updateNodePositions: Cannot update positions, current output is invalid or missing visualizationData.");
         }
       },
+
+
+      // Session Management Actions (Implementations)
+      fetchSessions: async () => {
+        set({ isSessionListLoading: true, error: null });
+        try {
+          const response = await fetch('/api/sessions');
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Failed to fetch sessions list' }));
+            throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+          }
+          const data: SessionListItem[] = await response.json();
+          set({ sessionsList: data, isSessionListLoading: false });
+        } catch (err: any) {
+          console.error("Error fetching sessions:", err);
+          set({ error: err.message || 'Failed to fetch sessions', isSessionListLoading: false });
+        }
+      },
+
+      loadSession: async (sessionId) => {
+        if (!sessionId) return;
+        set({ isSessionLoading: true, error: null });
+        get().resetActiveSessionState(); // Clear previous state before loading
+        try {
+          const response = await fetch(`/api/sessions/${sessionId}`);
+          if (!response.ok) {
+             const errorData = await response.json().catch(() => ({ error: 'Failed to load session' }));
+             throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+          }
+          const data = await response.json();
+          // Ensure session_data is parsed if it's a string (though API should return object)
+          let parsedOutput: CognitionResponse | null = null;
+          if (typeof data.session_data === 'string') {
+              try {
+                  parsedOutput = JSON.parse(data.session_data);
+              } catch (parseError) {
+                  console.error("Error parsing session_data:", parseError);
+                  throw new Error("Failed to parse session data.");
+              }
+          } else if (typeof data.session_data === 'object' && data.session_data !== null) {
+              parsedOutput = data.session_data;
+          }
+
+          set({
+            currentSessionId: data.id,
+            currentSessionTitle: data.title,
+            output: parsedOutput,
+            activePrompt: data.last_prompt, // Load last prompt into activePrompt
+            prompt: '', // Clear the input prompt field
+            isSessionLoading: false,
+          });
+        } catch (err: any) {
+          console.error(`Error loading session ${sessionId}:`, err);
+          set({ error: err.message || 'Failed to load session', isSessionLoading: false, currentSessionId: null }); // Clear ID on error
+        }
+      },
+
+      createSession: async (initialTitle = 'Untitled Session') => {
+          set({ isSavingSession: true, error: null }); // Use saving state for creation too
+          try {
+              const response = await fetch('/api/sessions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  // body: JSON.stringify({ title: initialTitle }) // Adjust if API expects title
+              });
+              if (!response.ok) {
+                   const errorData = await response.json().catch(() => ({ error: 'Failed to create session' }));
+                   throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+              }
+              const newSession: { id: string, title: string } = await response.json();
+
+              // Reset state for the new session
+              get().resetActiveSessionState();
+
+              // Set new session details and add to list optimistically
+              set(state => ({
+                  currentSessionId: newSession.id,
+                  currentSessionTitle: newSession.title,
+                  // Add to list, assuming basic structure matches SessionListItem for now
+                  sessionsList: [{ id: newSession.id, title: newSession.title, last_updated_at: new Date().toISOString(), last_prompt: null }, ...state.sessionsList],
+                  isSavingSession: false,
+              }));
+               return newSession.id; // Return the new ID
+          } catch (err: any) {
+              console.error("Error creating session:", err);
+              set({ error: err.message || 'Failed to create session', isSavingSession: false });
+              return null; // Indicate failure
+          }
+      },
+
+      saveSession: async () => {
+        const { currentSessionId, currentSessionTitle, output, activePrompt } = get();
+        if (!currentSessionId) {
+          set({ error: "No active session to save."});
+          console.warn("saveSession called without currentSessionId");
+          return;
+        }
+        // Ensure output is not an error string before saving
+        if (typeof output === 'string') {
+            set({ error: "Cannot save session with an error state as output."});
+            console.warn("saveSession attempted with error string in output state.");
+            return;
+        }
+
+        set({ isSavingSession: true, error: null });
+        try {
+          const payload = {
+            title: currentSessionTitle || 'Untitled Session', // Ensure title is never null
+            session_data: output, // Send the main output object
+            last_prompt: activePrompt || '' // Ensure prompt is never null
+          };
+          const response = await fetch(`/api/sessions/${currentSessionId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+             const errorData = await response.json().catch(() => ({ error: 'Failed to save session' }));
+             throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+          }
+
+          // Optimistically update the title in the sessionsList if it changed
+          const savedData = await response.json();
+          set(state => ({
+              isSavingSession: false,
+              sessionsList: state.sessionsList.map(session =>
+                  session.id === currentSessionId
+                      ? { ...session, title: payload.title, last_updated_at: new Date().toISOString(), last_prompt: payload.last_prompt } // Update timestamp locally too
+                      : session
+              )
+          }));
+
+        } catch (err: any) {
+          console.error(`Error saving session ${currentSessionId}:`, err);
+          set({ error: err.message || 'Failed to save session', isSavingSession: false });
+        }
+      },
+
+      deleteSession: async (sessionId) => {
+          if (!sessionId) return;
+          // Optionally add a loading state for deletion
+          set({ error: null });
+          try {
+              const response = await fetch(`/api/sessions/${sessionId}`, {
+                  method: 'DELETE',
+              });
+
+              if (!response.ok) {
+                  // Handle 204 No Content separately as it has no body
+                  if (response.status === 204) {
+                     // Success case handled below
+                  } else {
+                      const errorData = await response.json().catch(() => ({ error: 'Failed to delete session' }));
+                      throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+                  }
+              }
+
+              // If deletion was successful (200 OK or 204 No Content)
+              set(state => ({
+                  sessionsList: state.sessionsList.filter(s => s.id !== sessionId),
+                  // If the deleted session was the active one, reset the active state
+                  ...(state.currentSessionId === sessionId ? initialState : {})
+              }));
+
+          } catch (err: any) {
+               console.error(`Error deleting session ${sessionId}:`, err);
+               set({ error: err.message || 'Failed to delete session' });
+          }
+      },
+
+
+      // Action to reset only the active state, not the list
+      resetActiveSessionState: () => {
+          console.log("Resetting active session state...");
+          set({
+              prompt: initialState.prompt,
+              activePrompt: initialState.activePrompt,
+              output: initialState.output,
+              isLoading: initialState.isLoading, // Reset loading states too
+              isSessionLoading: initialState.isSessionLoading,
+              isSavingSession: initialState.isSavingSession,
+              focusedNodeId: initialState.focusedNodeId,
+              expandingNodeId: initialState.expandingNodeId,
+              currentSessionId: initialState.currentSessionId,
+              currentSessionTitle: initialState.currentSessionTitle,
+              error: initialState.error, // Clear errors too
+          });
+      },
+
     }),
     {
-      name: 'cognition-app-storage', // Name of the item in localStorage
-      storage: createJSONStorage(() => localStorage), // Use localStorage
-      // Explicitly type the return value of partialize
-      partialize: (state: AppState): Pick<AppState, 'prompt' | 'activePrompt' | 'output'> => ({ 
-          prompt: state.prompt,
-          activePrompt: state.activePrompt,
-          output: state.output,
-          // Note: focusedNodeId and expandingNodeId are intentionally NOT persisted
-      }), // Only persist these parts of the state
+      name: 'cognition-app-storage', // Keep same name
+      storage: createJSONStorage(() => localStorage),
+      // *** IMPORTANT: Update persisted state ***
+      partialize: (state: AppState): Pick<AppState, 'currentSessionId'> => ({
+          currentSessionId: state.currentSessionId,
+          // Only persist the ID of the last active session.
+          // DO NOT persist sessionsList, output, activePrompt, prompt etc. here
+      }),
     }
   )
 ); 

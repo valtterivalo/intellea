@@ -40,7 +40,7 @@ const VisualizationSection: React.FC<VisualizationSectionProps> = ({
     return (
         <>
             <Separator />
-            <section>
+            <section className="min-h-0">
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-2xl font-semibold">Visualization</h2>
                     {expandingNodeId && <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />}

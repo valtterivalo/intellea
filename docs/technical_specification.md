@@ -13,7 +13,7 @@ A modern web-based application that interfaces with multiple LLM APIs to generat
 - Quizzes and flashcards managed via local React state and contextual stores (e.g., Zustand)
 
 **Backend:**
-- **Bun**-based service layer for request handling and orchestration
+- **Node.js** service layer for request handling and orchestration (Next.js API Routes)
 - **Node.js** adapter for LLM API handling
 - Optional **Redis** cache layer for rate-limited API responses
 - Vector store integration for local retrieval-based memory (e.g., **Weaviate**, **Qdrant**, or **Chroma**)
@@ -82,7 +82,7 @@ Example:
 | Area | Tech |
 |------|------|
 | Frontend Framework | React + TailwindCSS |
-| Backend Runtime | Bun (Node-compatible) |
+| Backend Runtime | Node.js (via Next.js) |
 | Hosting | Vercel (frontend), optional Docker |
 | LLM APIs | OpenAI, Anthropic, Mistral, DeepSeek, xAI |
 | Visualizations | SVG, Canvas, Framer Motion |
@@ -296,30 +296,99 @@ The MVP must deliver **real user value**, especially for learners with short att
     *   Ensured focus is a one-time action per click, not sticky.
 *   **Node Dragging Disabled:** Permanently disabled node dragging (`enableNodeDrag={false}`) in `VisualizationComponent` as it doesn't fit the interaction model and caused errors.
 
+**Phase 11: Frontend User Authentication (Supabase - Completed)**
+
+*   **Dependency Installation:** Added `@supabase/supabase-js`, `@supabase/auth-helpers-nextjs`, `@supabase/auth-ui-react`, `@supabase/auth-ui-shared` using npm.
+*   **Environment Setup:** Configured `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in `.env.local`.
+*   **Supabase Client:** Created utility (`src/lib/supabase/client.ts`) using `createClientComponentClient`.
+*   **Auth UI Component:** Created `AuthComponent.tsx` using `Auth` from `@supabase/auth-ui-react`, configured for magic link, Google, and GitHub providers.
+*   **Callback Route:** Implemented `/auth/callback/route.ts` using `createRouteHandlerClient` to handle session exchange.
+*   **Layout Integration:** Modified root `layout.tsx` to be `async`, fetch initial server session using `createServerComponentClient`, and include `SupabaseListener` component.
+*   **Session Listener:** Created `SupabaseListener.tsx` client component to synchronize client/server session state using `onAuthStateChange` and trigger `router.refresh()`.
+*   **Conditional Rendering:** Modified `page.tsx` to be `async`, check server session, and render either `AuthComponent` (no session) or `MainAppClient` (session exists).
+*   **Main App Client Component:** Created `MainAppClient.tsx` containing the primary application UI/logic (previously in `page.tsx`), marked as `'use client'`, and added a `handleLogout` function using `supabase.auth.signOut()`.
+*   **Documentation:** Updated spec to reflect use of Node.js instead of Bun.
+
+**Phase 12: Backend Session Persistence & UI Integration (Completed)**
+
+*   **Database Schema:**
+    *   Created `sessions` table in Supabase with columns: `id`, `user_id` (FK to `auth.users`), `title`, `session_data` (JSONB), `last_prompt`, `created_at`, `last_updated_at`.
+    *   Implemented strict Row Level Security (RLS) policies allowing users CRUD access only to their own sessions (`auth.uid() = user_id`).
+    *   Added DB index on `user_id` and trigger for auto-updating `last_updated_at`.
+*   **Backend API Routes:**
+    *   Created `/api/sessions/route.ts` with:
+        *   `GET`: Lists sessions (`id`, `title`, `last_updated_at`, `last_prompt`) for the logged-in user.
+        *   `POST`: Creates a new session record for the logged-in user.
+    *   Created `/api/sessions/[sessionId]/route.ts` with:
+        *   `GET`: Fetches full session data (`id`, `title`, `session_data`, `last_prompt`) for a specific session ID owned by the user.
+        *   `PUT`: Updates `title`, `session_data`, `last_prompt` for a specific session ID owned by the user.
+        *   `DELETE`: Deletes a specific session ID owned by the user.
+    *   Ensured all handlers use `createRouteHandlerClient` and include `user_id` checks alongside RLS for defense-in-depth.
+*   **State Management (Zustand - `useAppStore.ts`):**
+    *   Added state for `sessionsList`, `currentSessionId`, `currentSessionTitle`, loading states (`isSessionListLoading`, `isSessionLoading`, `isSavingSession`), and `error`.
+    *   Implemented actions (`fetchSessions`, `loadSession`, `createSession`, `saveSession`, `deleteSession`) to call the backend API routes.
+    *   Refactored `persist` middleware to only store `currentSessionId` in `localStorage`, making the database the source of truth for session data.
+    *   Added `resetActiveSessionState` action to clear working state.
+*   **Frontend Integration (`MainAppClient.tsx`):**
+    *   Added `useEffect` hooks to fetch session list on mount and attempt loading persisted `currentSessionId`.
+    *   Implemented a collapsible sidebar using `shadcn/ui` `Sheet` component:
+        *   Displays `sessionsList` with loading/error states.
+        *   Allows creating new sessions (`handleCreateSession`).
+        *   Allows loading sessions by clicking (`handleLoadSession`).
+        *   Allows deleting sessions with confirmation (`handleDeleteSession`).
+        *   Highlights the `currentSessionId`.
+    *   Modified header:
+        *   Added `SheetTrigger` button.
+        *   Made session title editable via `Input` bound to `currentSessionTitle`, saving on blur.
+        *   Removed manual save button.
+    *   Implemented auto-saving by calling `saveSession` after successful AI generation and graph expansion.
+    *   Added global error display using `Alert`.
+    *   Disabled prompt input if no session is active.
+    *   Handled session reset on logout.
+*   **Dependency Installation:** Added `date-fns` and `shadcn/ui` components (`sheet`, `scroll-area`, `alert`, `input`).
+*   **Bug Fixes:**
+    *   Resolved `DialogTrigger must be used within Dialog` error by restructuring `Sheet` component layout.
+    *   Investigated and monitored (currently ignoring) `cookies()` warnings in development console.
+    *   Confirmed OAuth linking behavior (same email across providers maps to same user/sessions) is intended.
+    *   Fixed session not loading on refresh by adding `useEffect` hook.
+
 ---
 
 ### **8. Future Phases & Known Issues**
 
 #### **8.1 Immediate Next Steps / Enhancements**
 
-*   **Graph Expansion Frontend Implementation:** Wire up the frontend to trigger the expansion API call when a graph node is clicked. This involves:
-    *   Creating a handler function (e.g., in `page.tsx`) that constructs the request body (`nodeId`, `nodeLabel`, `currentGraph` - **sanitized**).
-    *   Passing this handler down to `VisualizationComponent` via the `onNodeExpand` prop.
-    *   Updating the handler to call the `addGraphExpansion` store action with the API response.
+*   **Troubleshoot Graph Resizing on Narrowing:**
+    *   **Issue:** The `VisualizationComponent` (3D graph) resizes correctly when the window widens but fails to shrink when the window narrows after being widened. This prevents the overall layout from shrinking correctly and introduces horizontal scrollbars below the graph's expanded width (e.g., < 1040px).
+    *   **Debugging Done:**
+        *   Initial responsiveness fixed by removing `max-w-4xl` and using an inner `max-w-5xl` container. Scrolling restored.
+        *   `ResizeObserver` confirmed implemented and fires correctly when widening.
+        *   Logging shows `ResizeObserver` stops firing when narrowing, indicating the graph's container `div` is not shrinking.
+        *   Attempts to fix with `min-h-0` on the container and its parent section were unsuccessful.
+    *   **Hypothesis:** Complex interaction between `aspect-video` on the graph container and the parent flexbox layout (`CardContent` in `MainAppClient.tsx`). Other flex items might prevent vertical shrinking, which `aspect-video` translates into preventing horizontal shrinking.
+    *   **Next Step:** Further investigate flex properties (`flex-shrink`, `flex-basis`, `min-height`) of elements within `CardContent`, especially the `VisualizationSection` and its siblings, to allow the graph container to shrink correctly.
+*   **User Dashboard / Project Management:** Design and implement a dedicated view (separate page or modal) accessible before loading a specific session where users can:
+    *   See a richer list/grid of their saved sessions (perhaps with previews or more metadata).
+    *   Explicitly create new sessions/projects.
+    *   Rename/delete sessions from this view.
+    *   *(This replaces the simple sidebar as the primary entry point)*
 *   **Integrate Knowledge Cards into Expansion:** Modify the expansion API prompt, response, and frontend logic (`addGraphExpansion` action) to generate and merge corresponding concise `knowledgeCards` alongside the new graph nodes/links. Ensure prompt requests brief summaries suitable for card display.
 *   **Knowledge Card Detail Expansion (Lazy Loading):** Implement functionality to fetch a more detailed explanation for a Knowledge Card on user demand (e.g., via an 'Expand' button). This will trigger a separate API call for the specific topic, fetching richer content only when needed to optimize token usage. The expanded content will be stored temporarily in the frontend state.
-*   **User Dashboard & Session Management:** Implement a way for users to start new sessions/topics and potentially view a history or summary (basic session memory view).
+*   **Refine Auto-Saving:** Consider more robust auto-saving triggers (e.g., debounced saving on changes to `output` state) or clearer visual indicators of save status.
 *   **Latency Optimization:** Address API response latency (~10s for initial generation, ensure expansion calls are faster). Explore streaming for `explanationMarkdown`.
 *   **LLM Output Consistency:** Continue monitoring and improving the reliability of the LLM returning the graph structure and other fields correctly.
-*   **UI/UX:** Consider adding more visual cues during expansion (e.g., brief node pulse). Improve label overlap handling if needed.
+*   **UI/UX:**
+    *   Improve session sidebar (if kept) or dashboard view styling and usability.
+    *   Consider adding more visual cues during expansion (e.g., brief node pulse).
+    *   Improve label overlap handling in 3D graph if needed.
+    *   Style AuthComponent further if desired.
+*   **Cookie Warning:** Monitor persistent `cookies()` warnings in development console, revisit if runtime issues appear.
 
 #### **8.2 MVP Features Remaining**
 
-*   User-facing dashboard with new session creation
-*   Session memory view (pinning cards, visual state)
-*   Graph Expansion Frontend Implementation & Knowledge Card Integration (**Completed**)
-*   Frontend-only user login (email/magic link)
-*   Basic Stripe integration
+*   ~~User-facing dashboard with new session creation & loading~~ (**Completed via Sidebar**)
+*   ~~Session memory view / Backend Persistence~~ (**Completed**)
+*   **Basic Stripe integration** (**Next Focus**)
 
 #### **8.3 Post-MVP**
 

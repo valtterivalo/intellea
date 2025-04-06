@@ -79,20 +79,46 @@ const VisualizationComponent: React.FC<VisualizationComponentProps> = ({
       return debounce(updateFunc, 500);
   }, [updateNodePositions]);
 
-  // Effect for dimensions
+  // Effect for dimensions using ResizeObserver
   useEffect(() => {
-    const measure = () => {
-      if (containerRef.current) {
-        const width = containerRef.current.offsetWidth;
-        const height = containerRef.current.offsetHeight;
-        setDimensions({ width, height });
+    const container = containerRef.current;
+    if (!container) return;
+
+    const resizeObserver = new ResizeObserver(entries => {
+      for (let entry of entries) {
+        if (entry.contentRect) {
+          // Log the dimensions reported by the observer
+          console.log("[ResizeObserver Callback] Observed dimensions:", {
+            width: entry.contentRect.width,
+            height: entry.contentRect.height
+          });
+          // Update dimensions state
+          setDimensions({
+            width: entry.contentRect.width,
+            height: entry.contentRect.height
+          });
+        }
       }
-    };
-    const timeoutId = setTimeout(measure, 100);
+    });
+
+    resizeObserver.observe(container);
+
+    // Initial measure in case observer doesn't fire immediately
+    const initialWidth = container.offsetWidth;
+    const initialHeight = container.offsetHeight;
+
+    // Log initial measure
+    console.log("[Effect Init] Initial container dimensions:", { initialWidth, initialHeight });
+    if (initialWidth > 0 && initialHeight > 0) {
+        setDimensions({ width: initialWidth, height: initialHeight });
+    }
+
+    // Cleanup function to disconnect observer
     return () => {
-      clearTimeout(timeoutId);
+      console.log("[Effect Cleanup] Disconnecting ResizeObserver");
+      resizeObserver.disconnect();
     };
-  }, []);
+  }, []); // Empty dependency array, observer handles updates
 
   // Reset last saved count if the underlying node/link count changes
   useEffect(() => {
@@ -220,7 +246,12 @@ const VisualizationComponent: React.FC<VisualizationComponentProps> = ({
   const ForceGraph3D = ForceGraph3DComponent as any;
 
   return (
-    <div ref={containerRef} className="aspect-video w-full bg-card rounded-md overflow-hidden border border-border relative">
+    <div ref={containerRef} className="aspect-video w-full bg-card rounded-md overflow-hidden border border-border relative min-h-0">
+      {/* Log dimensions passed to the graph component - Wrapped log to return null */}
+      {(() => {
+        console.log("[Render] Passing dimensions to ForceGraph3D:", dimensions);
+        return null; // Return null to satisfy ReactNode type
+      })()}
       {dimensions.width > 0 && dimensions.height > 0 && (
         <ForceGraph3D
           ref={graphRef}
