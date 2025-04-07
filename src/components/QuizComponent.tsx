@@ -9,7 +9,7 @@ import { Check, X } from 'lucide-react';
 interface QuizData {
   question: string;
   options: string[]; // e.g., ["A) Option 1", "B) Option 2", ...]
-  correctAnswerLetter: string; // e.g., "B"
+  correctAnswerLetter?: string; // Make optional if not already
 }
 
 interface QuizComponentProps {
@@ -29,25 +29,25 @@ const QuizComponent: React.FC<QuizComponentProps> = ({ quizData }) => {
   const checkAnswer = () => {
     if (!selectedOption) return;
     setIsAnswered(true);
-    if (selectedOption === quizData.correctAnswerLetter.toUpperCase()) {
+    if (selectedOption === quizData.correctAnswerLetter?.toUpperCase()) {
       setFeedback("Correct!");
     } else {
-      setFeedback(`Incorrect. The correct answer was ${quizData.correctAnswerLetter.toUpperCase()}.`);
+      setFeedback(`Incorrect. The correct answer was ${quizData.correctAnswerLetter?.toUpperCase()}.`);
     }
   };
 
   const getOptionLetter = (option: string): string => {
-      // Accept A) or A. (case-insensitive)
-      const match = option.match(/^([A-Z])[\.\)]/i); 
-      return match ? match[1].toUpperCase() : '';
-  }
+    // Handles "A)" or "A." format
+    return option?.match(/^([A-Za-z])[\.\)]/)?.[1] || '';
+  };
 
   const getOptionText = (option: string): string => {
       // Remove A) or A. prefix and any leading space
       return option.replace(/^([A-Z])[\.\)]\s*/i, '');
   }
 
-  const correctAnswerLetter = quizData.correctAnswerLetter.toUpperCase();
+  // Safely get the correct answer letter
+  const correctAnswerLetter = (quizData.correctAnswerLetter?.toUpperCase()) || '';
 
   return (
     <motion.div
@@ -59,7 +59,7 @@ const QuizComponent: React.FC<QuizComponentProps> = ({ quizData }) => {
           <CardTitle className="text-lg font-semibold">{quizData.question}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {quizData.options.map((option, index) => {
+          {quizData.options && Array.isArray(quizData.options) && quizData.options.map((option, index) => {
             const letter = getOptionLetter(option);
             const text = getOptionText(option);
             const isSelected = selectedOption === letter;

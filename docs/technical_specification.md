@@ -352,51 +352,92 @@ The MVP must deliver **real user value**, especially for learners with short att
     *   Confirmed OAuth linking behavior (same email across providers maps to same user/sessions) is intended.
     *   Fixed session not loading on refresh by adding `useEffect` hook.
 
+**Phase 13: Graph Readability & Single-Node Focus Scoping (Completed)**
+
+*   **Graph Layout & Readability:**
+    *   Accessed graph instance (`graphRef`) in `VisualizationComponent.tsx`.
+    *   Used `d3Force` method in `useEffect` to modify simulation forces:
+        *   Increased node repulsion (negative `'charge'` strength to -120).
+        *   Increased default link distance (`'link'` distance to 60).
+    *   Adjusted default node size (`nodeVal`) slightly smaller.
+    *   Modified `getNodeThreeObject` to calculate label Y-offset dynamically based on `nodeVal`, ensuring labels appear consistently above nodes of varying sizes.
+*   **Information Scoping (Single Node):**
+    *   Added `activeFocusNodeId` state and `setActiveFocusNodeId` setter to Zustand store (`useAppStore.ts`).
+    *   Modified `KnowledgeCard.tsx` button (`handleFocusClick`) to set both transient camera focus (`focusedNodeId`) and persistent active focus (`activeFocusNodeId`).
+    *   Updated `VisualizationComponent.tsx`:
+        *   Read `activeFocusNodeId` from store.
+        *   Implemented `getNodeColor` and `getNodeVal` callbacks to use `activeFocusNodeId` to highlight/enlarge the focused node and dim/shrink others.
+        *   Corrected type definitions to align with `react-force-graph-3d` accessors (`NodeObject`) and refactored helper/callbacks.
+    *   Updated `KnowledgeCardsSection.tsx`:
+        *   Read `activeFocusNodeId` from store using `useShallow` (to fix re-render loop).
+        *   Applied conditional `opacity` and `scale` via `motion.div` based on whether a card matches `activeFocusNodeId`.
+*   **Bug Fixes:**
+    *   Resolved infinite re-render loop in `KnowledgeCardsSection` by adding `useShallow` to the state selector.
+    *   Cleaned up `useAppStore` by removing redundant `visualizationData`/`knowledgeCards` state/setters and correcting `resetActiveSessionState`.
+    *   Installed `@types/three`.
+    *   Ignored persistent, potentially spurious linter error in `VisualizationComponent.tsx` after multiple fix attempts.
+
+**Phase 14: Path-Based Focusing & Session Creation Refactor (Completed)**
+
+*   **Path-Based Focusing Implementation:**
+    *   **Store (`useAppStore.ts`):** Replaced `activeFocusNodeId: string | null` with `activeFocusPathIds: Set<string> | null`. Added `setActiveFocusPath` action to calculate the path (clicked node ID + direct neighbor IDs based on `visualizationData.links`) and update the state.
+    *   **Knowledge Card Interaction (`KnowledgeCard.tsx`):** Modified 'Focus on Graph' button to call the new `setActiveFocusPath` action.
+    *   **Graph Styling (`VisualizationComponent.tsx`):** Updated `getNodeColor` and `getNodeVal` callbacks to read `activeFocusPathIds` from the store. Nodes whose IDs are *in* the set are highlighted (using `themeColors.nodeExpanding`) and enlarged, while nodes *not* in the set are visually muted (`themeColors.nodeMuted`) and shrunk. Label height (`getNodeThreeObject`) also adjusts based on path inclusion.
+    *   **Card Collapsing (`KnowledgeCardsSection.tsx`):** Updated component to read `activeFocusPathIds`. Uses `framer-motion` to animate `opacity` and `scale` of cards: cards whose `nodeId` is *not* in the `activeFocusPathIds` set are dimmed and slightly shrunk, addressing screen real estate usage when focus is active.
+*   **Session Creation Refactor & Root Node:**
+    *   **API Route (`/api/generate/route.ts`):** Updated `INITIAL_SYSTEM_PROMPT` to instruct the LLM to identify the core topic, create a central root node (marked with `isRoot: true`), and link all other initial nodes directly from this root. Added corresponding server-side validation to ensure exactly one root node exists and initial links originate correctly.
+    *   **Store Action (`createSession`):** Refactored the action to take `initialPrompt` as input. It now orchestrates the process: calls `/api/generate` with the prompt, waits for the response, finds the root node (`isRoot: true`), extracts its `label` to use as the session `title`, inserts the new session into Supabase (saving the `title` and the complete initial API `output` object as `session_data`), and finally updates the Zustand state with the new session details.
+    *   **Frontend Flow (`MainAppClient.tsx`):** 
+        *   'New Session' button functionality changed to simply reset the active UI state (`resetActiveSessionState`, clear `currentSessionId`/`Title`, clear prompt input) without calling the store's `createSession` action.
+        *   `handleSubmit` function modified: Now checks if `currentSessionId` is `null`. If it is (indicating the first prompt for a new session), it calls the `createSession` store action (passing `supabase`, `userId`, and the `prompt` text). If `currentSessionId` exists, it proceeds with the previous logic of fetching updates for the existing session.
+*   **API/Data Robustness:**
+    *   Further strengthened API prompts and added more server-side validation (`/api/generate/route.ts`) to enforce that `knowledgeCards` are generated with valid `nodeId`s matching `visualizationData.nodes` and that counts match.
+    *   Added filtering in `KnowledgeCardsSection.tsx` to only render cards with a valid `nodeId`, preventing key warnings and errors.
+*   **Bug Fixes:**
+    *   Resolved runtime error from accessing `.length` on potentially null `sessionsList` in `MainAppClient.tsx`.
+    *   Resolved runtime errors in `QuizComponent.tsx` by adding checks for potentially undefined `correctAnswerLetter` and `options` array.
+    *   Corrected logic in `MainAppClient.tsx` to ensure the prompt input and send button are enabled when starting a new session (i.e., when `currentSessionId` is `null`).
+
 ---
 
 ### **8. Future Phases & Known Issues**
 
 #### **8.1 Immediate Next Steps / Enhancements**
 
-*   **Troubleshoot Graph Resizing on Narrowing:**
-    *   **Issue:** The `VisualizationComponent` (3D graph) resizes correctly when the window widens but fails to shrink when the window narrows after being widened. This prevents the overall layout from shrinking correctly and introduces horizontal scrollbars below the graph's expanded width (e.g., < 1040px).
-    *   **Debugging Done:**
-        *   Initial responsiveness fixed by removing `max-w-4xl` and using an inner `max-w-5xl` container. Scrolling restored.
-        *   `ResizeObserver` confirmed implemented and fires correctly when widening.
-        *   Logging shows `ResizeObserver` stops firing when narrowing, indicating the graph's container `div` is not shrinking.
-        *   Attempts to fix with `min-h-0` on the container and its parent section were unsuccessful.
-    *   **Hypothesis:** Complex interaction between `aspect-video` on the graph container and the parent flexbox layout (`CardContent` in `MainAppClient.tsx`). Other flex items might prevent vertical shrinking, which `aspect-video` translates into preventing horizontal shrinking.
-    *   **Next Step:** Further investigate flex properties (`flex-shrink`, `flex-basis`, `min-height`) of elements within `CardContent`, especially the `VisualizationSection` and its siblings, to allow the graph container to shrink correctly.
-*   **User Dashboard / Project Management:** Design and implement a dedicated view (separate page or modal) accessible before loading a specific session where users can:
-    *   See a richer list/grid of their saved sessions (perhaps with previews or more metadata).
-    *   Explicitly create new sessions/projects.
-    *   Rename/delete sessions from this view.
-    *   *(This replaces the simple sidebar as the primary entry point)*
+*   **Implement Path-Based Focusing (Graph & Cards):**
+    *   **Goal:** Enhance the current single-node focus to highlight/manage an entire exploration *path* (focused node + its direct neighbors).
+    *   **Store:** Replace `activeFocusNodeId: string | null` with `activeFocusPathIds: Set<string> | null` in Zustand.
+    *   **Interaction:** Update `KnowledgeCard`'s `handleFocusClick` (or a new store action) to calculate the new `activeFocusPathIds` (clicked node ID + neighbor IDs from `visualizationData.links`).
+    *   **Graph (`VisualizationComponent`):** Refactor `getNodeColor` and `getNodeVal` to check if a node's ID is *in* the `activeFocusPathIds` set.
+    *   **Cards (`KnowledgeCardsSection`/`KnowledgeCard`):** Refactor logic to check if a card's ID is in `activeFocusPathIds`. Consider implementing card collapsing (e.g., showing only title or hiding entirely) for cards *not* in the path, instead of just dimming.
 *   **Integrate Knowledge Cards into Expansion:** Modify the expansion API prompt, response, and frontend logic (`addGraphExpansion` action) to generate and merge corresponding concise `knowledgeCards` alongside the new graph nodes/links. Ensure prompt requests brief summaries suitable for card display.
 *   **Knowledge Card Detail Expansion (Lazy Loading):** Implement functionality to fetch a more detailed explanation for a Knowledge Card on user demand (e.g., via an 'Expand' button). This will trigger a separate API call for the specific topic, fetching richer content only when needed to optimize token usage. The expanded content will be stored temporarily in the frontend state.
-*   **Refine Auto-Saving:** Consider more robust auto-saving triggers (e.g., debounced saving on changes to `output` state) or clearer visual indicators of save status.
-*   **Latency Optimization:** Address API response latency (~10s for initial generation, ensure expansion calls are faster). Explore streaming for `explanationMarkdown`.
-*   **LLM Output Consistency:** Continue monitoring and improving the reliability of the LLM returning the graph structure and other fields correctly.
-*   **UI/UX:**
-    *   Improve session sidebar (if kept) or dashboard view styling and usability.
-    *   Consider adding more visual cues during expansion (e.g., brief node pulse).
-    *   Improve label overlap handling in 3D graph if needed.
-    *   Style AuthComponent further if desired.
-*   **Cookie Warning:** Monitor persistent `cookies()` warnings in development console, revisit if runtime issues appear.
+*   **Troubleshoot Graph Resizing on Narrowing (Deprioritized):**
+    *   **Issue:** `VisualizationComponent` fails to shrink correctly when the window narrows after being widened.
+    *   **Status:** Temporarily deprioritized in favor of core feature development.
+*   **User Dashboard / Project Management:** Design and implement a dedicated view (separate page or modal) for richer session management, replacing the simple sidebar.
+*   **Refine Auto-Saving:** Consider more robust auto-saving triggers or clearer visual indicators.
+*   **Latency Optimization:** Explore streaming for `explanationMarkdown`, investigate API response times.
+*   **LLM Output Consistency:** Continue monitoring and improving prompt reliability.
+*   **UI/UX:** Refinements to sidebar/dashboard, graph interaction cues, label overlap handling.
+*   **Cookie/Linter Warnings:** Monitor persistent warnings in development console.
 
 #### **8.2 MVP Features Remaining**
 
-*   ~~User-facing dashboard with new session creation & loading~~ (**Completed via Sidebar**)
+*   ~~User-facing dashboard with new session creation & loading~~ (**Completed via Sidebar**) -> To be replaced/enhanced by dedicated Dashboard View.
 *   ~~Session memory view / Backend Persistence~~ (**Completed**)
-*   **Basic Stripe integration** (**Next Focus**)
+*   **Basic Stripe integration** (**High Priority - Next Focus after Path-Focusing**)
+*   ~~Shareable public sessions (read-only)~~ (Move to Post-MVP for now)
+*   Semantic Clustering for graph layout.
 
 #### **8.3 Post-MVP**
 
-*   **Deeper Personalization:** Backend session history, SR quizzes, visual bookmarks.
-*   **Collaboration & Network Effects:** Shared boards, embeds, learning paths.
-*   **Pro Mode:** Advanced topics, RAG, multimodal.
+*   Deeper Personalization (Backend session history, SR quizzes, visual bookmarks).
+*   Collaboration & Network Effects (Shared boards, embeds, learning paths).
+*   Pro Mode (Advanced topics, RAG, multimodal).
+*   Shareable public sessions (read-only).
 
 ---
 
 ### **Conclusion**
-This spec now reflects a development plan focused on producing **real value and revenue** from the first public release. The MVP delivers a differentiated experience tailored to learners frustrated by chat-based AI tools. It's scoped to ship fast, with a premium feel, and designed to grow into a serious platform.
+This spec reflects the current state of development, focusing on delivering a unique, visually interactive learning experience. Key UI improvements for readability and focus have been implemented. The next major step is enhancing the focus mechanism to encompass exploration paths, followed by integrating payments to complete the monetizable MVP. 

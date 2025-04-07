@@ -1,446 +1,417 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import {
+  CognitionResponse,
+  GraphData,
+  KnowledgeCardData,
+  NodeObject, // Assuming NodeObject is exported or defined here/imported
+  LinkObject, // Assuming LinkObject is exported or defined here/imported
+} from '@/types'; // Adjust import path if needed
+import { Session } from '@supabase/supabase-js';
+import { UseBoundStore, StoreApi } from 'zustand'; // Import Zustand types
+import { SupabaseClient } from '@supabase/supabase-js'; // Import Supabase type
 
-// Define the structure for nodes and links (reuse from API)
-interface GraphNode {
+// Define SessionSummary if not already globally available or imported
+export interface SessionSummary {
   id: string;
-  label: string;
-  [key: string]: any;
-}
-
-interface GraphLink {
-  source: string;
-  target: string;
-  [key: string]: any;
-}
-
-interface GraphExpansionData {
-    nodes: GraphNode[];
-    links: GraphLink[];
-    knowledgeCards?: KnowledgeCard[]; // Added optional field
-}
-
-// Define structure for Knowledge Cards (matches API route)
-interface KnowledgeCard {
-  id: string; // Corresponds to a node ID
-  title: string;
-  description: string;
-}
-
-// Define the structure for the output we expect from the API
-// Mirroring the interface in the API route
-export interface CognitionResponse {
-  explanationMarkdown: string;
-  knowledgeCards?: KnowledgeCard[]; // Updated field
-  visualizationData?: GraphExpansionData;
-  quiz?: { question: string; options: string[]; correctAnswerLetter: string };
-}
-
-// Define the structure for items in the session list
-interface SessionListItem {
-  id: string;
-  title: string;
-  last_updated_at: string; // Comes as string from JSON
+  title: string | null;
+  last_updated_at: string;
   last_prompt: string | null;
 }
 
-// Define the overall application state
+
 interface AppState {
-  // == Core Session State ==
-  sessionsList: SessionListItem[];
-  setSessionsList: (list: SessionListItem[]) => void;
-  currentSessionId: string | null;
-  setCurrentSessionId: (id: string | null) => void;
-  currentSessionTitle: string | null;
-  setCurrentSessionTitle: (title: string | null) => void;
-
-  // == Current Active Session Data ==
-  prompt: string; // Input field content
-  setPrompt: (prompt: string) => void;
-  activePrompt: string | null; // The prompt that generated the current output (part of saved data)
-  setActivePrompt: (prompt: string | null) => void;
-  output: CognitionResponse | null | string; // Main data/error (part of saved data)
-  setOutput: (output: CognitionResponse | null | string) => void;
-
-  // == UI / Loading States ==
-  isLoading: boolean; // For generating AI response
-  setIsLoading: (loading: boolean) => void;
+  prompt: string;
+  activePrompt: string | null; // Store the prompt that generated the current output
+  output: CognitionResponse | string | null; // Can be the structured response, an error string, or null
+  isLoading: boolean;
+  sessionsList: SessionSummary[] | null;
   isSessionListLoading: boolean;
-  setIsSessionListLoading: (loading: boolean) => void;
-  isSessionLoading: boolean; // For loading a full session
-  setIsSessionLoading: (loading: boolean) => void;
+  currentSessionId: string | null;
+  currentSessionTitle: string | null;
+  isSessionLoading: boolean;
   isSavingSession: boolean;
-  setIsSavingSession: (saving: boolean) => void;
+  // --- Focus State ---
+  activeFocusPathIds: Set<string> | null; // IDs of node + neighbors
+  focusedNodeId: string | null; // For transient camera focus animation trigger
+  // --- Error State ---
+  error: string | null;
 
-  // == Graph Interaction State (Keep as is, relates to active session) ==
-  focusedNodeId: string | null;
-  setFocusedNodeId: (id: string | null) => void;
-  expandingNodeId: string | null;
-  setExpandingNodeId: (id: string | null) => void;
+  // --- Actions ---
+  setPrompt: (prompt: string) => void;
+  setOutput: (output: CognitionResponse | string | null) => void;
+  setLoading: (isLoading: boolean) => void;
+  setActivePrompt: (prompt: string | null) => void; // Added action setter
+  fetchSessions: (supabase: SupabaseClient, userId: string) => Promise<void>;
+  loadSession: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
+  createSession: (supabase: SupabaseClient, userId: string, initialPrompt: string) => Promise<string | null>;
+  saveSession: (supabase: SupabaseClient) => Promise<void>;
+  deleteSession: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
+  updateSessionTitleLocally: (title: string) => void;
+  resetActiveSessionState: () => void;
 
-  // == Error State ==
-  error: string | null; // Store API or other errors
+  // --- Focus Actions ---
+  setActiveFocusPath: (nodeId: string | null) => void; // Calculate and set the path
+  setFocusedNodeId: (nodeId: string | null) => void; // Trigger camera animation
+
+  // --- Graph Expansion ---
+  addGraphExpansion: (expansionData: GraphData) => void;
+
+  // --- Error Handling ---
   setError: (error: string | null) => void;
-
-  // == Actions ==
-  // Existing graph actions
-  addGraphExpansion: (expansionData: GraphExpansionData) => void;
-  updateNodePositions: (nodesWithPositions: GraphNode[]) => void;
-  // Session management actions (implementations later)
-  fetchSessions: () => Promise<void>;
-  loadSession: (sessionId: string) => Promise<void>;
-  createSession: (initialTitle?: string) => Promise<string | null>; // Returns new session ID or null on error
-  saveSession: () => Promise<void>;
-  deleteSession: (sessionId: string) => Promise<void>;
-  resetActiveSessionState: () => void; // Renamed from resetSession
 }
 
-// Define initial state values explicitly
-const initialState = {
-  sessionsList: [],
-  currentSessionId: null,
-  currentSessionTitle: null,
-  prompt: '',
-  activePrompt: null,
-  output: null,
-  isLoading: false,
-  isSessionListLoading: false,
-  isSessionLoading: false,
-  isSavingSession: false,
-  focusedNodeId: null,
-  expandingNodeId: null,
-  error: null,
-};
-
-
-// Update the create call
-export const useAppStore = create<AppState>()(
+// Explicitly type the store hook
+export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()(
   persist(
     (set, get) => ({
-      ...initialState, // Spread initial state values
+      prompt: '',
+      activePrompt: null,
+      output: null,
+      isLoading: false,
+      sessionsList: null,
+      isSessionListLoading: false,
+      currentSessionId: null,
+      currentSessionTitle: null,
+      isSessionLoading: false,
+      isSavingSession: false,
+      // --- Focus State Init ---
+      activeFocusPathIds: null,
+      focusedNodeId: null,
+      // --- Error State Init ---
+      error: null,
 
-      // Simple setters
-      setSessionsList: (list) => set({ sessionsList: list }),
-      setCurrentSessionId: (id) => set({ currentSessionId: id }),
-      setCurrentSessionTitle: (title) => set({ currentSessionTitle: title }),
+      // --- Action Implementations ---
       setPrompt: (prompt) => set({ prompt }),
-      setActivePrompt: (activePrompt) => set({ activePrompt }),
-      setOutput: (output) => set({ output, error: null }), // Clear error on new output
-      setIsLoading: (isLoading) => set({ isLoading }),
-      setIsSessionListLoading: (loading) => set({ isSessionListLoading: loading }),
-      setIsSessionLoading: (loading) => set({ isSessionLoading: loading }),
-      setIsSavingSession: (saving) => set({ isSavingSession: saving }),
-      setFocusedNodeId: (id) => set({ focusedNodeId: id }),
-      setExpandingNodeId: (id) => set({ expandingNodeId: id }),
-      setError: (error) => set({ error }),
+      setOutput: (output) => set({ output }),
+      setLoading: (isLoading) => set({ isLoading }),
+      setActivePrompt: (prompt) => set({ activePrompt: prompt }), // Added implementation
 
-
-      // Graph Actions (Keep existing implementations)
-      addGraphExpansion: (expansionData) => {
-         const currentOutput = get().output; // Get current state
-        
-        // Check if currentOutput is valid and contains visualizationData
-        if (typeof currentOutput === 'object' && currentOutput !== null && currentOutput.visualizationData) {
-          const existingNodes = currentOutput.visualizationData.nodes || [];
-          const existingLinks = currentOutput.visualizationData.links || [];
-          // Extract nodes, links, and potentially knowledge cards from expansion data
-          const { nodes: newNodes, links: newLinks, knowledgeCards: newKnowledgeCards } = expansionData;
-
-          // --- Deduplicate Nodes --- 
-          const existingNodeIds = new Set(existingNodes.map(n => n.id));
-          const uniqueNewNodes = newNodes.filter(n => !existingNodeIds.has(n.id));
-
-          // --- Deduplicate Links --- 
-          const existingLinkKeys = new Set(existingLinks.map(l => `${l.source}->${l.target}`));
-          const uniqueNewLinks = newLinks.filter(l => {
-              // Ensure source/target are properly resolved to string IDs
-              const sourceId = (typeof l.source === 'object' && l.source !== null) ? (l.source as GraphNode).id : l.source;
-              const targetId = (typeof l.target === 'object' && l.target !== null) ? (l.target as GraphNode).id : l.target;
-              // Check if the string representation of the link exists
-              return !existingLinkKeys.has(`${sourceId}->${targetId}`);
-          });
-          
-          // --- Deduplicate Knowledge Cards --- 
-          const existingKnowledgeCards = currentOutput.knowledgeCards || [];
-          const existingCardIds = new Set(existingKnowledgeCards.map(c => c.id));
-          const uniqueNewKnowledgeCards = (newKnowledgeCards || []).filter(c => !existingCardIds.has(c.id));
-
-          // Check if there's anything new to add
-          if (uniqueNewNodes.length === 0 && uniqueNewLinks.length === 0 && uniqueNewKnowledgeCards.length === 0) {
-            console.log("addGraphExpansion: No new unique nodes, links, or knowledge cards to add.");
-            return; // Nothing to update
-          }
-
-          // Create the new, merged visualization data
-          const mergedVisualizationData: GraphExpansionData = {
-            nodes: [...existingNodes, ...uniqueNewNodes],
-            links: [...existingLinks, ...uniqueNewLinks],
-            // knowledgeCards are handled separately in the main output object
-          };
-          
-          // Create the new, merged knowledge cards array
-          const mergedKnowledgeCards = [...existingKnowledgeCards, ...uniqueNewKnowledgeCards];
-
-          // Create the updated output object immutably
-          const updatedOutput: CognitionResponse = {
-            ...currentOutput,
-            visualizationData: mergedVisualizationData, // Updated graph data
-            knowledgeCards: mergedKnowledgeCards, // Updated knowledge cards
-          };
-
-          console.log(`addGraphExpansion: Merged data. Total nodes: ${mergedVisualizationData.nodes.length}, Total links: ${mergedVisualizationData.links.length}, Total cards: ${mergedKnowledgeCards.length}`);
-          
-          // Update the state
-          set({ output: updatedOutput });
-        } else {
-          console.error("addGraphExpansion: Cannot add expansion data because current output is not a valid object or lacks visualizationData.");
-        }
-      },
-      updateNodePositions: (nodesWithPositions) => {
-         const currentOutput = get().output;
-        if (typeof currentOutput === 'object' && currentOutput !== null && currentOutput.visualizationData) {
-            // Create a map for efficient lookup, including only necessary props + fx, fy, fz
-            const positionMap = new Map(nodesWithPositions.map(node => [
-                node.id,
-                { 
-                    x: node.x, y: node.y, z: node.z, 
-                    fx: node.x, fy: node.y, fz: node.z // Set fixed positions
-                }
-            ]));
-            
-            // Create new nodes array with updated positions and fixed coordinates
-            const updatedNodes = currentOutput.visualizationData.nodes.map(node => {
-                const positionData = positionMap.get(node.id);
-                if (positionData) {
-                    // Create a *new* node object, merging original props with new positions
-                    // Important: Exclude internal props like index, vx, vy, vz, __threeObj
-                    const { index, vx, vy, vz, __threeObj, ...originalProps } = node;
-                    return { 
-                        ...originalProps, // Spread original properties (like id, label)
-                        ...positionData  // Add x, y, z and fx, fy, fz
-                    }; 
-                }
-                // If somehow a node doesn't have position data (shouldn't happen), return original
-                console.warn(`updateNodePositions: Position data not found for node ${node.id}`);
-                return node; 
-            });
-
-            // Create the updated output object immutably
-            const updatedOutput: CognitionResponse = {
-                ...currentOutput,
-                visualizationData: {
-                    ...currentOutput.visualizationData,
-                    nodes: updatedNodes, // Use the nodes with updated fixed positions
-                },
-            };
-
-            // Set the state, triggering persistence
-            console.log("updateNodePositions: Updated store with fixed node positions (fx, fy, fz). First node:", updatedNodes[0]);
-            set({ output: updatedOutput });
-        } else {
-             console.warn("updateNodePositions: Cannot update positions, current output is invalid or missing visualizationData.");
-        }
-      },
-
-
-      // Session Management Actions (Implementations)
-      fetchSessions: async () => {
+      fetchSessions: async (supabase, userId) => {
         set({ isSessionListLoading: true, error: null });
         try {
-          const response = await fetch('/api/sessions');
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'Failed to fetch sessions list' }));
-            throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-          }
-          const data: SessionListItem[] = await response.json();
-          set({ sessionsList: data, isSessionListLoading: false });
-        } catch (err: any) {
-          console.error("Error fetching sessions:", err);
-          set({ error: err.message || 'Failed to fetch sessions', isSessionListLoading: false });
+          const { data, error } = await supabase
+            .from('sessions')
+            .select('id, title, last_updated_at, last_prompt')
+            .eq('user_id', userId)
+            .order('last_updated_at', { ascending: false });
+
+          if (error) throw error;
+          set({ sessionsList: data as SessionSummary[], isSessionListLoading: false });
+        } catch (error: any) {
+          console.error('Error fetching sessions:', error);
+          set({ error: `Failed to fetch sessions: ${error.message}`, isSessionListLoading: false });
         }
       },
 
-      loadSession: async (sessionId) => {
-        if (!sessionId) return;
-        set({ isSessionLoading: true, error: null });
-        get().resetActiveSessionState(); // Clear previous state before loading
+      loadSession: async (sessionId, supabase) => {
+        // Reset focus state when loading a new session
+        set({ isSessionLoading: true, error: null, activeFocusPathIds: null, focusedNodeId: null });
         try {
-          const response = await fetch(`/api/sessions/${sessionId}`);
-          if (!response.ok) {
-             const errorData = await response.json().catch(() => ({ error: 'Failed to load session' }));
-             throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-          }
-          const data = await response.json();
-          // Ensure session_data is parsed if it's a string (though API should return object)
-          let parsedOutput: CognitionResponse | null = null;
-          if (typeof data.session_data === 'string') {
-              try {
-                  parsedOutput = JSON.parse(data.session_data);
-              } catch (parseError) {
-                  console.error("Error parsing session_data:", parseError);
-                  throw new Error("Failed to parse session data.");
-              }
-          } else if (typeof data.session_data === 'object' && data.session_data !== null) {
-              parsedOutput = data.session_data;
-          }
+          const { data: loadedData, error } = await supabase
+            .from('sessions')
+            .select('id, title, session_data, last_prompt')
+            .eq('id', sessionId)
+            .single();
 
+          if (error) throw error;
+          if (!loadedData) throw new Error('Session not found.');
+
+          // Reset focus state again right before setting the loaded data
           set({
-            currentSessionId: data.id,
-            currentSessionTitle: data.title,
-            output: parsedOutput,
-            activePrompt: data.last_prompt, // Load last prompt into activePrompt
-            prompt: '', // Clear the input prompt field
+            output: loadedData.session_data as CognitionResponse,
+            activePrompt: loadedData.last_prompt, // Load last prompt
+            currentSessionId: sessionId,
+            currentSessionTitle: loadedData.title,
             isSessionLoading: false,
+            activeFocusPathIds: null, // Ensure focus is reset
+            focusedNodeId: null
           });
-        } catch (err: any) {
-          console.error(`Error loading session ${sessionId}:`, err);
-          set({ error: err.message || 'Failed to load session', isSessionLoading: false, currentSessionId: null }); // Clear ID on error
+        } catch (error: any) {
+          console.error('Error loading session:', error);
+          get().resetActiveSessionState(); // Also reset state fully on error
+          set({ error: `Failed to load session: ${error.message}`, currentSessionId: null, currentSessionTitle: null, isSessionLoading: false });
         }
       },
 
-      createSession: async (initialTitle = 'Untitled Session') => {
-          set({ isSavingSession: true, error: null }); // Use saving state for creation too
-          try {
-              const response = await fetch('/api/sessions', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json' },
-                  // body: JSON.stringify({ title: initialTitle }) // Adjust if API expects title
-              });
-              if (!response.ok) {
-                   const errorData = await response.json().catch(() => ({ error: 'Failed to create session' }));
-                   throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-              }
-              const newSession: { id: string, title: string } = await response.json();
+      createSession: async (supabase, userId, initialPrompt) => {
+        if (!initialPrompt?.trim()) {
+          set({ error: 'Cannot create session: Initial topic/prompt is required.' });
+          return null;
+        }
+        set({ isSessionLoading: true, isLoading: true, error: null }); // Indicate loading for creation AND API call
+        let newSessionId: string | null = null;
+        let sessionTitle: string = 'Untitled Session'; // Default title
+        try {
+          // --- Step 1: Call the API to get the initial graph and root node title --- 
+          console.log("createSession: Calling API with initial prompt:", initialPrompt);
+          const response = await fetch('/api/generate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ prompt: initialPrompt }),
+          });
 
-              // Reset state for the new session
-              get().resetActiveSessionState();
-
-              // Set new session details and add to list optimistically
-              set(state => ({
-                  currentSessionId: newSession.id,
-                  currentSessionTitle: newSession.title,
-                  // Add to list, assuming basic structure matches SessionListItem for now
-                  sessionsList: [{ id: newSession.id, title: newSession.title, last_updated_at: new Date().toISOString(), last_prompt: null }, ...state.sessionsList],
-                  isSavingSession: false,
-              }));
-               return newSession.id; // Return the new ID
-          } catch (err: any) {
-              console.error("Error creating session:", err);
-              set({ error: err.message || 'Failed to create session', isSavingSession: false });
-              return null; // Indicate failure
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'API Error' }));
+            throw new Error(`API Error (${response.status}): ${errorData.error || 'Failed to generate initial data'}`);
           }
+
+          const result = await response.json();
+          if (result.error) {
+            throw new Error(`API Error: ${result.error}`);
+          }
+          if (!result.output) {
+            throw new Error('API Error: Invalid response structure received.');
+          }
+
+          const initialOutput: CognitionResponse = result.output;
+
+          // Find the root node to set the title
+          const rootNode = initialOutput.visualizationData?.nodes?.find((n: NodeObject) => n.isRoot === true);
+          if (rootNode && rootNode.label) {
+            sessionTitle = rootNode.label; // Use root node label as title
+            console.log("createSession: Using root node label as session title:", sessionTitle);
+          } else {
+            console.warn("createSession: Root node or label not found in API response, using default title.");
+          }
+
+          // --- Step 2: Insert the new session into Supabase with the derived title and initial data ---
+          console.log("createSession: Inserting session into DB with title:", sessionTitle);
+          const { data, error: dbError } = await supabase
+            .from('sessions')
+            .insert({ 
+                user_id: userId, 
+                title: sessionTitle, 
+                session_data: initialOutput, // Store the initial API output
+                last_prompt: initialPrompt  // Store the initial prompt
+            })
+            .select('id')
+            .single();
+
+          if (dbError) throw dbError; // Throw Supabase error
+          if (!data) throw new Error('Failed to create session record in database.');
+
+          newSessionId = data.id;
+
+          // --- Step 3: Update Zustand store state --- 
+          get().resetActiveSessionState(); // Clear previous session state fully
+          set({
+            currentSessionId: newSessionId,
+            currentSessionTitle: sessionTitle,
+            output: initialOutput, // Set the initial output
+            activePrompt: initialPrompt, // Set the initial prompt as active
+            isSessionLoading: false, // Creation DB insert finished
+            isLoading: false, // API call finished
+            error: null
+          });
+
+          console.log("createSession: Session created successfully, ID:", newSessionId);
+          await get().fetchSessions(supabase, userId); // Refresh session list in sidebar
+          return newSessionId;
+        } catch (error: any) {
+          console.error('Error during session creation process:', error);
+          // Clean up potential partial state (e.g., if DB insert failed after API call)
+          if (newSessionId) {
+             // Optionally try to delete the potentially created DB entry if feasible
+             console.warn("Attempting to clean up potentially created session record...");
+             await supabase.from('sessions').delete().eq('id', newSessionId); 
+          }
+          get().resetActiveSessionState(); // Ensure state is reset on error
+          set({ error: `Failed to create session: ${error.message}`, isSessionLoading: false, isLoading: false });
+          return null;
+        }
       },
 
-      saveSession: async () => {
+      saveSession: async (supabase) => {
         const { currentSessionId, currentSessionTitle, output, activePrompt } = get();
         if (!currentSessionId) {
-          set({ error: "No active session to save."});
-          console.warn("saveSession called without currentSessionId");
-          return;
-        }
-        // Ensure output is not an error string before saving
-        if (typeof output === 'string') {
-            set({ error: "Cannot save session with an error state as output."});
-            console.warn("saveSession attempted with error string in output state.");
-            return;
+          console.warn('Attempted to save without an active session ID.');
+          return; // Don't save if no session is active
         }
 
         set({ isSavingSession: true, error: null });
         try {
-          const payload = {
-            title: currentSessionTitle || 'Untitled Session', // Ensure title is never null
-            session_data: output, // Send the main output object
-            last_prompt: activePrompt || '' // Ensure prompt is never null
-          };
-          const response = await fetch(`/api/sessions/${currentSessionId}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
+          const { error } = await supabase
+            .from('sessions')
+            .update({
+              title: currentSessionTitle,
+              session_data: output, // Save the entire output object (or string)
+              last_prompt: activePrompt, // Save the last successful prompt
+              last_updated_at: new Date().toISOString(), // Explicitly set update time
+            })
+            .eq('id', currentSessionId);
 
-          if (!response.ok) {
-             const errorData = await response.json().catch(() => ({ error: 'Failed to save session' }));
-             throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-          }
-
-          // Optimistically update the title in the sessionsList if it changed
-          const savedData = await response.json();
-          set(state => ({
-              isSavingSession: false,
-              sessionsList: state.sessionsList.map(session =>
-                  session.id === currentSessionId
-                      ? { ...session, title: payload.title, last_updated_at: new Date().toISOString(), last_prompt: payload.last_prompt } // Update timestamp locally too
-                      : session
-              )
-          }));
-
-        } catch (err: any) {
-          console.error(`Error saving session ${currentSessionId}:`, err);
-          set({ error: err.message || 'Failed to save session', isSavingSession: false });
+          if (error) throw error;
+          set({ isSavingSession: false });
+          // Optionally refresh session list to show updated timestamp
+          // const session = await supabase.auth.getSession();
+          // if (session.data.session?.user.id) {
+          //   get().fetchSessions(supabase, session.data.session.user.id);
+          // }
+        } catch (error: any) {
+          console.error('Error saving session:', error);
+          set({ error: `Failed to save session: ${error.message}`, isSavingSession: false });
         }
       },
 
-      deleteSession: async (sessionId) => {
-          if (!sessionId) return;
-          // Optionally add a loading state for deletion
-          set({ error: null });
-          try {
-              const response = await fetch(`/api/sessions/${sessionId}`, {
-                  method: 'DELETE',
-              });
+      deleteSession: async (sessionId, supabase) => {
+        set({ isSessionLoading: true, error: null }); // Use isSessionLoading or a dedicated deleting state
+        try {
+          const { error } = await supabase
+            .from('sessions')
+            .delete()
+            .eq('id', sessionId);
 
-              if (!response.ok) {
-                  // Handle 204 No Content separately as it has no body
-                  if (response.status === 204) {
-                     // Success case handled below
-                  } else {
-                      const errorData = await response.json().catch(() => ({ error: 'Failed to delete session' }));
-                      throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
-                  }
-              }
+          if (error) throw error;
 
-              // If deletion was successful (200 OK or 204 No Content)
-              set(state => ({
-                  sessionsList: state.sessionsList.filter(s => s.id !== sessionId),
-                  // If the deleted session was the active one, reset the active state
-                  ...(state.currentSessionId === sessionId ? initialState : {})
-              }));
-
-          } catch (err: any) {
-               console.error(`Error deleting session ${sessionId}:`, err);
-               set({ error: err.message || 'Failed to delete session' });
+          const { currentSessionId } = get();
+          // If the deleted session was the active one, reset the app state
+          if (currentSessionId === sessionId) {
+            get().resetActiveSessionState();
+            set({ currentSessionId: null, currentSessionTitle: null });
           }
+
+          // Refresh session list after deletion
+          const session = await supabase.auth.getSession();
+          if (session.data.session?.user.id) {
+            await get().fetchSessions(supabase, session.data.session.user.id);
+          }
+           set({ isSessionLoading: false }); // Deletion finished
+
+        } catch (error: any) {
+          console.error('Error deleting session:', error);
+          set({ error: `Failed to delete session: ${error.message}`, isSessionLoading: false });
+        }
       },
 
+      updateSessionTitleLocally: (title) => set({ currentSessionTitle: title }),
 
-      // Action to reset only the active state, not the list
-      resetActiveSessionState: () => {
-          console.log("Resetting active session state...");
-          set({
-              prompt: initialState.prompt,
-              activePrompt: initialState.activePrompt,
-              output: initialState.output,
-              isLoading: initialState.isLoading, // Reset loading states too
-              isSessionLoading: initialState.isSessionLoading,
-              isSavingSession: initialState.isSavingSession,
-              focusedNodeId: initialState.focusedNodeId,
-              expandingNodeId: initialState.expandingNodeId,
-              currentSessionId: initialState.currentSessionId,
-              currentSessionTitle: initialState.currentSessionTitle,
-              error: initialState.error, // Clear errors too
+      resetActiveSessionState: () => set({
+        output: null,
+        activePrompt: '', // Keep prompt input, but clear active/output
+        isLoading: false,
+        isSessionLoading: false,
+        isSavingSession: false,
+        error: null,
+        activeFocusPathIds: null, // Reset focus path
+        focusedNodeId: null,      // Reset transient camera focus trigger
+      }),
+
+      // --- Focus Actions Impl ---
+      setActiveFocusPath: (nodeId) => { // Calculate and set the path
+        if (nodeId === null) {
+          set({ activeFocusPathIds: null }); // Clear focus path if null is passed
+          return;
+        }
+
+        const output = get().output;
+        // Ensure output is the CognitionResponse object and has visualizationData
+        if (output && typeof output === 'object' && 'visualizationData' in output && output.visualizationData) {
+          const { nodes, links } = output.visualizationData;
+          const focusPath = new Set<string>();
+          focusPath.add(nodeId); // Add the clicked node itself
+
+          // Iterate through links to find direct neighbors
+          links.forEach((link: LinkObject) => { // Explicitly type 'link'
+            // Handle both string IDs and NodeObject references in links
+            const sourceId = typeof link.source === 'object' ? (link.source as NodeObject).id : link.source;
+            const targetId = typeof link.target === 'object' ? (link.target as NodeObject).id : link.target;
+
+            if (sourceId === nodeId && targetId) {
+                focusPath.add(targetId as string);
+            } else if (targetId === nodeId && sourceId) {
+                focusPath.add(sourceId as string);
+            }
           });
+          set({ activeFocusPathIds: focusPath });
+        } else {
+          // Fallback: If no graph data, just focus the single node
+          const singleNodeSet = new Set<string>();
+          singleNodeSet.add(nodeId);
+          set({ activeFocusPathIds: singleNodeSet });
+        }
       },
 
+      setFocusedNodeId: (nodeId) => set({ focusedNodeId: nodeId }), // Only triggers camera animation
+
+      // --- Graph Expansion Impl ---
+       addGraphExpansion: (expansionData) => {
+        set((state) => {
+          const currentOutput = state.output;
+          // Ensure we have a valid CognitionResponse object to update
+          if (currentOutput && typeof currentOutput === 'object' && 'visualizationData' in currentOutput && currentOutput.visualizationData) {
+            const existingNodes = new Map(currentOutput.visualizationData.nodes.map((n: NodeObject) => [n.id, n])); // Explicitly type 'n'
+            // Create a set of string representations of links for efficient lookup
+             const existingLinks = new Set(
+               currentOutput.visualizationData.links.map((l: LinkObject) => { // Explicitly type 'l'
+                 const sourceId = typeof l.source === 'object' ? (l.source as NodeObject).id : l.source;
+                 const targetId = typeof l.target === 'object' ? (l.target as NodeObject).id : l.target;
+                 // Sort IDs to ensure direction doesn't matter for uniqueness ('A-B' is same as 'B-A')
+                 return [sourceId, targetId].sort().join('-');
+               })
+             );
+
+            // Filter out nodes that already exist
+            const newNodes = expansionData.nodes.filter((n: NodeObject) => n.id && !existingNodes.has(n.id)); // Explicitly type 'n'
+            // Filter out links that already exist (checking both directions)
+            const newLinks = expansionData.links.filter((l: LinkObject) => { // Explicitly type 'l'
+               const sourceId = typeof l.source === 'object' ? l.source.id : l.source;
+               const targetId = typeof l.target === 'object' ? l.target.id : l.target;
+               if (!sourceId || !targetId) return false; // Ignore links with missing IDs
+               const linkStr = [sourceId, targetId].sort().join('-');
+               return !existingLinks.has(linkStr);
+             });
+
+            // Filter out knowledge cards that already exist for a given nodeId
+            const existingCardNodeIds = new Set(currentOutput.knowledgeCards?.map((kc: KnowledgeCardData) => kc.nodeId) ?? []); // Explicitly type 'kc'
+            const newKnowledgeCards = expansionData.knowledgeCards?.filter(
+                (kc: KnowledgeCardData) => kc.nodeId && !existingCardNodeIds.has(kc.nodeId) // Explicitly type 'kc'
+            ) ?? [];
+
+            // Construct the updated output object
+            const updatedOutput: CognitionResponse = {
+              ...currentOutput, // Spread existing fields (like explanationMarkdown, quiz)
+              knowledgeCards: [
+                ...(currentOutput.knowledgeCards ?? []), // Keep existing cards
+                ...newKnowledgeCards,                   // Add new unique cards
+              ],
+              visualizationData: {
+                nodes: [...currentOutput.visualizationData.nodes, ...newNodes],
+                links: [...currentOutput.visualizationData.links, ...newLinks],
+              },
+            };
+            return { output: updatedOutput };
+          }
+          // If current output is not in the expected format, return empty object (no state change)
+          return {};
+        });
+       },
+
+      // --- Error Handling Impl ---
+      setError: (error) => set({ error }),
     }),
     {
-      name: 'cognition-app-storage', // Keep same name
+      name: 'cognition-session-storage', // LocalStorage key
       storage: createJSONStorage(() => localStorage),
-      // *** IMPORTANT: Update persisted state ***
-      partialize: (state: AppState): Pick<AppState, 'currentSessionId'> => ({
-          currentSessionId: state.currentSessionId,
-          // Only persist the ID of the last active session.
-          // DO NOT persist sessionsList, output, activePrompt, prompt etc. here
-      }),
+      partialize: (state) => ({ currentSessionId: state.currentSessionId }), // Only persist currentSessionId
     }
   )
-); 
+);
+
+// Ensure necessary types (like NodeObject, LinkObject, GraphData, KnowledgeCardData, CognitionResponse)
+// are defined or imported correctly, matching their usage throughout the store.
+// Example placeholder definitions if not imported from '@/types':
+
+// UNCOMMENT and EXPORT these types
+export interface NodeObject { id: string; label?: string; isRoot?: boolean; [key: string]: any; }
+export interface LinkObject { source: string | NodeObject; target: string | NodeObject; [key: string]: any; }
+export interface KnowledgeCardData { nodeId: string; title: string; description: string; }
+export interface GraphData { nodes: NodeObject[]; links: LinkObject[]; knowledgeCards?: KnowledgeCardData[]; }
+export interface QuizQuestion { question: string; options: string[]; correctAnswer: string; }
+export interface QuizData { questions: QuizQuestion[]; }
+export interface CognitionResponse {
+  explanationMarkdown: string;
+  knowledgeCards: KnowledgeCardData[];
+  visualizationData: GraphData | null;
+  quiz: QuizData | null;
+} 

@@ -1,69 +1,150 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { useAppStore, CognitionResponse } from '@/store/useAppStore';
+import { useShallow } from 'zustand/react/shallow';
 import { motion } from 'framer-motion';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import KnowledgeCard from './KnowledgeCard'; // Import the new component
+import KnowledgeCard from './KnowledgeCard';
+import { CollapsedKnowledgeCard } from './CollapsedKnowledgeCard';
+import type { KnowledgeCardData } from '@/store/useAppStore';
+import type { GraphData } from '@/store/useAppStore';
+import type { NodeObject } from 'react-force-graph-3d';
 
 // Helper type guard
 function isCognitionResponse(output: any): output is CognitionResponse {
-    return typeof output === 'object' && output !== null;
+    return (
+        typeof output === 'object' &&
+        output !== null &&
+        'explanationMarkdown' in output &&
+        'knowledgeCards' in output && Array.isArray(output.knowledgeCards) &&
+        'visualizationData' in output && typeof output.visualizationData === 'object' && output.visualizationData !== null && 'nodes' in output.visualizationData &&
+        'quiz' in output
+    );
 }
 
-// Renamed component
 const KnowledgeCardsSection: React.FC = () => {
-    // Select knowledgeCards from the store
-    const knowledgeCards = useAppStore((state) => {
-        if (isCognitionResponse(state.output)) {
-            // Access knowledgeCards instead of keyTerms
-            return state.output.knowledgeCards;
-        }
-        return undefined;
-    });
+    // Select necessary state and actions using useShallow
+    const {
+        knowledgeCards,
+        visualizationNodes,
+        activeFocusPathIds,
+        setActiveFocusPath,
+        output,
+    } = useAppStore(
+        useShallow((state) => ({
+            knowledgeCards: isCognitionResponse(state.output) ? state.output.knowledgeCards : [],
+            visualizationNodes: isCognitionResponse(state.output) ? state.output.visualizationData.nodes : [],
+            activeFocusPathIds: state.activeFocusPathIds,
+            setActiveFocusPath: state.setActiveFocusPath,
+            output: state.output,
+        }))
+    );
 
-    // Only render if knowledgeCards exist and have items
-    if (!knowledgeCards || knowledgeCards.length === 0) {
+    // Memoized focus handler
+    const handleFocus = useCallback((nodeId: string) => {
+        if (isCognitionResponse(output)) {
+            setActiveFocusPath(nodeId, output.visualizationData);
+        }
+    }, [setActiveFocusPath, output]);
+
+    // Filter out cards without a valid nodeId BEFORE processing
+    const validKnowledgeCards = knowledgeCards?.filter(
+        (card): card is KnowledgeCardData =>
+            card && typeof card.nodeId === 'string' && card.nodeId.trim() !== '' && typeof card.title === 'string'
+    ) || [];
+
+    // Find the root node ID
+    const rootNode = visualizationNodes.find((node: NodeObject) => node.isRoot);
+    const rootNodeId = rootNode?.id;
+
+    // Separate root card and child cards
+    let rootCard: KnowledgeCardData | undefined;
+    let childCards: KnowledgeCardData[] = [];
+
+    if (rootNodeId) {
+        rootCard = validKnowledgeCards.find(card => card.nodeId === rootNodeId);
+        childCards = validKnowledgeCards.filter(card => card.nodeId !== rootNodeId);
+    } else {
+        childCards = validKnowledgeCards;
+    }
+
+    // Determine if any focus is active
+    const isFocusActive = activeFocusPathIds !== null;
+
+    // Only render if there are *any* valid cards (root or children)
+    if (!rootCard && childCards.length === 0) {
+        if (knowledgeCards && knowledgeCards.length > 0) {
+            console.warn("KnowledgeCardsSection: Cards present but none valid or no root found.");
+        }
         return null;
     }
 
     return (
         <>
             <Separator />
-            <section>
-                {/* Updated section title */}
-                <h2 className="text-2xl font-semibold mb-4">Knowledge Cards</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {/* Map over knowledgeCards */} 
-                    {knowledgeCards.map((card, index) => (
-                        <motion.div
-                            key={card.id} // Use card.id as key
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0, transition: { delay: index * 0.05 } }}
-                        >
-                            {/* 
-                                Placeholder for the actual KnowledgeCard component.
-                                We will create this component next and pass the 'card' object as a prop.
-                                Example: <KnowledgeCard card={card} /> 
-                            */}
-                            {/* <Card className="h-full flex flex-col py-1 gap-0">
-                                <CardHeader className="p-1 pb-1 flex-shrink-0">
-                                    <CardTitle className="text-lg">{card.title}</CardTitle>
-                                </CardHeader>
-                                <CardContent className="p-1 pt-1 flex-grow">
-                                    <p className="text-sm text-muted-foreground">{card.description.substring(0, 100)}{card.description.length > 100 ? '...' : ''}</p> 
-                                </CardContent>
-                            </Card> */}
-                            {/* Use the actual KnowledgeCard component */}
-                            <KnowledgeCard card={card} />
-                        </motion.div>
-                    ))}
-                </div>
+            <section className="mt-6">
+                <h2 className="text-2xl font-semibold mb-6 text-center">Knowledge Cards</h2>
+                
+                {rootCard && (
+                    <motion.div
+                        key={`root-${rootCard.nodeId}`}
+                        layout
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0, transition: { duration: 0.3 } }}
+                        className="w-full mb-6 flex justify-center px-4"
+                    >
+                        <div className="w-full max-w-2xl">
+                            {isFocusActive && !activeFocusPathIds.has(rootCard.nodeId) ? (
+                                <CollapsedKnowledgeCard
+                                    nodeId={rootCard.nodeId}
+                                    title={rootCard.title}
+                                    onFocus={handleFocus}
+                                />
+                            ) : (
+                                <KnowledgeCard card={rootCard} />
+                            )}
+                        </div>
+                    </motion.div>
+                )}
+
+                {childCards.length > 0 && (
+                     <>
+                         {rootCard && <Separator className="mb-6"/>}
+                         <h3 className="text-xl font-medium mb-4 text-center text-muted-foreground">Related Concepts</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 px-4">
+                            {childCards.map((card: KnowledgeCardData, index: number) => {
+                                const isChildInFocusPath = !isFocusActive || activeFocusPathIds.has(card.nodeId);
+
+                                return (
+                                    <motion.div
+                                        key={card.nodeId}
+                                        layout
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{
+                                            opacity: 1,
+                                            y: 0,
+                                            transition: { delay: index * 0.03, duration: 0.2 }
+                                        }}
+                                    >
+                                        {isChildInFocusPath ? (
+                                            <KnowledgeCard card={card} />
+                                        ) : (
+                                            <CollapsedKnowledgeCard
+                                                nodeId={card.nodeId}
+                                                title={card.title}
+                                                onFocus={handleFocus}
+                                            />
+                                        )}
+                                    </motion.div>
+                                );
+                            })}
+                        </div>
+                     </>
+                )}
             </section>
         </>
     );
 };
 
-// Update export
 export default React.memo(KnowledgeCardsSection); 

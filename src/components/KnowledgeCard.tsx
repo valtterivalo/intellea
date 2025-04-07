@@ -10,7 +10,7 @@ import { useAppStore } from '@/store/useAppStore'; // Import the store
 // We might need to import the KnowledgeCard type from the store if it's exported,
 // otherwise, redefine it here for clarity.
 interface KnowledgeCardData {
-  id: string;
+  nodeId: string; // Changed from id to nodeId to match store/API
   title: string;
   description: string;
 }
@@ -20,13 +20,18 @@ interface KnowledgeCardProps {
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card }) => {
-  // Get the setter function from the store
+  // Get the setter functions from the store
   const setFocusedNodeId = useAppStore((state) => state.setFocusedNodeId);
+  // const setActiveFocusNodeId = useAppStore((state) => state.setActiveFocusNodeId); // REMOVE OLD
+  const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath); // USE NEW
   
   const handleFocusClick = () => {
-    console.log(`Focus graph requested for node: ${card.id}`);
-    // Call the Zustand action to set the focused node ID
-    setFocusedNodeId(card.id);
+    console.log(`Focus graph requested for node: ${card.nodeId}, setting active focus PATH.`);
+    // Call the Zustand action to set the transient focused node ID (for camera)
+    setFocusedNodeId(card.nodeId);
+    // Call the Zustand action to set the persistent active focus PATH
+    // setActiveFocusNodeId(card.nodeId); // REMOVE OLD
+    setActiveFocusPath(card.nodeId); // USE NEW
   };
 
   return (

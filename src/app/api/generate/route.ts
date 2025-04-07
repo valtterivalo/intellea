@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 interface GraphNode {
   id: string; // Unique identifier for the node
   label: string; // Text label displayed for the node
+  isRoot?: boolean; // ADDED: Flag to identify the central root node
   // Add other potential node properties if needed later (e.g., color, size)
   [key: string]: any; // Allow arbitrary properties for flexibility
 }
@@ -18,7 +19,7 @@ interface GraphLink {
 
 // Define structure for Knowledge Cards
 interface KnowledgeCard {
-  id: string; // Corresponds to a node ID in visualizationData
+  nodeId: string; // RENAMED from id. Corresponds to a node ID in visualizationData.
   title: string; // Concept title (often matches node label)
   description: string; // Concise explanation of the concept (2-4 sentences)
   // Add other potential fields later (e.g., relatedConcepts: string[])
@@ -26,17 +27,16 @@ interface KnowledgeCard {
 
 // Define structure for expansion data
 interface GraphExpansionData {
-    nodes: GraphNode[];
+    nodes: GraphNode[]; // Contains GraphNode which now includes isRoot?
     links: GraphLink[];
-    knowledgeCards?: KnowledgeCard[]; // Add optional knowledge cards for new nodes
+    knowledgeCards: KnowledgeCard[]; // Changed from optional to mandatory for expansion
 }
 
 // Define the expected structure of the INITIAL response from the LLM
 export interface CognitionResponse { // Exporting for frontend use
   explanationMarkdown: string;
-  // keyTerms?: { term: string; definition: string }[]; // Replaced by knowledgeCards
-  knowledgeCards?: KnowledgeCard[]; // Optional: List of cards linked to graph nodes.
-  visualizationData?: GraphExpansionData; // Reuse expansion structure
+  knowledgeCards: KnowledgeCard[]; // Make mandatory, use nodeId
+  visualizationData: GraphExpansionData; // Make mandatory, use nodeId
   quiz?: { question: string; options: string[]; correctAnswerLetter: string };
 }
 
@@ -50,25 +50,36 @@ const openai = new OpenAI({
 });
 
 // System prompt for INITIAL 3D graph generation
-const INITIAL_SYSTEM_PROMPT = `You are Cognition, an expert AI assistant generating structured learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object matching this structure:
+const INITIAL_SYSTEM_PROMPT = `You are Cognition, an expert AI assistant generating structured learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object.
 
+**Instructions:**
+1.  Identify the core subject/topic from the user's prompt.
+2.  Create a central "root" node representing this core topic. This node object MUST have the property \`"isRoot": true\`. All other nodes MUST NOT have this property or have it set to \`false\`.
+3.  Generate 3-6 additional nodes representing key sub-concepts or initial aspects related to the root topic.
+4.  Structure the \`visualizationData.links\` so that ALL generated sub-concept nodes link FROM the central root node (e.g., \`{ source: <root_node_id>, target: <sub_concept_node_id> }\`). Do not link sub-concepts to each other in this initial graph.
+5.  Generate ONE \`knowledgeCard\` for EACH generated node (including the root node).
+6.  Ensure every \`knowledgeCard.nodeId\` EXACTLY matches the \`id\` of its corresponding node.
+7.  Provide a single-paragraph \`explanationMarkdown\` summarizing the overall topic.
+
+**JSON Structure:**
 {
-  "explanationMarkdown": "string", // MANDATORY: A **single paragraph** high-level summary. Max 3-4 sentences. Use Markdown. **ABSOLUTELY NO definitions here.** Just the core idea/flow.
-  "knowledgeCards": [ { "id": "string", "title": "string", "description": "string" } ], // Optional: Detailed cards for each node. 'id' MUST match a 'visualizationData.nodes.id'. 'title' should match node 'label'. 'description' is 2-4 sentences explaining the concept.
-  "visualizationData": { // Optional: Data for the 3D graph. Generate a SMALL initial graph (3-7 nodes max) representing core concepts.
-    "nodes": [ { "id": "string", "label": "string" } ], // Node list. 'id' must be unique. 'label' is display text.
-    "links": [ { "source": "string", "target": "string" } ] // Link list connecting nodes by 'id'. 'source' and 'target' MUST match node IDs.
+  "explanationMarkdown": "string", // MANDATORY: 1 paragraph summary (3-4 sentences max). NO definitions.
+  "knowledgeCards": [ { "nodeId": "string", "title": "string", "description": "string" } ], // MANDATORY: One card per node. 'nodeId' MUST match node 'id'. 'title' = node 'label'. 'description' = 2-4 sentences.
+  "visualizationData": { // MANDATORY: Data for the graph.
+    "nodes": [ { "id": "string", "label": "string", "isRoot": boolean } ], // List of nodes. Exactly ONE node MUST have "isRoot": true. Others MUST have "isRoot": false or omit it.
+    "links": [ { "source": "string", "target": "string" } ] // Links list. ALL links MUST originate from the root node (\`source\` = root node ID).
    },
-  "quiz": { "question": "string", "options": [\"A) Option text\", \"B) Option text\", ...], "correctAnswerLetter": \"string\" } // Optional: One MCQ. Options MUST start with A), B), C), D).
+  "quiz": { /* ... (optional quiz structure) ... */ } // Optional.
 }
 
-**Constraint Checklist:**
-1. Single JSON object ONLY.
-2. explanationMarkdown: MANDATORY, **1 paragraph max**, NO definitions.
-3. knowledgeCards: Optional. If included, each card's 'id' MUST correspond to a node 'id' in 'visualizationData.nodes'. 'title' should match the node 'label'. 'description' MUST be 2-4 sentences per card.
-4. visualizationData: If included, MUST follow { nodes: [{id, label}], links: [{source, target}] } structure. Generate a SMALL initial graph. Ensure all link source/target IDs exist in the nodes list. Ensure all node IDs match a knowledgeCard ID.
-5. quiz: If included, options MUST be formatted as "A) ...", "B) ..." etc.
-6. Optional fields only if valuable. Ensure information isn't duplicated unnecessarily (e.g., definitions belong in knowledgeCards, not explanationMarkdown).
+**Constraint Checklist & Summary:**
+*   Single JSON response.
+*   Identify core topic -> Create root node with \`"isRoot": true\`.
+*   Create 3-6 sub-concept nodes (no \`isRoot\` property or \`false\`).
+*   Link ALL sub-concepts FROM the root node.
+*   Generate ONE knowledge card per node (root + sub-concepts), linked via \`nodeId\` == \`id\`.
+*   Provide brief \`explanationMarkdown\`.
+*   Ensure all IDs match and constraints are met.
 `;
 
 // System prompt for GRAPH EXPANSION
@@ -77,18 +88,19 @@ const EXPANSION_SYSTEM_PROMPT = `You are Cognition, an AI assistant expanding an
 {
   "nodes": [ { "id": "string", "label": "string" } ], // **NEW nodes ONLY**. 'id' MUST be unique within the ENTIRE graph (existing + new). 'label' is display text. Max 2-3 new nodes.
   "links": [ { "source": "string", "target": "string" } ], // **NEW links ONLY**. Connect new nodes OR connect new nodes to EXISTING nodes. 'source' and 'target' MUST match node IDs (either existing or new). Max 3-4 new links.
-  "knowledgeCards": [ { "id": "string", "title": "string", "description": "string" } ] // **NEW cards ONLY**. Generate ONE card for EACH new node. 'id' MUST match the new node's 'id'. 'title' should match node 'label'. 'description' MUST be 2-4 concise sentences.
+  "knowledgeCards": [ { "nodeId": "string", "title": "string", "description": "string" } ] // **NEW cards ONLY**. Generate ONE card for EACH new node. 'nodeId' MUST match the new node's 'id'. 'title' should match node 'label'. 'description' MUST be 2-4 concise sentences.
 }
 
 **Constraint Checklist:**
 1. Single JSON object ONLY.
-2. Only include nodes/links/cards that are **directly relevant** to the clicked node and **add new information** not already present.
-3. Generate **ONE KnowledgeCard for EACH new node**. Card 'id' MUST match the corresponding new node 'id'. Card 'title' should match node 'label'. 'description' MUST be 2-4 concise sentences.
-4. **DO NOT** include the clicked node itself or any existing nodes/links/cards in the response.
-5. Ensure all node IDs (in nodes, links, and cards) are unique strings across the entire graph context (existing + new).
-6. Ensure all link source/target IDs exist in either the provided existing graph or the new nodes list.
-7. Keep the expansion focused: generate a maximum of 2-3 new nodes, 3-4 new links, and their corresponding cards per request.
-8. If no relevant expansion is possible, return { "nodes": [], "links": [], "knowledgeCards": [] }.
+2. Only include nodes/links/cards that are **directly relevant** and **add new information**.
+3. **CRITICAL: Generate EXACTLY ONE KnowledgeCard for EACH new node generated in the 'nodes' array.** The number of objects in 'knowledgeCards' MUST equal the number of objects in 'nodes'.
+4. **Each generated KnowledgeCard object MUST have a 'nodeId' property that EXACTLY matches the 'id' of its corresponding node in the NEW 'nodes' list.** Card 'title' should match node 'label'. 'description' MUST be 2-4 concise sentences.
+5. **DO NOT** include the clicked node itself or any existing nodes/links/cards in the response.
+6. Ensure all new node IDs are unique strings across the entire graph context (existing + new).
+7. Ensure all link source/target IDs exist in either the provided existing graph or the new nodes list.
+8. Max 2-3 new nodes, 3-4 new links, and their corresponding cards.
+9. If no relevant expansion is possible, return { "nodes": [], "links": [], "knowledgeCards": [] }.
 `;
 
 export async function POST(req: NextRequest) {
@@ -145,24 +157,88 @@ export async function POST(req: NextRequest) {
       const parsedJson = JSON.parse(rawResult);
 
       if (isExpansion) {
-        // Validate expansion structure, including optional knowledgeCards
-        if (!parsedJson.nodes || !parsedJson.links) { // Keep basic check
-            throw new Error("Missing required fields for expansion: nodes or links");
+        // Validate expansion structure
+        if (!parsedJson.nodes || !parsedJson.links || !parsedJson.knowledgeCards) { // Make cards mandatory here too
+            throw new Error("Missing required fields for expansion: nodes, links, or knowledgeCards");
         }
-        // Add checks for knowledgeCards if they are expected to always exist
-        // if (!parsedJson.knowledgeCards) {
-        //    throw new Error("Missing required field for expansion: knowledgeCards");
-        // }
+        // Add check: Number of new nodes must match number of new cards
+        if (parsedJson.nodes.length !== parsedJson.knowledgeCards.length) {
+            throw new Error(`Validation Error: Number of new nodes (${parsedJson.nodes.length}) does not match number of new knowledge cards (${parsedJson.knowledgeCards.length}).`);
+        }
+        // Add check: Ensure all new cards have a valid nodeId matching a new node
+        const newNodeIds = new Set(parsedJson.nodes.map((n: any) => n.id));
+        for (const card of parsedJson.knowledgeCards) {
+            if (!card.nodeId || typeof card.nodeId !== 'string' || !newNodeIds.has(card.nodeId)) {
+                throw new Error(`Validation Error: Knowledge card with title "${card.title}" has missing, invalid, or non-matching nodeId "${card.nodeId}".`);
+            }
+        }
+
         const expansionData: GraphExpansionData = parsedJson; // Type now includes knowledgeCards?
-        console.log(`Expansion generated: ${expansionData.nodes.length} nodes, ${expansionData.links.length} links, ${expansionData.knowledgeCards?.length ?? 0} cards.`);
+        console.log(`Expansion validated: ${expansionData.nodes.length} nodes, ${expansionData.links.length} links, ${expansionData.knowledgeCards?.length ?? 0} cards.`);
         return NextResponse.json({ expansionData }); // Return the full expansion data
       } else {
-        // Validate basic initial structure
-        if (!parsedJson.explanationMarkdown) {
-            throw new Error("Missing required field for initial response: explanationMarkdown");
+        // Validate initial structure (make viz and cards mandatory)
+        if (!parsedJson.explanationMarkdown || !parsedJson.visualizationData || !parsedJson.knowledgeCards) {
+            throw new Error("Missing required fields for initial response: explanationMarkdown, visualizationData, or knowledgeCards");
         }
-        const output: CognitionResponse = parsedJson; // Assume structure is correct
-        return NextResponse.json({ output }); // Return full output object
+        // Add check: Number of nodes must match number of cards
+         if (parsedJson.visualizationData.nodes.length !== parsedJson.knowledgeCards.length) {
+            throw new Error(`Validation Error: Number of nodes (${parsedJson.visualizationData.nodes.length}) does not match number of knowledge cards (${parsedJson.knowledgeCards.length}).`);
+        }
+        // Add check: Ensure all cards have a valid nodeId matching a node
+        const nodeIds = new Set(parsedJson.visualizationData.nodes.map((n: any) => n.id));
+        for (const card of parsedJson.knowledgeCards) {
+            if (!card.nodeId || typeof card.nodeId !== 'string' || !nodeIds.has(card.nodeId)) {
+                 throw new Error(`Validation Error: Knowledge card with title "${card.title}" has missing, invalid, or non-matching nodeId "${card.nodeId}".`);
+            }
+        }
+
+        const nodes = parsedJson.visualizationData.nodes;
+        const cards = parsedJson.knowledgeCards;
+        const links = parsedJson.visualizationData.links;
+
+        if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
+             throw new Error("Validation Error: visualizationData.nodes is missing, not an array, or empty.");
+        }
+        if (!cards || !Array.isArray(cards)) { // Allow empty links array initially if only root exists
+            throw new Error("Validation Error: knowledgeCards is missing or not an array.");
+        }
+        if (!links || !Array.isArray(links)) { 
+             throw new Error("Validation Error: visualizationData.links is missing or not an array.");
+        }
+
+        // Find the root node
+        const rootNodes = nodes.filter((n: any) => n.isRoot === true);
+        if (rootNodes.length !== 1) {
+            throw new Error(`Validation Error: Expected exactly 1 root node (with isRoot: true), but found ${rootNodes.length}.`);
+        }
+        const rootNodeId = rootNodes[0].id;
+
+        // Check node count vs card count
+         if (nodes.length !== cards.length) {
+            throw new Error(`Validation Error: Number of nodes (${nodes.length}) does not match number of knowledge cards (${cards.length}).`);
+        }
+       
+        // Check if all links originate from the root node (if links exist)
+        if (links.length > 0 && nodes.length > 1) { // Only check if there are sub-nodes/links
+             for (const link of links) {
+                 if (link.source !== rootNodeId) {
+                     throw new Error(`Validation Error: Link source "${link.source}" does not match root node ID "${rootNodeId}". All links must originate from the root.`);
+                 }
+             }
+        }
+
+        // Check card nodeIds
+        const nodeIdsSet = new Set(nodes.map((n: any) => n.id));
+        for (const card of cards) {
+            if (!card.nodeId || typeof card.nodeId !== 'string' || !nodeIdsSet.has(card.nodeId)) {
+                 throw new Error(`Validation Error: Knowledge card with title "${card.title}" has missing, invalid, or non-matching nodeId "${card.nodeId}".`);
+            }
+        }
+
+        const output: CognitionResponse = parsedJson; 
+        console.log(`Initial response validated: Root="${rootNodes[0].label}", ${output.visualizationData.nodes.length} nodes, ${output.visualizationData.links.length} links, ${output.knowledgeCards?.length ?? 0} cards.`);
+        return NextResponse.json({ output });
       }
 
     } catch (parseError: any) {

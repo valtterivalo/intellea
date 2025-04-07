@@ -42,11 +42,11 @@ The UI becomes the learning assistant, not the bottleneck.
 ---
 
 ### **4. Core Features**
-- **Dynamic 3D Knowledge Graph:** The primary interaction mode. Instead of static outputs, the AI generates an initial 3D graph (nodes and links) representing core concepts. Users click nodes to trigger further LLM calls that dynamically expand the graph with related sub-concepts, allowing for user-driven exploration. This serves as the **visual semantic map** of the topic. Rendered via `react-force-graph-3d`.
+- **Dynamic 3D Knowledge Graph:** The primary interaction mode. Instead of static outputs, the AI generates an initial 3D graph (nodes and links) representing core concepts **structured around a central root node derived from the initial prompt**. Users click nodes to trigger further LLM calls that dynamically expand the graph with related sub-concepts, allowing for user-driven exploration. This serves as the **visual semantic map** of the topic. Rendered via `react-force-graph-3d`.
 - **Unified Multi-Facet Response:** The AI still provides complementary components alongside the graph (explanation, Knowledge Cards, quiz) for a richer context, derived from the initial prompt.
-- **Interactive Knowledge Cards:** Detailed cards corresponding to each node in the graph. They contain concise explanations, definitions, and potentially relationships to other concepts. These serve as the **primary source for deeper learning** about individual concepts within the map. Includes a button to **focus the 3D graph** on the corresponding node.
+- **Interactive Knowledge Cards:** Detailed cards corresponding to each node in the graph. They contain concise explanations, definitions, and potentially relationships to other concepts. These serve as the **primary source for deeper learning** about individual concepts within the map. Includes a button to **focus the 3D graph** on the corresponding node **and its immediate neighbors (path focusing)**, visually emphasizing related concepts while dimming others.
 - **Lightweight Quizzing:** Interactive MCQ for concept checks based on the explored topic.
-- **Contextual Memory:** Key ideas, terms, and the *state of the explored graph* persist across sessions (Future MVP feature).
+- **Contextual Memory:** Key ideas, terms, and the *state of the explored graph* persist across sessions (**Implemented via Supabase backend**). Session titles are **automatically generated** based on the root node label.
 - **Non-linear Exploration:** The dynamic graph inherently facilitates non-linear navigation driven by user curiosity.
 
 ---
