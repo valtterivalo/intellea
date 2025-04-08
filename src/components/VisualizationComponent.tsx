@@ -10,7 +10,7 @@ import { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d'
 // Define our application-specific node structure, extending the library's base type
 interface AppGraphNode extends NodeObject {
   id: string; // Ensure id is a string
-  label: string;
+  label?: string; // Make label optional
   // Add our specific optional properties
   fx?: number;
   fy?: number;
@@ -60,7 +60,7 @@ const VisualizationComponent = ({
 }: VisualizationComponentProps) => {
   const containerRef = useRef<HTMLDivElement>(null);
   // Use ForceGraphMethods type for the ref for better type safety
-  const graphRef = useRef<ForceGraphMethods | undefined>(); 
+  const graphRef = useRef<ForceGraphMethods | undefined>(undefined); // Initialize with undefined
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
@@ -106,7 +106,7 @@ const VisualizationComponent = ({
   // --- Node Label Object Logic ---
   const getNodeThreeObject = useCallback((node: NodeObject) => {
     const appNode = asAppNode(node);
-    const sprite = new SpriteText(appNode.label);
+    const sprite = new SpriteText(appNode.label || ''); // Use empty string if label is undefined
     sprite.material.depthWrite = false; // prevent sprite from occluding other objects
     sprite.color = themeColors.label;
 
@@ -139,30 +139,40 @@ const VisualizationComponent = ({
     }
   }, []); // Run once on mount
 
-  // Effect for dimensions using ResizeObserver (remains the same)
+  // Effect for dimensions using ResizeObserver
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+
     const resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
         if (entry.contentRect) {
-          setDimensions({
-            width: entry.contentRect.width,
-            height: entry.contentRect.height
+          const newWidth = entry.contentRect.width;
+          const newHeight = entry.contentRect.height;
+          // Only update state if dimensions actually changed
+          setDimensions(currentDimensions => {
+              if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
+                  return { width: newWidth, height: newHeight };
+              }
+              return currentDimensions; // Return current state if no change
           });
         }
       }
     });
+
     resizeObserver.observe(container);
     const initialWidth = container.offsetWidth;
     const initialHeight = container.offsetHeight;
     if (initialWidth > 0 && initialHeight > 0) {
         setDimensions({ width: initialWidth, height: initialHeight });
     }
+
+    // Cleanup function
     return () => {
       resizeObserver.disconnect();
+      // Renderer disposal removed
     };
-  }, []);
+  }, []); // Dependencies remain empty
 
   // Effect for Camera Focus (remains the same, but uses graphRef type)
   useEffect(() => {
@@ -204,7 +214,7 @@ const VisualizationComponent = ({
       const appNode = asAppNode(node);
       if (onNodeExpand && appNode.id) { 
           console.log(`VisualizationComponent: Node clicked, calling onNodeExpand for ${appNode.id}`);
-          onNodeExpand(appNode.id, appNode.label || ''); 
+          onNodeExpand(appNode.id, appNode.label || ''); // Use empty string if label is undefined
       } else {
           console.log("VisualizationComponent: Node clicked, but onNodeExpand not available or node.id missing.", appNode);
       }
@@ -245,6 +255,7 @@ const VisualizationComponent = ({
         width={dimensions.width}
         height={dimensions.height}
         backgroundColor={themeColors.background}
+        cooldownTime={1000}
         // --- Node Styling ---
         nodeRelSize={6} 
         nodeVal={getNodeVal} 

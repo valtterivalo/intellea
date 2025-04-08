@@ -398,18 +398,57 @@ The MVP must deliver **real user value**, especially for learners with short att
     *   Resolved runtime errors in `QuizComponent.tsx` by adding checks for potentially undefined `correctAnswerLetter` and `options` array.
     *   Corrected logic in `MainAppClient.tsx` to ensure the prompt input and send button are enabled when starting a new session (i.e., when `currentSessionId` is `null`).
 
+**Phase 15: Hierarchical Knowledge Card Layout (Completed)**
+
+*   **Goal:** Improve clarity and space usage in the Knowledge Cards section when focus is active.
+*   **State Refinement (`useAppStore.ts`):** Added `activeClickedNodeId` state to differentiate the specifically clicked node from the broader highlighted path (`activeFocusPathIds`). Modified `setActiveFocusPath` action to set both states correctly, requiring `visualizationData` as input.
+*   **Click Handler Update (`KnowledgeCard.tsx`):** Modified the 'Focus on Graph' button handler to fetch `visualizationData` from the store and pass it to the updated `setActiveFocusPath` action.
+*   **Layout Calculation (`KnowledgeCardsSection.tsx`):** 
+    *   Implemented `useMemo` hook to calculate card groups based on `activeClickedNodeId`.
+    *   Uses BFS traversal upwards from the clicked node to find all ancestors.
+    *   Identifies direct children.
+    *   Groups cards into `ancestorLevels`, `focusedCard`, `childCards`, and `otherCards`.
+*   **Rendering Logic (`KnowledgeCardsSection.tsx`):**
+    *   **Focus Active:**
+        *   Renders ancestor levels (root -> parents -> grandparents...) using CSS Grid (`grid-cols-*`) for horizontal layout, with narrower max-width (`max-w-xl`) and centered content (`place-content-center`).
+        *   Renders the focused card centered with a wider max-width (`max-w-3xl`).
+        *   Renders direct children using CSS Grid, similar to ancestors (narrower, centered).
+        *   Renders `otherCards` (not in the focused path) as `CollapsedKnowledgeCard` components within a horizontal scrolling container (`overflow-x-auto`, `flex-nowrap`) below the main focus path.
+        *   Removed `motion.div` wrapper from ancestor/child grid items to prevent layout interference.
+    *   **Focus Inactive:** Retains the original layout (root card centered, other cards in a responsive grid).
+*   **Component Creation (`CollapsedKnowledgeCard.tsx`):** Created a minimal card component showing only the title and a focus button for collapsed items.
+*   **Bug Fixing:** Resolved various layout issues related to flexbox vs. grid interactions, CSS class specificity (`w-full` override), and ensured correct centering (`place-content-center`).
+
+**Phase 16: Fullscreen Graph View (Completed)**
+
+*   **Goal:** Allow users to view the 3D knowledge graph in a near-fullscreen overlay for better focus and exploration.
+*   **State Management (`useAppStore.ts`):**
+    *   Added `isGraphFullscreen: boolean` state to manage the view mode.
+    *   Added `toggleGraphFullscreen()` action to switch between normal and fullscreen views.
+    *   Ensured `isGraphFullscreen` is reset in `resetActiveSessionState`.
+*   **Initial Implementation Approach (Issues Encountered):**
+    *   Created `FullscreenGraphContainer.tsx` component.
+    *   Initially used `AnimatePresence` and conditional rendering (`{isGraphFullscreen && <VisualizationComponent />}`) to mount/unmount the graph component within the fullscreen container.
+    *   Added a button to `OutputRenderer.tsx` to trigger `toggleGraphFullscreen`.
+    *   **Issue 1 (WebGL Context Leak):** Rapidly toggling fullscreen caused "Too many active WebGL contexts" errors and eventual graph render failure. This indicated the underlying `VisualizationComponent` or `react-force-graph-3d` wasn't cleaning up WebGL resources on unmount.
+    *   **Attempted Fix 1 (Dispose Renderer):** Added cleanup logic in `VisualizationComponent`'s `useEffect` hook (within the `ResizeObserver` effect) to call `graphRef.current?.renderer().dispose()` on unmount. This resolved the WebGL context leak error.
+    *   **Issue 2 (Node Drifting):** Nodes slightly repositioned (drifted) every time the fullscreen view was closed and the original view was re-rendered. This also occurred on initial page load.
+*   **Refined Implementation Approach (Addressing Drift):**
+    *   **Hypothesis:** Unmounting/remounting or resizing was causing the force simulation to reset or recalculate, leading to drift.
+    *   **Change 1 (Persistent Rendering):** Modified `FullscreenGraphContainer` and `OutputRenderer` to *always* render their respective `VisualizationComponent` instances if `visualizationData` exists. Visibility is now controlled using CSS (`opacity`, `pointer-events`) via `motion.div` variants, rather than mounting/unmounting components.
+    *   **Change 2 (Remove Dispose Logic):** Removed the `renderer.dispose()` call added in Attempted Fix 1, as the component is no longer unmounted during toggling.
+    *   **Investigation (Cooldown & Resize Sensitivity):**
+        *   Added `cooldownTime={1000}` prop to `ForceGraph3DComponent` to encourage faster simulation stabilization. This fixed the drift on initial page load but *not* when closing fullscreen.
+        *   Refined `ResizeObserver` logic in `VisualizationComponent` to only call `setDimensions` if the width/height actually changed, reducing sensitivity to minor layout shifts. This also did not fully resolve the close-fullscreen drift.
+    *   **Final Fix (Opacity Toggle for Non-Fullscreen View):** Changed the hiding mechanism for the non-fullscreen graph container in `OutputRenderer` from using `display: hidden/block` (via `cn`) to using `opacity` and `pointer-events` managed by `motion.div`, mirroring the fullscreen container's approach. This prevented the layout shift that was likely triggering the simulation adjustment on close.
+*   **Current Status:** Fullscreen view toggles smoothly without WebGL leaks or node drifting. The graph state is preserved across view changes.
+
 ---
 
 ### **8. Future Phases & Known Issues**
 
 #### **8.1 Immediate Next Steps / Enhancements**
 
-*   **Implement Path-Based Focusing (Graph & Cards):**
-    *   **Goal:** Enhance the current single-node focus to highlight/manage an entire exploration *path* (focused node + its direct neighbors).
-    *   **Store:** Replace `activeFocusNodeId: string | null` with `activeFocusPathIds: Set<string> | null` in Zustand.
-    *   **Interaction:** Update `KnowledgeCard`'s `handleFocusClick` (or a new store action) to calculate the new `activeFocusPathIds` (clicked node ID + neighbor IDs from `visualizationData.links`).
-    *   **Graph (`VisualizationComponent`):** Refactor `getNodeColor` and `getNodeVal` to check if a node's ID is *in* the `activeFocusPathIds` set.
-    *   **Cards (`KnowledgeCardsSection`/`KnowledgeCard`):** Refactor logic to check if a card's ID is in `activeFocusPathIds`. Consider implementing card collapsing (e.g., showing only title or hiding entirely) for cards *not* in the path, instead of just dimming.
 *   **Integrate Knowledge Cards into Expansion:** Modify the expansion API prompt, response, and frontend logic (`addGraphExpansion` action) to generate and merge corresponding concise `knowledgeCards` alongside the new graph nodes/links. Ensure prompt requests brief summaries suitable for card display.
 *   **Knowledge Card Detail Expansion (Lazy Loading):** Implement functionality to fetch a more detailed explanation for a Knowledge Card on user demand (e.g., via an 'Expand' button). This will trigger a separate API call for the specific topic, fetching richer content only when needed to optimize token usage. The expanded content will be stored temporarily in the frontend state.
 *   **Troubleshoot Graph Resizing on Narrowing (Deprioritized):**

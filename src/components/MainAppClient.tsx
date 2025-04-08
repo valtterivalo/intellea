@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
+import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
 
 export default function MainAppClient() {
   const supabase = createClient();
@@ -458,6 +459,9 @@ export default function MainAppClient() {
                </footer>
            </div>
         </main>
+
+        {/* Add the fullscreen container here */}
+        <FullscreenGraphContainer />
 
       </div>
     </Sheet>

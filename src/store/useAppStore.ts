@@ -1,12 +1,5 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import {
-  CognitionResponse,
-  GraphData,
-  KnowledgeCardData,
-  NodeObject, // Assuming NodeObject is exported or defined here/imported
-  LinkObject, // Assuming LinkObject is exported or defined here/imported
-} from '@/types'; // Adjust import path if needed
 import { Session } from '@supabase/supabase-js';
 import { UseBoundStore, StoreApi } from 'zustand'; // Import Zustand types
 import { SupabaseClient } from '@supabase/supabase-js'; // Import Supabase type
@@ -32,10 +25,13 @@ interface AppState {
   isSessionLoading: boolean;
   isSavingSession: boolean;
   // --- Focus State ---
-  activeFocusPathIds: Set<string> | null; // IDs of node + neighbors
+  activeFocusPathIds: Set<string> | null; // IDs of node + neighbors for graph highlighting
   focusedNodeId: string | null; // For transient camera focus animation trigger
+  activeClickedNodeId: string | null; // ID of the node the user clicked for card layout
   // --- Error State ---
   error: string | null;
+  // --- Graph State ---
+  isGraphFullscreen: boolean;
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -51,11 +47,12 @@ interface AppState {
   resetActiveSessionState: () => void;
 
   // --- Focus Actions ---
-  setActiveFocusPath: (nodeId: string | null) => void; // Calculate and set the path
+  setActiveFocusPath: (nodeId: string | null, vizData: GraphData | null) => void;
   setFocusedNodeId: (nodeId: string | null) => void; // Trigger camera animation
 
   // --- Graph Expansion ---
   addGraphExpansion: (expansionData: GraphData) => void;
+  toggleGraphFullscreen: () => void; // Action to toggle fullscreen
 
   // --- Error Handling ---
   setError: (error: string | null) => void;
@@ -78,8 +75,11 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Focus State Init ---
       activeFocusPathIds: null,
       focusedNodeId: null,
+      activeClickedNodeId: null,
       // --- Error State Init ---
       error: null,
+      // --- Graph State Init ---
+      isGraphFullscreen: false,
 
       // --- Action Implementations ---
       setPrompt: (prompt) => set({ prompt }),
@@ -106,7 +106,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
 
       loadSession: async (sessionId, supabase) => {
         // Reset focus state when loading a new session
-        set({ isSessionLoading: true, error: null, activeFocusPathIds: null, focusedNodeId: null });
+        set({ isSessionLoading: true, error: null, activeFocusPathIds: null, focusedNodeId: null, activeClickedNodeId: null });
         try {
           const { data: loadedData, error } = await supabase
             .from('sessions')
@@ -125,7 +125,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
             currentSessionTitle: loadedData.title,
             isSessionLoading: false,
             activeFocusPathIds: null, // Ensure focus is reset
-            focusedNodeId: null
+            focusedNodeId: null,
+            activeClickedNodeId: null // Ensure activeClickedNodeId is reset
           });
         } catch (error: any) {
           console.error('Error loading session:', error);
@@ -198,10 +199,13 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           set({
             currentSessionId: newSessionId,
             currentSessionTitle: sessionTitle,
-            output: initialOutput, // Set the initial output
-            activePrompt: initialPrompt, // Set the initial prompt as active
-            isSessionLoading: false, // Creation DB insert finished
-            isLoading: false, // API call finished
+            output: initialOutput,
+            activePrompt: initialPrompt,
+            isSessionLoading: false,
+            isLoading: false,
+            activeFocusPathIds: null,
+            focusedNodeId: null,
+            activeClickedNodeId: null,
             error: null
           });
 
@@ -287,49 +291,51 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       updateSessionTitleLocally: (title) => set({ currentSessionTitle: title }),
 
       resetActiveSessionState: () => set({
+        prompt: '',
+        activePrompt: null,
         output: null,
-        activePrompt: '', // Keep prompt input, but clear active/output
         isLoading: false,
+        currentSessionId: null,
+        currentSessionTitle: null,
         isSessionLoading: false,
         isSavingSession: false,
+        activeFocusPathIds: null,
+        focusedNodeId: null,
+        activeClickedNodeId: null,
         error: null,
-        activeFocusPathIds: null, // Reset focus path
-        focusedNodeId: null,      // Reset transient camera focus trigger
+        isGraphFullscreen: false,
       }),
 
       // --- Focus Actions Impl ---
-      setActiveFocusPath: (nodeId) => { // Calculate and set the path
-        if (nodeId === null) {
-          set({ activeFocusPathIds: null }); // Clear focus path if null is passed
+      setActiveFocusPath: (nodeId, vizData) => {
+        if (nodeId === null || !vizData?.nodes || !vizData?.links) {
+          // Clear focus if nodeId is null or data is invalid
+          set({ activeClickedNodeId: null, activeFocusPathIds: null });
           return;
         }
 
-        const output = get().output;
-        // Ensure output is the CognitionResponse object and has visualizationData
-        if (output && typeof output === 'object' && 'visualizationData' in output && output.visualizationData) {
-          const { nodes, links } = output.visualizationData;
-          const focusPath = new Set<string>();
-          focusPath.add(nodeId); // Add the clicked node itself
+        const newFocusPathIds = new Set<string>();
+        newFocusPathIds.add(nodeId); // Add the clicked node
 
-          // Iterate through links to find direct neighbors
-          links.forEach((link: LinkObject) => { // Explicitly type 'link'
-            // Handle both string IDs and NodeObject references in links
-            const sourceId = typeof link.source === 'object' ? (link.source as NodeObject).id : link.source;
-            const targetId = typeof link.target === 'object' ? (link.target as NodeObject).id : link.target;
+        // Find direct neighbors (parents and children)
+        vizData.links.forEach((link: LinkObject) => {
+          // Handle nodes potentially being objects with id
+          const sourceId = typeof link.source === 'object' && link.source !== null ? (link.source as NodeObject).id : link.source as string;
+          const targetId = typeof link.target === 'object' && link.target !== null ? (link.target as NodeObject).id : link.target as string;
 
-            if (sourceId === nodeId && targetId) {
-                focusPath.add(targetId as string);
-            } else if (targetId === nodeId && sourceId) {
-                focusPath.add(sourceId as string);
-            }
-          });
-          set({ activeFocusPathIds: focusPath });
-        } else {
-          // Fallback: If no graph data, just focus the single node
-          const singleNodeSet = new Set<string>();
-          singleNodeSet.add(nodeId);
-          set({ activeFocusPathIds: singleNodeSet });
-        }
+          if (sourceId === nodeId && targetId) { // Check targetId is not null/undefined
+            newFocusPathIds.add(targetId);
+          }
+          if (targetId === nodeId && sourceId) { // Check sourceId is not null/undefined
+            newFocusPathIds.add(sourceId);
+          }
+        });
+
+        console.log(`setActiveFocusPath: Clicked=${nodeId}, Path IDs=`, newFocusPathIds);
+        set({ 
+            activeClickedNodeId: nodeId, // Set the clicked node ID
+            activeFocusPathIds: newFocusPathIds // Set the calculated path for graph highlight
+        });
       },
 
       setFocusedNodeId: (nodeId) => set({ focusedNodeId: nodeId }), // Only triggers camera animation
@@ -386,6 +392,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           return {};
         });
        },
+
+      toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),
 
       // --- Error Handling Impl ---
       setError: (error) => set({ error }),

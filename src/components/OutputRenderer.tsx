@@ -10,6 +10,9 @@ import QuizComponent from './QuizComponent';
 import VisualizationComponent from './VisualizationComponent';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Button } from '@/components/ui/button';
+import { Maximize } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 // Import the new section components
 import ExplanationSection from './ExplanationSection';
@@ -62,6 +65,8 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
 }) => {
   // Select the output state to determine rendering mode
   const output = useAppStore((state) => state.output);
+  const toggleGraphFullscreen = useAppStore((state) => state.toggleGraphFullscreen);
+  const isGraphFullscreen = useAppStore((state) => state.isGraphFullscreen);
 
   // Initial state
   if (!output) {
@@ -84,14 +89,47 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
   // Valid response state: Render the section components
   // Each section component will fetch its own data from the store and render conditionally
   if (isCognitionResponse(output)) {
+    // Define variants for visibility
+    const graphContainerVariants = {
+      visible: { opacity: 1, transition: { duration: 0.2 }, pointerEvents: 'auto' as const },
+      hidden: { opacity: 0, transition: { duration: 0.2 }, pointerEvents: 'none' as const }
+    };
+
     return (
       <div className="space-y-6">
         <ExplanationSection />
         <KnowledgeCardsSection />
-        <VisualizationSection 
-          onNodeExpand={onNodeExpand} 
-          expandingNodeId={expandingNodeId} 
-        />
+
+        {/* Use motion.div to control visibility of the non-fullscreen graph */}
+        <motion.div
+          variants={graphContainerVariants}
+          animate={isGraphFullscreen ? 'hidden' : 'visible'}
+          initial={false} // Avoid initial animation unless isGraphFullscreen starts true
+        >
+          {output.visualizationData && (
+            <section aria-labelledby="visualization-heading">
+              <h2 id="visualization-heading" className="text-xl font-semibold mb-3">Knowledge Graph</h2>
+              <div className="relative">
+                <VisualizationComponent
+                  visualizationData={output.visualizationData}
+                  onNodeExpand={onNodeExpand}
+                  expandingNodeId={expandingNodeId}
+                />
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 z-10 bg-card/50 hover:bg-card/80 backdrop-blur-sm rounded-full p-1.5 text-foreground/70 hover:text-foreground"
+                  onClick={toggleGraphFullscreen}
+                  aria-label="Enter fullscreen graph view"
+                  tabIndex={isGraphFullscreen ? -1 : 0} // Prevent tabbing when hidden
+                >
+                  <Maximize className="h-4 w-4" />
+                </Button>
+              </div>
+            </section>
+          )}
+        </motion.div>
+
         <QuizSection />
       </div>
     );
