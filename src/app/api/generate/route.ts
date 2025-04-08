@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { cookies } from 'next/headers';
 
 // Define the expected structure for nodes and links in the graph
 interface GraphNode {
@@ -40,9 +42,12 @@ export interface CognitionResponse { // Exporting for frontend use
   quiz?: { question: string; options: string[]; correctAnswerLetter: string };
 }
 
-// Ensure the API key is available in the environment
+// Ensure API keys are available
 if (!process.env.OPENAI_API_KEY) {
   throw new Error('Missing Environment Variable OPENAI_API_KEY');
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  throw new Error('Missing Supabase environment variables');
 }
 
 const openai = new OpenAI({
@@ -105,12 +110,32 @@ const EXPANSION_SYSTEM_PROMPT = `You are Cognition, an AI assistant expanding an
 
 export async function POST(req: NextRequest) {
   try {
+    // 1. Authenticate User & Check Subscription
+    const supabase = createRouteHandlerClient({ cookies });
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('subscription_status')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile || profile.subscription_status !== 'active') {
+      console.warn(`User ${user.id} attempted access without active subscription. Status: ${profile?.subscription_status ?? 'not found'}`);
+      return NextResponse.json({ error: 'Active subscription required' }, { status: 402 }); // 402 Payment Required
+    }
+
+    // 2. Proceed with existing generation logic
     const body = await req.json();
     const { prompt, nodeId, nodeLabel, currentGraph } = body;
 
     let systemPrompt: string;
     let userPromptContent: string;
-    let responseStructureExample: string; // Hint for the model
+    let responseStructureExample: string;
     let isExpansion = false;
 
     if (nodeId && nodeLabel && currentGraph) {
@@ -138,8 +163,6 @@ export async function POST(req: NextRequest) {
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPromptContent },
-        // Optionally add a hint about expected structure if needed, but response_format should handle it
-        // { role: 'assistant', content: responseStructureExample } 
       ],
       response_format: { type: 'json_object' },
       temperature: isExpansion ? 0.3 : 0.4, // Slightly lower temp for stricter expansion
@@ -153,6 +176,7 @@ export async function POST(req: NextRequest) {
 
     console.log(`OpenAI response received for ${isExpansion ? 'EXPANSION' : 'INITIAL'} request.`);
 
+    // 3. Parse and Validate Response (Keep existing validation logic)
     try {
       const parsedJson = JSON.parse(rawResult);
 
@@ -161,11 +185,9 @@ export async function POST(req: NextRequest) {
         if (!parsedJson.nodes || !parsedJson.links || !parsedJson.knowledgeCards) { // Make cards mandatory here too
             throw new Error("Missing required fields for expansion: nodes, links, or knowledgeCards");
         }
-        // Add check: Number of new nodes must match number of new cards
         if (parsedJson.nodes.length !== parsedJson.knowledgeCards.length) {
             throw new Error(`Validation Error: Number of new nodes (${parsedJson.nodes.length}) does not match number of new knowledge cards (${parsedJson.knowledgeCards.length}).`);
         }
-        // Add check: Ensure all new cards have a valid nodeId matching a new node
         const newNodeIds = new Set(parsedJson.nodes.map((n: any) => n.id));
         for (const card of parsedJson.knowledgeCards) {
             if (!card.nodeId || typeof card.nodeId !== 'string' || !newNodeIds.has(card.nodeId)) {
@@ -173,19 +195,17 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        const expansionData: GraphExpansionData = parsedJson; // Type now includes knowledgeCards?
+        const expansionData: GraphExpansionData = parsedJson;
         console.log(`Expansion validated: ${expansionData.nodes.length} nodes, ${expansionData.links.length} links, ${expansionData.knowledgeCards?.length ?? 0} cards.`);
-        return NextResponse.json({ expansionData }); // Return the full expansion data
+        return NextResponse.json({ expansionData });
       } else {
-        // Validate initial structure (make viz and cards mandatory)
+        // Validate initial structure
         if (!parsedJson.explanationMarkdown || !parsedJson.visualizationData || !parsedJson.knowledgeCards) {
             throw new Error("Missing required fields for initial response: explanationMarkdown, visualizationData, or knowledgeCards");
         }
-        // Add check: Number of nodes must match number of cards
-         if (parsedJson.visualizationData.nodes.length !== parsedJson.knowledgeCards.length) {
+        if (parsedJson.visualizationData.nodes.length !== parsedJson.knowledgeCards.length) {
             throw new Error(`Validation Error: Number of nodes (${parsedJson.visualizationData.nodes.length}) does not match number of knowledge cards (${parsedJson.knowledgeCards.length}).`);
         }
-        // Add check: Ensure all cards have a valid nodeId matching a node
         const nodeIds = new Set(parsedJson.visualizationData.nodes.map((n: any) => n.id));
         for (const card of parsedJson.knowledgeCards) {
             if (!card.nodeId || typeof card.nodeId !== 'string' || !nodeIds.has(card.nodeId)) {
@@ -200,27 +220,20 @@ export async function POST(req: NextRequest) {
         if (!nodes || !Array.isArray(nodes) || nodes.length === 0) {
              throw new Error("Validation Error: visualizationData.nodes is missing, not an array, or empty.");
         }
-        if (!cards || !Array.isArray(cards)) { // Allow empty links array initially if only root exists
+        if (!cards || !Array.isArray(cards)) {
             throw new Error("Validation Error: knowledgeCards is missing or not an array.");
         }
         if (!links || !Array.isArray(links)) { 
              throw new Error("Validation Error: visualizationData.links is missing or not an array.");
         }
 
-        // Find the root node
         const rootNodes = nodes.filter((n: any) => n.isRoot === true);
         if (rootNodes.length !== 1) {
             throw new Error(`Validation Error: Expected exactly 1 root node (with isRoot: true), but found ${rootNodes.length}.`);
         }
         const rootNodeId = rootNodes[0].id;
 
-        // Check node count vs card count
-         if (nodes.length !== cards.length) {
-            throw new Error(`Validation Error: Number of nodes (${nodes.length}) does not match number of knowledge cards (${cards.length}).`);
-        }
-       
-        // Check if all links originate from the root node (if links exist)
-        if (links.length > 0 && nodes.length > 1) { // Only check if there are sub-nodes/links
+        if (links.length > 0 && nodes.length > 1) {
              for (const link of links) {
                  if (link.source !== rootNodeId) {
                      throw new Error(`Validation Error: Link source "${link.source}" does not match root node ID "${rootNodeId}". All links must originate from the root.`);
@@ -228,7 +241,6 @@ export async function POST(req: NextRequest) {
              }
         }
 
-        // Check card nodeIds
         const nodeIdsSet = new Set(nodes.map((n: any) => n.id));
         for (const card of cards) {
             if (!card.nodeId || typeof card.nodeId !== 'string' || !nodeIdsSet.has(card.nodeId)) {
@@ -248,13 +260,8 @@ export async function POST(req: NextRequest) {
     }
 
   } catch (error) {
-    console.error('API Route Error:', error);
-    let errorMessage = 'Internal Server Error';
-    if (error instanceof OpenAI.APIError) {
-      errorMessage = `OpenAI Error: ${error.status} ${error.name} ${error.message}`;
-    } else if (error instanceof Error) {
-      errorMessage = error.message;
-    }
+    console.error('Error in /api/generate:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
     return NextResponse.json({ error: errorMessage }, { status: 500 });
   }
 } 

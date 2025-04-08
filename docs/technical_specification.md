@@ -443,6 +443,50 @@ The MVP must deliver **real user value**, especially for learners with short att
     *   **Final Fix (Opacity Toggle for Non-Fullscreen View):** Changed the hiding mechanism for the non-fullscreen graph container in `OutputRenderer` from using `display: hidden/block` (via `cn`) to using `opacity` and `pointer-events` managed by `motion.div`, mirroring the fullscreen container's approach. This prevented the layout shift that was likely triggering the simulation adjustment on close.
 *   **Current Status:** Fullscreen view toggles smoothly without WebGL leaks or node drifting. The graph state is preserved across view changes.
 
+**Phase 17: Stripe Subscription Integration (Completed)**
+
+*   **Goal:** Implement a basic monthly subscription paywall using Stripe to monetize the application.
+*   **Dependencies:** Installed `stripe` (backend) and `@stripe/stripe-js` (frontend).
+*   **Environment Setup:** Configured `.env.local` with Stripe test keys (`NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`, `STRIPE_SECRET_KEY`), the Price ID for the subscription (`STRIPE_PRICE_ID`), the webhook signing secret (`STRIPE_WEBHOOK_SECRET`), and the base site URL (`NEXT_PUBLIC_SITE_URL`).
+*   **Database Schema:**
+    *   Created `profiles` table in Supabase with columns `id` (FK to `auth.users`), `stripe_customer_id` (unique), `subscription_status`, `stripe_subscription_id` (unique).
+    *   Enabled RLS and added policies for users to select/update their own profiles.
+    *   **Fix:** Manually inserted profile rows for existing users created before the table existed.
+    *   **Fix:** Removed incorrect `handle_updated_at` trigger from `profiles` table to resolve DB update errors (function name mismatch with column `updated_at`).
+*   **Backend API Routes:**
+    *   Created `/api/stripe/create-checkout/route.ts`:
+        *   Fetches/creates Stripe customer ID (storing `supabaseUserId` in metadata).
+        *   Creates a Stripe Checkout Session for the defined `STRIPE_PRICE_ID`.
+        *   Redirects user back to the root path (`/`) on success/cancel (corrected from `/dashboard`).
+    *   Created `/api/stripe/create-portal-session/route.ts`:
+        *   Fetches user's `stripe_customer_id` from `profiles` table.
+        *   Creates a Stripe Billing Portal Session for subscription management.
+    *   Created `/api/stripe/webhook/route.ts`:
+        *   Verifies webhook signature using `STRIPE_WEBHOOK_SECRET`.
+        *   Uses Supabase Admin Client (with `SUPABASE_SERVICE_ROLE_KEY`) to bypass RLS for database updates.
+        *   Handles `checkout.session.completed` event: Updates `profiles` table with `stripe_customer_id`, `stripe_subscription_id`, and sets `subscription_status` to `active`.
+        *   Handles `customer.subscription.updated`/`deleted` events: Updates `subscription_status` in `profiles` based on the event.
+        *   Added robust error handling and logging.
+*   **Stripe Utility (`src/lib/stripe.ts`):**
+    *   Initialized Stripe Node client.
+    *   Created `getStripeCustomerId` helper function (though its DB update part might have been initially blocked by RLS).
+*   **State Management (`useAppStore.ts`):**
+    *   Added `subscriptionStatus` ('active', 'inactive', etc.) and `isSubscriptionLoading` state.
+    *   Implemented `fetchSubscriptionStatus` action to query the `profiles` table for the user's status.
+    *   Modified `createSession` action to check for 'active' status before proceeding.
+*   **Frontend Integration (`MainAppClient.tsx`):**
+    *   Loads Stripe.js using `loadStripe`.
+    *   Calls `fetchSubscriptionStatus` on mount.
+    *   Conditionally renders "Subscribe Now" or "Manage Billing" buttons based on `subscriptionStatus`.
+    *   Implements `handleSubscribe` (calls create-checkout API, redirects to Stripe) and `handleManageSubscription` (calls create-portal API, redirects to Stripe).
+    *   Disables core features (prompt input, expand button, new session button) if `subscriptionStatus` is not 'active'.
+    *   Added loading states for checkout/portal redirection.
+*   **API Route Protection:** Added check in `/api/generate/route.ts` to verify `subscription_status` is 'active' before calling the LLM, returning a 402 error if inactive.
+*   **Debugging:**
+    *   Resolved 406 error by ensuring user profile row exists.
+    *   Resolved webhook DB update failures by using Service Role Key and removing the incorrect DB trigger.
+    *   Corrected Stripe redirect URLs.
+
 ---
 
 ### **8. Future Phases & Known Issues**
@@ -465,7 +509,7 @@ The MVP must deliver **real user value**, especially for learners with short att
 
 *   ~~User-facing dashboard with new session creation & loading~~ (**Completed via Sidebar**) -> To be replaced/enhanced by dedicated Dashboard View.
 *   ~~Session memory view / Backend Persistence~~ (**Completed**)
-*   **Basic Stripe integration** (**High Priority - Next Focus after Path-Focusing**)
+*   ~~Basic Stripe integration: monthly subscription paywall for unlimited usage~~ (**Completed**)
 *   ~~Shareable public sessions (read-only)~~ (Move to Post-MVP for now)
 *   Semantic Clustering for graph layout.
 

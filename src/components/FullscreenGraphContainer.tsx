@@ -3,11 +3,20 @@
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useAppStore } from '@/store/useAppStore';
-import VisualizationComponent from './VisualizationComponent'; // Assuming VisualizationComponent is in the same folder
+import { useAppStore, NodeObject, LinkObject, GraphData } from '@/store/useAppStore';
+import VisualizationComponent from './VisualizationComponent';
 import { Button } from '@/components/ui/button';
 
-const FullscreenGraphContainer: React.FC = () => {
+// Define props for the container
+interface FullscreenGraphContainerProps {
+    onNodeExpand: (nodeId: string, nodeLabel: string) => void;
+    expandingNodeId: string | null;
+}
+
+const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({ 
+    onNodeExpand, 
+    expandingNodeId 
+}) => {
     const isGraphFullscreen = useAppStore((state) => state.isGraphFullscreen);
     const toggleGraphFullscreen = useAppStore((state) => state.toggleGraphFullscreen);
     const output = useAppStore((state) => state.output);
@@ -34,7 +43,14 @@ const FullscreenGraphContainer: React.FC = () => {
         };
     }, [isGraphFullscreen, toggleGraphFullscreen]);
 
-    const vizData = (typeof output === 'object' && output?.visualizationData) ? output.visualizationData : null;
+    // Extract visualization data, ensuring it conforms to GraphData
+    let vizData: GraphData | null = null;
+    if (typeof output === 'object' && output !== null && 'visualizationData' in output && output.visualizationData) {
+        // Basic structural check
+        if (output.visualizationData.nodes && output.visualizationData.links) {
+            vizData = output.visualizationData as GraphData;
+        }
+    }
 
     const variants = {
         hidden: { opacity: 0, scale: 0.95, pointerEvents: 'none' as const },
@@ -55,7 +71,11 @@ const FullscreenGraphContainer: React.FC = () => {
         >
             {vizData && (
                 <div className="relative h-[95vh] w-[95vw] rounded-lg border bg-card shadow-xl overflow-hidden">
-                    <VisualizationComponent visualizationData={vizData} />
+                    <VisualizationComponent 
+                        visualizationData={vizData} 
+                        onNodeExpand={onNodeExpand}
+                        expandingNodeId={expandingNodeId}
+                    />
                     <Button
                         variant="ghost"
                         size="icon"
