@@ -34,7 +34,7 @@ weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Cognition - Interactive AI Learning", // Keep existing metadata
+  title: "Intellea - Interactive AI Learning", // Keep existing metadata
   description: "Learn complex topics visually with an interactive AI interface.",
 };
 

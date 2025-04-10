@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useAppStore, CognitionResponse } from '@/store/useAppStore';
+import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
 import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion } from 'framer-motion';
 
 // Helper type guard (Consider exporting from store or a utils file)
-function isCognitionResponse(output: any): output is CognitionResponse {
+function isIntelleaResponse(output: any): output is IntelleaResponse {
     return typeof output === 'object' && output !== null && 'explanationMarkdown' in output;
 }
 
@@ -36,7 +36,7 @@ const markdownComponents: Components = {
 const ExplanationSection: React.FC = () => {
     // Select only the explanationMarkdown from the store
     const explanationMarkdown = useAppStore((state) => {
-        if (isCognitionResponse(state.output)) {
+        if (isIntelleaResponse(state.output)) {
             return state.output.explanationMarkdown;
         }
         return null; // Return null if not available

@@ -3,12 +3,12 @@
 ---
 
 ### **Project Title:**
-**Cognition** (working title)
+**Intellea**
 
 ---
 
 ### **1. Purpose & Vision**
-Modern chat-based LLM interfaces are poorly suited for learning and comprehension, especially for neurodivergent users or those who struggle with reading long blocks of text. *Cognition* aims to replace the wall-of-text output with a visually interactive, **dynamically expanding 3D knowledge graph** and complementary components, creating a learning environment that improves understanding, retention, and usability.
+Modern chat-based LLM interfaces are poorly suited for learning and comprehension, especially for neurodivergent users or those who struggle with reading long blocks of text. *Intellea* aims to replace the wall-of-text output with a visually interactive, **dynamically expanding 3D knowledge graph** and complementary components, creating a learning environment that improves understanding, retention, and usability.
 
 We aren't building a dev tool. We're building an **AI-assisted thinking and learning interface**, designed for people who want to intuitively grasp complex topics by exploring structured information visually, rather than parsing verbose LLM outputs.
 
@@ -84,5 +84,5 @@ The UI becomes the learning assistant, not the bottleneck.
 ---
 
 ### **Summary**
-*Cognition* rethinks how people engage with LLMs to learn new concepts. By shifting from text to visual interactivity, we help users understand faster, remember longer, and stay engaged. This is a visual language for AI assistance—built for the way humans actually learn.
+*Intellea* rethinks how people engage with LLMs to learn new concepts. By shifting from text to visual interactivity, we help users understand faster, remember longer, and stay engaged. This is a visual language for AI assistance—built for the way humans actually learn.
 

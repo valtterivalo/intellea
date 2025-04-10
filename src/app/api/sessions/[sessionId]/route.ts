@@ -2,7 +2,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { Database } from '@/lib/database.types';
-import type { CognitionResponse } from '@/store/useAppStore';
+import type { IntelleaResponse } from '@/store/useAppStore';
 
 interface Params {
   sessionId: string;
@@ -112,7 +112,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     const { data, error: updateError } = await supabase
       .from('sessions')
       .update({
-        session_data: session_data, // Pass the validated object directly
+        session_data: session_data as any, // Cast to any to bypass strict type check
         title: title,
         last_prompt: last_prompt,
         // last_updated_at is handled by trigger

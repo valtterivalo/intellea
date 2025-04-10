@@ -12,7 +12,10 @@ interface AppGraphNode extends NodeObject {
   id: string; // Ensure id is a string
   label?: string; // Make label optional
   // Add our specific optional properties
-  fx?: number;
+  x?: number; // Use x, y, z for calculated positions
+  y?: number;
+  z?: number;
+  fx?: number; // Keep fx, fy, fz for potential future use (e.g., manual pinning)
   fy?: number;
   fz?: number;
 }
@@ -190,7 +193,7 @@ const VisualizationComponent = ({
 
             // Check if positions are reasonably defined (not all zero)
             if (focusX !== 0 || focusY !== 0 || focusZ !== 0) {
-                const distance = 60; // Increase focus distance slightly
+                const distance = 200; // INCREASED FOCUS DISTANCE from 60
                 const distRatio = 1 + distance / Math.hypot(focusX, focusY, focusZ);
                 const newCameraPosition = {
                     x: focusX * distRatio,
@@ -269,13 +272,17 @@ const VisualizationComponent = ({
         linkWidth={0.5}
         linkDirectionalParticles={1}
         linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleColor={() => themeColors.nodeHover}
+        linkDirectionalParticleSpeed={0.006}
         // --- Interaction ---
         onNodeClick={handleNodeClick} 
         onNodeHover={handleNodeHover} // Use the correctly typed hover handler
         enableNodeDrag={false}
         // --- Forces & Camera ---
         controlType="orbit"
+        // Node Configuration
+        nodeResolution={16} // Increase geometry detail
+        // Performance / Simulation
+        d3AlphaDecay={0.02} // Adjust decay rate if needed
       />
     </div>
   );

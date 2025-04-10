@@ -14,7 +14,7 @@ export default async function Home() {
   if (!session) {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen py-2">
-             <h1 className="text-4xl font-bold mb-6">Welcome to Cognition</h1>
+             <h1 className="text-4xl font-bold mb-6">Welcome to Intellea</h1>
             <p className="text-lg text-muted-foreground mb-8">Please sign in to continue</p>
             <AuthComponent />
         </div>

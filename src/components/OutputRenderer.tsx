@@ -4,7 +4,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import ReactMarkdown, { Components } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { useAppStore, CognitionResponse } from '@/store/useAppStore';
+import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
 // Import the interactive quiz component
 import QuizComponent from './QuizComponent';
 import VisualizationComponent from './VisualizationComponent';
@@ -13,6 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { Button } from '@/components/ui/button';
 import { Maximize } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { useShallow } from 'zustand/react/shallow';
+import { Loader2, Expand } from 'lucide-react';
 
 // Import the new section components
 import ExplanationSection from './ExplanationSection';
@@ -26,9 +28,13 @@ interface OutputRendererProps {
   expandingNodeId: string | null;
 }
 
-// Helper type guard (might need to be exported from store/utils)
-function isCognitionResponse(output: any): output is CognitionResponse {
-  return typeof output === 'object' && output !== null && ('explanationMarkdown' in output || 'visualizationData' in output || 'knowledgeCards' in output || 'quiz' in output);
+// Type guard to check if the output is the structured IntelleaResponse
+function isIntelleaResponse(output: any): output is IntelleaResponse {
+  return (
+    typeof output === 'object' &&
+    output !== null &&
+    ('explanationMarkdown' in output || 'visualizationData' in output || 'knowledgeCards' in output || 'quiz' in output)
+  );
 }
 
 // --- Custom Markdown Components (Adjusted for theme) --- 
@@ -88,7 +94,7 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
 
   // Valid response state: Render the section components
   // Each section component will fetch its own data from the store and render conditionally
-  if (isCognitionResponse(output)) {
+  if (isIntelleaResponse(output)) {
     // Define variants for visibility
     const graphContainerVariants = {
       visible: { opacity: 1, transition: { duration: 0.2 }, pointerEvents: 'auto' as const },

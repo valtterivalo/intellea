@@ -3,14 +3,15 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Camera } from 'lucide-react'; // Icon for the button
-import { useAppStore, CognitionResponse } from '@/store/useAppStore'; // Import the store and CognitionResponse type
+import { Camera, Expand } from 'lucide-react'; // Add Expand icon
+import { useAppStore, IntelleaResponse } from '@/store/useAppStore'; // Import the store and IntelleaResponse type
 import { useShallow } from 'zustand/react/shallow'; // Import useShallow for multiple state slices
-import type { KnowledgeCardData, GraphData } from '@/store/useAppStore'; // Import types
+import type { KnowledgeCard as KnowledgeCardType, GraphData } from '@/store/useAppStore'; // Import types
 import { cn } from '@/lib/utils';
+import { createClient } from '@/lib/supabase/client'; // Import our client creator
 
 // Helper type guard
-function isCognitionResponse(output: any): output is CognitionResponse {
+function isIntelleaResponse(output: any): output is IntelleaResponse {
     return (
         typeof output === 'object' &&
         output !== null &&
@@ -19,7 +20,7 @@ function isCognitionResponse(output: any): output is CognitionResponse {
 }
 
 interface KnowledgeCardProps {
-  card: KnowledgeCardData;
+  card: KnowledgeCardType;
   variant?: 'default' | 'focused';
 }
 
@@ -28,15 +29,24 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
   const {
     setFocusedNodeId,
     setActiveFocusPath,
+    expandConcept,
+    isExpandingConcept,
+    subscriptionStatus,
     visualizationData
   } = useAppStore(
     useShallow((state) => ({ // Use useShallow for multiple selections
       setFocusedNodeId: state.setFocusedNodeId,
       setActiveFocusPath: state.setActiveFocusPath,
+      expandConcept: state.expandConcept,
+      isExpandingConcept: state.isExpandingConcept,
+      subscriptionStatus: state.subscriptionStatus,
       // Safely access visualizationData
-      visualizationData: isCognitionResponse(state.output) ? state.output.visualizationData : null,
+      visualizationData: isIntelleaResponse(state.output) ? state.output.visualizationData : null,
     }))
   );
+
+  // Create a stable supabase client
+  const supabase = createClient();
   
   const handleFocusClick = () => {
     console.log(`Focus graph requested for node: ${card.nodeId}, setting active focus PATH.`);
@@ -45,6 +55,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     // Set persistent focus path and clicked node ID, passing visualizationData
     setActiveFocusPath(card.nodeId, visualizationData);
   };
+
+  const handleExpandClick = () => {
+    console.log(`Expand concept requested for node: ${card.nodeId}, ${card.title}`);
+    expandConcept(card.nodeId, card.title, supabase);
+  };
+
+  const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
   return (
     <Card
@@ -61,16 +78,25 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
       <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3"> {/* Adjusted padding */}
         <p>{card.description}</p>
       </CardContent>
-      <div className="p-2 px-4 border-t"> {/* Button container with padding and border */}
+      <div className="p-2 px-4 border-t flex gap-2"> {/* Button container with padding and border */}
          <Button 
             variant="outline" 
             size="sm" 
-            className="w-full text-xs"
+            className="flex-1 text-xs"
             onClick={handleFocusClick}
             // Disable button if vizData isn't available (should generally be available if cards are)
             disabled={!visualizationData} 
           >
-            <Camera className="mr-1.5 h-3.5 w-3.5" /> Focus on Graph
+            <Camera className="mr-1.5 h-3.5 w-3.5" /> Focus
+          </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex-1 text-xs"
+            onClick={handleExpandClick}
+            disabled={isExpandingConcept || !isSubscriptionActive}
+          >
+            <Expand className="mr-1.5 h-3.5 w-3.5" /> Expand
           </Button>
       </div>
     </Card>

@@ -1,7 +1,7 @@
 'use client'; // Mark as a Client Component
 
 import React, { useEffect, useState } from 'react';
-import { useAppStore, CognitionResponse, NodeObject, LinkObject, SessionSummary, GraphData, KnowledgeCard } from '@/store/useAppStore';
+import { useAppStore, IntelleaResponse, NodeObject, LinkObject, SessionSummary, GraphData, KnowledgeCard } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +24,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
+import ExpandedConceptCard from '@/components/ExpandedConceptCard';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
 
@@ -143,7 +144,7 @@ export default function MainAppClient() {
         if (data.error) {
           throw new Error(data.error);
         }
-        setOutput(data.output as CognitionResponse);
+        setOutput(data.output as IntelleaResponse);
         setActivePrompt(currentPrompt);
         sessionCreatedOrUpdated = true;
 
@@ -197,18 +198,27 @@ export default function MainAppClient() {
       setLocalExpandingNodeId(null);
       return;
     }
-    let simplifiedGraphContext = null;
-    if (currentGraphData && currentGraphData.nodes && currentGraphData.links) {
-        simplifiedGraphContext = {
-            nodes: currentGraphData.nodes.map(({ id, label }: NodeObject) => ({ id, label })).slice(0, 50),
-            links: currentGraphData.links.map(({ source, target }: LinkObject) => ({
-                source: typeof source === 'object' && source !== null ? (source as NodeObject).id : source as string,
-                target: typeof target === 'object' && target !== null ? (target as NodeObject).id : target as string,
-            })).slice(0, 100)
-        };
-    } else {
-        console.warn("handleNodeExpand: currentGraphData or its nodes/links are missing, sending null context.");
-    }
+
+    // **Clean the graph data before sending**
+    const cleanedNodes = currentGraphData.nodes.map(({ id, label, fx, fy, fz, isRoot }) => ({ 
+        id, 
+        label, 
+        fx, // Include fixed positions for context if needed (can be omitted if too large)
+        fy, 
+        fz, 
+        isRoot // Keep isRoot flag
+    }));
+    const cleanedLinks = currentGraphData.links.map(({ source, target }) => ({ 
+        source: typeof source === 'object' && source !== null ? (source as NodeObject).id : source as string, 
+        target: typeof target === 'object' && target !== null ? (target as NodeObject).id : target as string 
+    }));
+    const cleanedVisualizationData = { nodes: cleanedNodes, links: cleanedLinks };
+
+    // ADDED: Get current knowledge cards for the request context
+    const currentKnowledgeCards = typeof currentOutput === 'object' && currentOutput !== null && 'knowledgeCards' in currentOutput && currentOutput.knowledgeCards
+        ? currentOutput.knowledgeCards
+        : [];
+
     try {
       const response = await fetch('/api/generate', {
         method: 'POST',
@@ -216,7 +226,9 @@ export default function MainAppClient() {
         body: JSON.stringify({
           nodeId,
           nodeLabel,
-          currentGraph: simplifiedGraphContext 
+          // Send the FULL current visualization data and cards, now cleaned
+          currentVisualizationData: cleanedVisualizationData, 
+          currentKnowledgeCards: currentKnowledgeCards
         }),
       });
       if (!response.ok) {
@@ -228,18 +240,16 @@ export default function MainAppClient() {
       if (data.error) {
         throw new Error(data.error);
       }
-      if (data.expansionData && data.expansionData.nodes && data.expansionData.links && data.expansionData.knowledgeCards && (data.expansionData.nodes.length > 0 || data.expansionData.links.length > 0)) {
-        addGraphExpansion(data.expansionData as GraphData & { knowledgeCards: KnowledgeCard[] });
-        console.log("Expansion successful, data merged into store.");
-        const activeSessionId = useAppStore.getState().currentSessionId;
-        if (activeSessionId) {
-           console.log(`Attempting auto-save for session ${activeSessionId} after expansion.`);
-           saveSession(supabase);
-        } else {
-            console.warn("No active session ID, cannot auto-save after expansion.");
-        }
+      // UPDATED: Check for the new response structure and pass it to the store action
+      // The response payload directly matches the ExpansionResponse interface from the store
+      if (data && data.updatedVisualizationData && data.newKnowledgeCards) {
+        // Pass supabase client to the action
+        addGraphExpansion(data, nodeId, supabase); 
+        console.log("Expansion successful, data processed by store.");
+        // Autosave is now handled within the addGraphExpansion action itself
       } else {
-        console.log("Expansion API returned no new nodes or links.");
+        console.log("Expansion API returned an unexpected response structure or no new data.");
+        // Optionally set an error or notification here
       }
     } catch (error) {
       console.error("Failed to fetch or process graph expansion:", error);
@@ -552,6 +562,7 @@ export default function MainAppClient() {
             onNodeExpand={handleNodeExpand} 
             expandingNodeId={localExpandingNodeId} 
         />
+        <ExpandedConceptCard />
       </main>
 
       <footer className="p-4 border-t bg-background">

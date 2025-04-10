@@ -1,3 +1,5 @@
+# Intellea - Interactive LLM-Based Learning Interface
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started
@@ -34,4 +36,18 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
-"# cognition" 
+
+## Features
+
+### Expandable Knowledge Cards
+
+The knowledge cards in Intellea can now be expanded to show detailed information about each concept:
+
+1. Each knowledge card has an "Expand" button alongside the "Focus" button
+2. Clicking the "Expand" button opens a fullscreen modal with:
+   - Comprehensive markdown-formatted explanation of the concept
+   - List of related concepts with their relationships to the main concept
+   - Ability to focus on related concepts directly from the expanded view
+3. Content is generated dynamically using the LLM, taking into account the current state of the knowledge graph and other concepts
+4. Requires an active subscription to use
+"# intellea" 

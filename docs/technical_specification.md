@@ -1,4 +1,4 @@
-**Technical Specification: Cognition - Interactive LLM-Based Learning Interface**
+**Technical Specification: Intellea - Interactive LLM-Based Learning Interface**
 
 ---
 
@@ -90,12 +90,14 @@ Example:
 | DB (optional) | SQLite or Postgres |
 | Vector Store (optional) | Chroma / Qdrant / Weaviate |
 | **3D Visualization** | **react-force-graph / Three.js** |
+| **Text Embeddings** | **OpenAI's text-embedding-3-small** |
+| **Dimensionality Reduction** | **UMAP.js** |
 
 ---
 
 ### **7. Development Plan (MVP-Ready for Monetization)**
 
-The MVP must deliver **real user value**, especially for learners with short attention spans or visual-first cognition styles. Our monetizable MVP will include:
+The MVP must deliver **real user value**, especially for learners with short attention spans or visual-first intellea styles. Our monetizable MVP will include:
 
 1. **User-facing dashboard with new session creation**
 2. **Prompt input + mode selector (visualize, quiz, explain)**
@@ -117,7 +119,7 @@ The MVP must deliver **real user value**, especially for learners with short att
 **Phase 1: Foundation Setup (Completed)**
 
 *   **Project Initialization:**
-    *   Created Next.js 15 project (`cognition`) using `create-next-app`.
+    *   Created Next.js 15 project (`intellea`) using `create-next-app`.
     *   Configured with TypeScript, Tailwind CSS, ESLint, App Router (`/src`), and `@/*` alias.
 *   **Core Dependencies:**
     *   Installed `zustand` for state management.
@@ -164,23 +166,23 @@ The MVP must deliver **real user value**, especially for learners with short att
     *   Adopted a unified approach: AI attempts to provide multiple facets (explanation, terms, viz, quiz) for every prompt.
 *   **API Route Refactor (`/api/generate/route.ts`):**
     *   Removed all mode-specific logic.
-    *   Defined `CognitionResponse` interface for the target structured JSON output.
-    *   Implemented a new unified `SYSTEM_PROMPT` instructing the LLM to always return JSON matching `CognitionResponse`.
+    *   Defined `IntelleaResponse` interface for the target structured JSON output.
+    *   Implemented a new unified `SYSTEM_PROMPT` instructing the LLM to always return JSON matching `IntelleaResponse`.
     *   Enforced `response_format: { type: "json_object" }` for all requests.
     *   Added server-side parsing of the LLM's JSON response string with error handling for parse failures.
-    *   Returns the *parsed* `CognitionResponse` object or an error object (`{ error: ... }`).
+    *   Returns the *parsed* `IntelleaResponse` object or an error object (`{ error: ... }`).
 *   **State Management Refactor (`useAppStore.ts`):**
     *   Removed `mode` and `setMode` from the state.
-    *   Updated `output` type definition to `CognitionResponse | null | string`.
-    *   Exported `CognitionResponse` interface for use in frontend components.
+    *   Updated `output` type definition to `IntelleaResponse | null | string`.
+    *   Exported `IntelleaResponse` interface for use in frontend components.
 *   **UI Refactor (`page.tsx`):**
     *   Removed mode selector buttons and associated logic (`handleModeChange`, `getButtonClass`).
     *   Updated `handleSubmit` to only send `prompt` to the API.
     *   Updated textarea placeholder text.
 *   **Output Renderer Refactor (`OutputRenderer.tsx`):**
     *   Updated expected `output` prop type.
-    *   Added `isCognitionResponse` type guard.
-    *   Renders different sections (`Explanation`, `Key Terms`, `Visualization Data`, `Check Understanding`) based on the presence of data in the `CognitionResponse` object.
+    *   Added `isIntelleaResponse` type guard.
+    *   Renders different sections (`Explanation`, `Key Terms`, `Visualization Data`, `Check Understanding`) based on the presence of data in the `IntelleaResponse` object.
     *   Uses `ReactMarkdown` with custom components (`h1`, `h2`, `h3`, `p`) and improved `prose` styling for `explanationMarkdown`.
     *   Renders `keyTerms` as styled cards.
     *   Uses existing `JsonRenderer` helper for `visualizationData`.
@@ -284,7 +286,7 @@ The MVP must deliver **real user value**, especially for learners with short att
 **Phase 10: Knowledge Cards & Graph Focusing (Completed)**
 
 *   **Conceptual Refinement:** Replaced "Key Terms" with "Knowledge Cards" as the primary textual learning component, tightly coupled with the 3D graph nodes.
-*   **State & API:** Updated `CognitionResponse` interface and Zustand store (`useAppStore`) to use `knowledgeCards` structure, linking cards to nodes via IDs. Updated API prompt (`INITIAL_SYSTEM_PROMPT`) accordingly.
+*   **State & API:** Updated `IntelleaResponse` interface and Zustand store (`useAppStore`) to use `knowledgeCards` structure, linking cards to nodes via IDs. Updated API prompt (`INITIAL_SYSTEM_PROMPT`) accordingly.
 *   **Component Implementation:**
     *   Refactored `OutputRenderer` to use `KnowledgeCardsSection`.
     *   Created `KnowledgeCardsSection` to fetch and display cards.
@@ -487,40 +489,194 @@ The MVP must deliver **real user value**, especially for learners with short att
     *   Resolved webhook DB update failures by using Service Role Key and removing the incorrect DB trigger.
     *   Corrected Stripe redirect URLs.
 
+**Phase 18: Project Renaming & Stripe Portal Fix (Completed)**
+
+*   **Project Renaming:**
+    *   Changed project name from "Intellea" to "Intellea".
+    *   Updated documentation (`design_document.md`, `technical_specification.md`) to reflect the new name.
+    *   Refactored codebase: Renamed `IntelleaResponse` type to `IntelleaResponse` and updated all references in state (`useAppStore.ts`), API routes (`/api/generate`, `/api/sessions/[sessionId]`), and components (`OutputRenderer.tsx`). Fixed resulting type errors.
+*   **Stripe Portal Return URL:**
+    *   Updated `/api/stripe/create-portal-session/route.ts` to set the `return_url` to the root path (`/`) instead of the non-existent `/dashboard`, resolving the redirect issue after managing billing.
+
+**Phase 19: Graph Expansion & Knowledge Card Improvements (Completed)**
+
+**Phase 20: Semantic Graph Layout Implementation (Completed)**
+
+*   **Goal:** Implement a semantically meaningful 3D layout where related concepts appear close to each other in the graph visualization.
+*   **Technical Approach:**
+    *   **Embedding Generation:** Using OpenAI's `text-embedding-3-small` model to create vector representations for each node/concept description.
+    *   **Dimensionality Reduction:** Applied UMAP.js to transform high-dimensional embeddings into 3D coordinates.
+    *   **Root-Centered Layout:** Implemented a post-processing step to center the graph around the root node (0,0,0).
+    *   **Fixed Node Positioning:** Applied the calculated 3D coordinates as fixed positions (`fx`,`fy`,`fz`) to the graph nodes.
+*   **Parameter Tuning:**
+    *   Optimized UMAP parameters (`nNeighbors: 20`, `minDist: 0.05`, `spread: 1.2`) for better clustering of related concepts.
+*   **Data Sanitization:**
+    *   Implemented cleaning of graph data before sending to the LLM to prevent context length errors and minimize token usage.
+    *   Removed internal ThreeJS objects (`__threeObj`) and other rendering-specific properties from API requests.
+*   **Knowledge Card Hierarchy Improvements:**
+    *   Fixed the ancestor/descendant relationship calculation to correctly identify the true root node.
+    *   Ensured root node is always included in focus paths.
+    *   Fixed multi-root bug in knowledge card display.
+*   **Debug Logging:**
+    *   Added console logging to track relationship changes during graph expansion.
+
+**Phase 21: Persistent Concept Caching Implementation (Completed)**
+
+*   **Goal:** Implement persistent storage of expanded concept data to maintain it across sessions and devices.
+*   **Database Schema:**
+    *   Created `expanded_concepts` table in Supabase with columns:
+        *   `id`: UUID (Primary Key)
+        *   `session_id`: UUID (Foreign Key to sessions table, with cascade delete)
+        *   `node_id`: TEXT (ID of the node/concept)
+        *   `title`: TEXT (Title of the concept)
+        *   `content`: TEXT (Markdown content of the expanded concept)
+        *   `related_concepts`: JSONB (Array of related concepts with relationships)
+        *   `graph_hash`: TEXT (SHA-256 hash signature of the graph structure for versioning)
+        *   `created_at`: TIMESTAMPTZ
+    *   Implemented SHA-256 cryptographic hashing of the graph structure to create compact, consistent identifiers for graph state, replacing the previous approach of using full node/link listings (which caused URL length issues)
+    *   Added unique constraint on `(session_id, node_id, graph_hash)` to prevent duplicates
+    *   Added indexes on `session_id`, `node_id`, and `graph_hash` for query performance
+    *   Enabled Row Level Security with appropriate policies for data isolation
+    *   Created SQL migration script (`docs/migrations/create_expanded_concepts_table.sql`) that can be run in the Supabase SQL Editor to set up the table, indexes, and security policies with proper error handling using IF NOT EXISTS clauses
+*   **API Implementation:**
+    *   Created `/api/sessions/[sessionId]/expanded-concepts` endpoints:
+        *   `GET`: Fetches all expanded concepts for a session
+        *   `POST`: Creates a new expanded concept or updates an existing one
+        *   `DELETE`: Removes a specific expanded concept by nodeId
+    *   Created specialized `/api/sessions/[sessionId]/expanded-concepts/lookup` endpoint using POST requests to avoid URL length limitations with SHA-256 hash parameters
+    *   Added authentication, authorization, and input validation
+    *   Implemented data transformation between database and application formats
+*   **Store Enhancement:**
+    *   Added new state: `expandedConceptCache: Map<string, {data: ExpandedConceptData, graphHash: string}>`
+    *   Implemented multi-level caching strategy: memory → database → API
+    *   Enhanced `expandConcept` to:
+        *   Check memory cache first
+        *   Query database if not in cache
+        *   Call API only when necessary, then persist result to database
+    *   Added `loadExpandedConcepts` function to load concepts from database when a session is loaded
+    *   Updated `resetActiveSessionState` to clear concept cache on session switch
+    *   Added type-safe interfaces and error handling
+*   **Integration:**
+    *   Modified `loadSession` to load expanded concepts after session data
+    *   Ensured data consistency with graph versioning using hash-based validation
+    *   Implemented clean error handling and fallback mechanisms
+*   **Benefits:**
+    *   Significantly improved performance by reducing redundant API calls
+    *   Enhanced user experience with consistent concept explanations
+    *   Added cross-device and cross-session availability of expanded content
+    *   Reduced API costs by reusing previously generated content
+
 ---
 
-### **8. Future Phases & Known Issues**
+### **8. Current Status & Future Development**
 
-#### **8.1 Immediate Next Steps / Enhancements**
+#### **8.1 Semantic Layout Characteristics**
 
-*   **Integrate Knowledge Cards into Expansion:** Modify the expansion API prompt, response, and frontend logic (`addGraphExpansion` action) to generate and merge corresponding concise `knowledgeCards` alongside the new graph nodes/links. Ensure prompt requests brief summaries suitable for card display.
-*   **Knowledge Card Detail Expansion (Lazy Loading):** Implement functionality to fetch a more detailed explanation for a Knowledge Card on user demand (e.g., via an 'Expand' button). This will trigger a separate API call for the specific topic, fetching richer content only when needed to optimize token usage. The expanded content will be stored temporarily in the frontend state.
-*   **Troubleshoot Graph Resizing on Narrowing (Deprioritized):**
-    *   **Issue:** `VisualizationComponent` fails to shrink correctly when the window narrows after being widened.
-    *   **Status:** Temporarily deprioritized in favor of core feature development.
-*   **User Dashboard / Project Management:** Design and implement a dedicated view (separate page or modal) for richer session management, replacing the simple sidebar.
-*   **Refine Auto-Saving:** Consider more robust auto-saving triggers or clearer visual indicators.
-*   **Latency Optimization:** Explore streaming for `explanationMarkdown`, investigate API response times.
-*   **LLM Output Consistency:** Continue monitoring and improving prompt reliability.
-*   **UI/UX:** Refinements to sidebar/dashboard, graph interaction cues, label overlap handling.
-*   **Cookie/Linter Warnings:** Monitor persistent warnings in development console.
+*   **Data-Driven Positioning:** Node placement is calculated using UMAP based on text embeddings.
+*   **Semantic Relationships:** Positions reflect conceptual proximity - similar concepts appear closer together.
+*   **Root-Centered Design:** All graphs are centered around the root node at (0,0,0).
+*   **Adaptive Layout:** When expanding the graph, all node positions are recalculated to maintain semantic relationships.
 
-#### **8.2 MVP Features Remaining**
+#### **8.2 LLM-Generated Relationships**
 
-*   ~~User-facing dashboard with new session creation & loading~~ (**Completed via Sidebar**) -> To be replaced/enhanced by dedicated Dashboard View.
-*   ~~Session memory view / Backend Persistence~~ (**Completed**)
-*   ~~Basic Stripe integration: monthly subscription paywall for unlimited usage~~ (**Completed**)
-*   ~~Shareable public sessions (read-only)~~ (Move to Post-MVP for now)
-*   Semantic Clustering for graph layout.
+*   **Dynamic Edge Creation:** The LLM can create cross-connections between nodes based on its knowledge.
+*   **Non-Deterministic:** These connections represent the model's understanding and may occasionally differ from strict hierarchical taxonomies.
+*   **Discovery-Oriented:** Cross-connections can reveal unexpected relationships between concepts that might not be immediately obvious.
 
-#### **8.3 Post-MVP**
+#### **8.3 Performance Considerations**
 
-*   Deeper Personalization (Backend session history, SR quizzes, visual bookmarks).
-*   Collaboration & Network Effects (Shared boards, embeds, learning paths).
-*   Pro Mode (Advanced topics, RAG, multimodal).
-*   Shareable public sessions (read-only).
+*   **Initial Generation:** ~15-20 seconds for the complete initial graph generation.
+*   **Node Expansion:** ~10 seconds for typical node expansion.
+*   **Embedding Generation:** Adds some latency but delivers significantly improved graph quality.
+*   **UMAP Calculation:** Scales with the number of nodes; may need optimization for very large graphs.
+
+#### **8.4 Expandable Knowledge Cards**
+
+*   **Interactive Feature:** Provides detailed explanations of individual concepts in a full-screen modal view.
+*   **Related Concepts:** Shows related concepts from the knowledge graph with context-aware relationships.
+*   **Markdown Content:** Renders formatted markdown with proper heading hierarchies and spacing.
+*   **Performance Optimizations:**
+    * Content caching mechanism based on graph structure fingerprinting
+    * Immediate loading indicator display before content is available
+    * Properly styled loading states to improve user experience
+
+#### **8.5 Known Issues & Future Improvements**
+
+*   **Expandable Knowledge Cards (Completed):**
+    * Implementation of fullscreen modal view for detailed concept explanations
+    * Related concepts display with context-aware relationships
+    * In-memory caching of expanded content based on graph structure
+    * Improved markdown rendering with proper styling for headings, paragraphs, and lists
+    * Automatic focusing on the expanded concept in the graph view
+
+*   **Persistent Concept Caching (Completed):**
+    * Implementation of database schema with `expanded_concepts` table to store expanded concept data
+    * Multi-level caching strategy (memory + database) with graph hash validation to ensure freshness
+    * New API endpoints for storing, retrieving, and deleting expanded concepts
+    * Enhanced Zustand store with functions to load expanded concepts when sessions are loaded
+    * Row Level Security (RLS) policies to ensure data isolation and security
+    * Cross-device and cross-session availability of previously expanded concepts
+    * Significantly improved performance by avoiding redundant API calls
+
+*   **Performance Optimization (Planned):**
+    * Current latency from clicking expand button to content display is substantial
+    * Future work: Investigate bottlenecks in the expansion process (API, LLM, rendering)
+    * Consider implementing streaming response for concept explanations to improve perceived performance
+    * Explore pre-fetching of likely-to-be-expanded concepts based on user interaction patterns
+
+*   **Node Interaction Improvements (Planned):**
+    * Currently clicking on a node directly attempts to expand the graph
+    * Future work: Implement a context menu when clicking on nodes with options:
+        * "Expand Graph" - Current functionality, adds sub-concepts to the knowledge graph
+        * "Expand Concept" - Opens the detailed explanation modal (same as knowledge card "Expand" button)
+        * "Focus on Node" - Centers and highlights the node (same as knowledge card "Focus" button)
+    * Consider terminology improvements to clearly differentiate between graph expansion and concept explanation
+
+*   **UI Polish:**
+    * Removed double borders and improved container styling
+    * Future work: Further refine loading animations and transitions between states
+
+*   **Future Considerations:**
+    * Server-side caching for expanded concept data
+    * Visual transitions between knowledge card and expanded view
+    * Ability to save and bookmark specific expanded concepts
+
+#### **8.6 Next Steps**
+
+*   **Performance Optimization:** Investigate caching strategies for embeddings and optimizing UMAP parameter defaults.
+*   **Relationship Validation:** Consider adding an optional user confirmation step for unexpected cross-links.
+*   **Animation Refinement:** Add smoother transitions when nodes reposition after expansion.
+*   **LLM Model Selection:** Consider more efficient models for specific sub-tasks (e.g., embedding generation).
+*   **Improved Layout Algorithm:** Research alternative layout algorithms or hybrid approaches for better results.
+
+---
+
+### **9. Implementation Notes**
+
+#### **9.1 Key Data Structures**
+
+*   **Graph Nodes:** Include semantic coordinates (`fx`, `fy`, `fz`) and role identifiers (e.g., `isRoot`).
+*   **Focus Path:** Set of node IDs in the current focus path, including the selected node, its neighbors, and the root.
+*   **Knowledge Card Hierarchies:** Organized into ancestor levels, focused card, direct children, and other concepts.
+
+#### **9.2 API Workflow**
+
+*   **Initial Generation:**
+    1. LLM generates initial graph structure
+    2. Backend generates embeddings using `text-embedding-3-small`
+    3. UMAP transforms embeddings to 3D coordinates
+    4. Root node centered at origin, other nodes positioned relative to it
+    5. Positions stored as fixed coordinates (`fx`,`fy`,`fz`)
+    
+*   **Node Expansion:**
+    1. Frontend sends clean graph data (without rendering artifacts)
+    2. LLM generates new nodes and potential cross-connections
+    3. Backend regenerates embeddings for ALL nodes
+    4. UMAP recalculates positions for the entire graph
+    5. Root node recentered at origin
+    6. Updated complete graph returned to frontend
 
 ---
 
 ### **Conclusion**
-This spec reflects the current state of development, focusing on delivering a unique, visually interactive learning experience. Key UI improvements for readability and focus have been implemented. The next major step is enhancing the focus mechanism to encompass exploration paths, followed by integrating payments to complete the monetizable MVP. 
+This spec reflects the current state of development, focusing on delivering a unique, visually interactive learning experience with semantically meaningful graph layouts. The system now produces high-quality 3D knowledge graphs where the positioning of nodes reflects their conceptual relationships, making exploration more intuitive and insightful for users. 
