@@ -296,7 +296,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Call OpenAI LLM
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini', // Using the faster, cheaper model first
+      model: 'gpt-4.1-nano', // Using a real cheap model now for testing
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPromptContent },
