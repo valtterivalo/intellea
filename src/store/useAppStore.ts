@@ -107,6 +107,10 @@ export interface AppState {
   isExpandingConcept: boolean;
   expandedConceptCache: Map<string, {data: ExpandedConceptData, graphHash: string}>; // Cache with hash to detect changes
 
+  // --- Graph UX Upgrade State ---
+  selectedNodeId: string | null;
+  pinnedNodes: Record<string, boolean>;
+
   // --- Actions ---
   setPrompt: (prompt: string) => void;
   setOutput: (output: IntelleaResponse | string | null) => void;
@@ -140,6 +144,11 @@ export interface AppState {
 
   // Add a new function to load expanded concepts from the database
   loadExpandedConcepts: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
+
+  // --- Graph UX Upgrade Actions ---
+  setSelectedNodeId: (nodeId: string | null) => void;
+  pinNode: (nodeId: string) => void;
+  unpinNode: (nodeId: string) => void;
 }
 
 // Explicitly type the store hook
@@ -173,7 +182,22 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       isExpandingConcept: false,
       expandedConceptCache: new Map(),
 
+      // --- Graph UX Upgrade State Init ---
+      selectedNodeId: null,
+      pinnedNodes: {},
+
       // --- Action Implementations ---
+      setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
+      pinNode: (nodeId) =>
+        set((state) => ({
+          pinnedNodes: { ...state.pinnedNodes, [nodeId]: true },
+        })),
+      unpinNode: (nodeId) =>
+        set((state) => {
+          const updated = { ...state.pinnedNodes };
+          delete updated[nodeId];
+          return { pinnedNodes: updated };
+        }),
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => set({ output }),
       setLoading: (isLoading) => set({ isLoading }),
@@ -882,4 +906,4 @@ export function isIntelleaResponse(obj: any): obj is IntelleaResponse {
     'links' in obj.visualizationData && Array.isArray(obj.visualizationData.links)
     // Optional: Add deeper validation for node/link/card structure if needed
   );
-} 
+}

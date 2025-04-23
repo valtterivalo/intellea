@@ -4,6 +4,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
+import { getNodeColor as getDepthColor } from '@/lib/graphColors';
 import * as THREE from 'three'; // Keep THREE import for now, might be needed by dependencies
 import { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d'; // Import library types
 
@@ -56,42 +57,45 @@ const ForceGraph3DComponent = dynamic(() => import('react-force-graph-3d').then(
 // Type assertion helper (not memoized)
 const asAppNode = (node: NodeObject): AppGraphNode => node as AppGraphNode;
 
-const VisualizationComponent = ({ 
-    visualizationData, 
-    onNodeExpand, 
-    expandingNodeId
-}: VisualizationComponentProps) => {
+const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, VisualizationComponentProps>(
+  ({ visualizationData, onNodeExpand, expandingNodeId }, forwardedRef) => {
   const containerRef = useRef<HTMLDivElement>(null);
   // Use ForceGraphMethods type for the ref for better type safety
   const graphRef = useRef<ForceGraphMethods | undefined>(undefined); // Initialize with undefined
+
+  // Forward the ref to parent if provided
+  React.useImperativeHandle(forwardedRef, () => graphRef.current, []);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   // --- Store State Selectors ---
   const focusedNodeId = useAppStore((state) => state.focusedNodeId); // For camera focus (transient)
-  const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds); // Revert to implicit state type
+  const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds);
+  const selectedNodeId = useAppStore((state) => state.selectedNodeId);
+  const pinnedNodes = useAppStore((state) => state.pinnedNodes);
+  const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId);
+  const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath);
+  const pinNode = useAppStore((state) => state.pinNode);
+  const unpinNode = useAppStore((state) => state.unpinNode);
   // --- End State Selectors ---
 
-  // --- Node Color Logic ---
+  // --- Node Color Logic (using depth helper) ---
   const getNodeColor = useCallback((node: NodeObject) => {
     const appNode = asAppNode(node);
-    // Highest priority: Expanding node
-    if (expandingNodeId === appNode.id) {
-      return themeColors.nodeExpanding;
+    // Determine node depth (assume it's stored as appNode.depth, fallback to 0)
+    const depth = typeof appNode.depth === 'number' ? appNode.depth : 0;
+    // Highlight if selected or pinned
+    if (selectedNodeId === appNode.id) {
+      return '#eab308'; // yellow-500
     }
-    // Next priority: Hovered node
-    if (hoveredNodeId === appNode.id) {
-      return themeColors.nodeHover;
+    if (pinnedNodes[appNode.id]) {
+      return '#22c55e'; // green-500
     }
-    // Next priority: Path focus
-    if (activeFocusPathIds) {
-      return activeFocusPathIds.has(appNode.id)
-          ? themeColors.nodeExpanding // Highlight nodes in the path
-          : themeColors.nodeMuted;     // Dim nodes outside the path
-    }
-    // Default color if no other state applies
-    return themeColors.nodeBase;
-  }, [activeFocusPathIds, hoveredNodeId, expandingNodeId]);
+    // Use depth-based color (hex values)
+    if (depth === 0) return '#f43f5e'; // accent-500 (pick a visible accent, e.g., rose-500)
+    if (depth === 1) return '#3b82f6'; // primary-500 (blue-500)
+    return '#64748b'; // slate-500
+  }, [selectedNodeId, pinnedNodes]);
   // --- End Node Color Logic ---
 
   // --- Node Size Logic ---
@@ -212,16 +216,81 @@ const VisualizationComponent = ({
     }
   }, [focusedNodeId]); 
 
-  // Node click handler - Use prop and correct type
+  // Double-click and single-click logic
+  const clickTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastClickedNodeId = useRef<string | null>(null);
+
+  // Left-click: select & center, and set activeClickedNodeId for card focus
   const handleNodeClick = useCallback((node: NodeObject) => {
-      const appNode = asAppNode(node);
-      if (onNodeExpand && appNode.id) { 
-          console.log(`VisualizationComponent: Node clicked, calling onNodeExpand for ${appNode.id}`);
-          onNodeExpand(appNode.id, appNode.label || ''); // Use empty string if label is undefined
-      } else {
-          console.log("VisualizationComponent: Node clicked, but onNodeExpand not available or node.id missing.", appNode);
+    const appNode = asAppNode(node);
+    if (!appNode.id) return;
+
+    // If the same node is clicked twice within 300ms, treat as double-click
+    if (clickTimer.current && lastClickedNodeId.current === appNode.id) {
+      clearTimeout(clickTimer.current);
+      clickTimer.current = null;
+      lastClickedNodeId.current = null;
+      // Double-click: expand concept
+      if (onNodeExpand) {
+        onNodeExpand(appNode.id, appNode.label || '');
       }
-  }, [onNodeExpand]);
+      return;
+    }
+
+    // Otherwise, treat as single click (with delay to allow for double-click)
+    lastClickedNodeId.current = appNode.id;
+    clickTimer.current = setTimeout(() => {
+      setSelectedNodeId(appNode.id);
+      // Set activeClickedNodeId for card focus (and focus path)
+      const currentOutput = useAppStore.getState().output;
+      const vizData =
+        typeof currentOutput === 'object' && currentOutput?.visualizationData
+          ? currentOutput.visualizationData
+          : null;
+      setActiveFocusPath(appNode.id, vizData);
+
+      // Center camera on node
+      if (graphRef.current) {
+        const focusX = appNode.fx ?? appNode.x ?? 0;
+        const focusY = appNode.fy ?? appNode.y ?? 0;
+        const focusZ = appNode.fz ?? appNode.z ?? 0;
+        const distance = 200;
+        const distRatio = 1 + distance / Math.hypot(focusX, focusY, focusZ);
+        const newCameraPosition = {
+          x: focusX * distRatio,
+          y: focusY * distRatio,
+          z: focusZ * distRatio,
+        };
+        const lookAtPosition = { x: focusX, y: focusY, z: focusZ };
+        graphRef.current.cameraPosition(newCameraPosition, lookAtPosition, 1000);
+      }
+      clickTimer.current = null;
+      lastClickedNodeId.current = null;
+    }, 300);
+  }, [setSelectedNodeId, setActiveFocusPath, onNodeExpand]);
+
+  // Right-click: context menu (pin/unpin, collapse, expand again)
+  // Attach native contextmenu event to canvas and use last hovered node
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      if (!hoveredNodeId) return;
+      const appNode = (visualizationData?.nodes || []).find(n => n.id === hoveredNodeId);
+      if (!appNode) return;
+      if (pinnedNodes[appNode.id]) {
+        unpinNode(appNode.id);
+      } else {
+        pinNode(appNode.id);
+      }
+      // TODO: Show context menu with more options (collapse, expand again)
+    };
+    container.addEventListener('contextmenu', handleContextMenu);
+    return () => {
+      container.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, [hoveredNodeId, visualizationData, pinnedNodes, pinNode, unpinNode]);
 
   // Node hover handler - Use correct type
   const handleNodeHover = useCallback((node: NodeObject | null) => {
@@ -260,13 +329,13 @@ const VisualizationComponent = ({
         backgroundColor={themeColors.background}
         cooldownTime={1000}
         // --- Node Styling ---
-        nodeRelSize={6} 
-        nodeVal={getNodeVal} 
+        nodeRelSize={6}
+        nodeVal={getNodeVal}
         nodeLabel="label" // Tooltip label
-        nodeColor={getNodeColor} 
+        nodeColor={getNodeColor}
         nodeOpacity={1}
         nodeThreeObjectExtend={true}
-        nodeThreeObject={getNodeThreeObject} // Persistent label object
+        nodeThreeObject={getNodeThreeObject}
         // --- Link Styling ---
         linkColor={() => themeColors.link}
         linkWidth={0.5}
@@ -274,18 +343,18 @@ const VisualizationComponent = ({
         linkDirectionalParticleWidth={1.5}
         linkDirectionalParticleSpeed={0.006}
         // --- Interaction ---
-        onNodeClick={handleNodeClick} 
-        onNodeHover={handleNodeHover} // Use the correctly typed hover handler
+        onNodeClick={handleNodeClick}
+        onNodeHover={handleNodeHover}
         enableNodeDrag={false}
         // --- Forces & Camera ---
         controlType="orbit"
         // Node Configuration
-        nodeResolution={16} // Increase geometry detail
+        nodeResolution={16}
         // Performance / Simulation
-        d3AlphaDecay={0.02} // Adjust decay rate if needed
+        d3AlphaDecay={0.02}
       />
     </div>
   );
-};
+});
 
-export default VisualizationComponent; 
+export default VisualizationComponent;

@@ -51,9 +51,32 @@ const VisualizationSection: React.FC<VisualizationSectionProps> = ({
                     onNodeExpand={onNodeExpand}
                     expandingNodeId={expandingNodeId}
                 />
+                {/* Legend Bar */}
+                <div className="flex flex-row gap-4 mt-4 items-center text-sm">
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-accent-500 border border-accent-600" />
+                    Root
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-primary-500 border border-primary-600" />
+                    Depth 1
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-slate-500 border border-slate-600" />
+                    Depth ≥2
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-yellow-500 border border-yellow-600" />
+                    Selected
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <span className="inline-block w-4 h-4 rounded-full bg-green-500 border border-green-600" />
+                    Pinned
+                  </span>
+                </div>
             </section>
         </>
     );
 };
 
-export default VisualizationSection; 
+export default VisualizationSection;
