@@ -51,3 +51,9 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 3. Content is generated dynamically using the LLM, taking into account the current state of the knowledge graph and other concepts
 4. Requires an active subscription to use
 "# intellea" 
+
+## Environment Variables
+
+| Variable    | Description                | Example                      |
+|-------------|---------------------------|------------------------------|
+| REDIS_URL   | Redis connection string.  | redis://localhost:6379       |
