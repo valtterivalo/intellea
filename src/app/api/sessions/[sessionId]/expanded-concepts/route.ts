@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { Database } from '@/lib/database.types';
 import type { ExpandedConceptData } from '@/store/useAppStore';
+import { createClient as createRedisClient } from '@/lib/redis';
 
 interface Params {
   sessionId: string;
@@ -12,6 +13,7 @@ interface Params {
 export async function GET(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
   const supabase = createRouteHandlerClient<Database>({ cookies });
+  const redis = createRedisClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
@@ -47,7 +49,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
       return NextResponse.json({ error: 'Session not found or access denied' }, { status: 404 });
     }
 
-    // Fetch all expanded concepts for the session
+    // Fetch all expanded concepts for the session from Supabase (to get graph hashes)
     const { data: expandedConcepts, error: fetchError } = await supabase
       .from('expanded_concepts')
       .select('*')
@@ -58,14 +60,40 @@ export async function GET(request: Request, { params }: { params: Params }) {
       return NextResponse.json({ error: 'Failed to fetch expanded concepts' }, { status: 500 });
     }
 
-    // Transform the database response to match the app's ExpandedConceptData format
-    const formattedConcepts = expandedConcepts.map(concept => ({
-      nodeId: concept.node_id,
-      title: concept.title,
-      content: concept.content,
-      relatedConcepts: concept.related_concepts,
-      graphHash: concept.graph_hash
-    }));
+    // Try to fetch from Redis in batch
+    const cacheKeys = expandedConcepts.map(concept => `expand:${sessionId}:${concept.graph_hash}`);
+    let cachedResults: (string | null)[] = [];
+    if (cacheKeys.length > 0) {
+      cachedResults = await redis.mget(...cacheKeys);
+    }
+
+    // Use cached value if available, otherwise fall back to DB value
+    const formattedConcepts = expandedConcepts.map((concept, idx) => {
+      const cached = cachedResults[idx];
+      if (cached) {
+        try {
+          // Parse and return the cached expanded concept
+          const parsed = JSON.parse(cached);
+          return {
+            nodeId: concept.node_id,
+            title: parsed.title,
+            content: parsed.content,
+            relatedConcepts: parsed.relatedConcepts,
+            graphHash: concept.graph_hash
+          };
+        } catch (e) {
+          // If cache is corrupted, fall back to DB value
+        }
+      }
+      // Fallback to DB value
+      return {
+        nodeId: concept.node_id,
+        title: concept.title,
+        content: concept.content,
+        relatedConcepts: concept.related_concepts,
+        graphHash: concept.graph_hash
+      };
+    });
 
     return NextResponse.json({ expandedConcepts: formattedConcepts });
 
@@ -268,4 +296,4 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
     console.error(`Unexpected error in DELETE /api/sessions/${sessionId}/expanded-concepts:`, error);
     return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 });
   }
-} 
+}

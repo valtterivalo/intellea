@@ -3,6 +3,7 @@ import OpenAI from 'openai';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
+import * as apiCache from '@/lib/apiCache';
 
 // Simplified interface for visualization data
 interface SanitizedNode {
@@ -114,46 +115,72 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Missing required fields: nodeId, nodeLabel' }, { status: 400 });
     }
 
-    // Prepare the prompt for OpenAI
-    const messages = [
-      { role: 'system', content: EXPAND_CONCEPT_PROMPT },
-      {
-        role: 'user',
-        content: JSON.stringify({
-          nodeToExpand: { id: nodeId, label: nodeLabel },
-          visualizationData,
-          knowledgeCards
-        })
-      }
-    ];
+    // Generate a stable hash for the graph/request
+    const sessionId = data.user.id;
+    const graphHash = apiCache.getGraphHash({ nodeId, nodeLabel, visualizationData, knowledgeCards });
 
-    // Call the OpenAI API with enforced JSON response format
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
-      messages: messages as any,
-      temperature: 0.7,
-      response_format: { type: 'json_object' }
-    });
-
-    // Extract and parse the response
-    const content = response.choices[0].message.content;
-    if (!content) {
-      throw new Error('Empty response from OpenAI');
+    // 1. Check cache
+    const cached = await apiCache.getCachedExpandedConcept(sessionId, graphHash);
+    if (cached) {
+      return NextResponse.json(cached);
     }
 
-    // Parse and validate the response
-    let expandedData: ExpandedConceptResponse;
+    // 2. Try to acquire lock (SETNX with 5 min TTL)
+    const lockAcquired = await apiCache.acquireLock(sessionId, graphHash, 300);
+    if (!lockAcquired) {
+      // Lock exists, return 202 with Retry-After
+      const ttl = await apiCache.getLockTTL(sessionId, graphHash);
+      return NextResponse.json(
+        { error: 'Request in progress. Please retry later.', retryAfter: ttl > 0 ? ttl : 60 },
+        { status: 202, headers: { 'Retry-After': (ttl > 0 ? ttl : 60).toString() } }
+      );
+    }
+
+    let expandedData: ExpandedConceptResponse | null = null;
     try {
+      // Prepare the prompt for OpenAI
+      const messages = [
+        { role: 'system', content: EXPAND_CONCEPT_PROMPT },
+        {
+          role: 'user',
+          content: JSON.stringify({
+            nodeToExpand: { id: nodeId, label: nodeLabel },
+            visualizationData,
+            knowledgeCards
+          })
+        }
+      ];
+
+      // Call the OpenAI API with enforced JSON response format
+      const response = await openai.chat.completions.create({
+        model: 'gpt-4-turbo-preview',
+        messages: messages as any,
+        temperature: 0.7,
+        response_format: { type: 'json_object' }
+      });
+
+      // Extract and parse the response
+      const content = response.choices[0].message.content;
+      if (!content) {
+        throw new Error('Empty response from OpenAI');
+      }
+
+      // Parse and validate the response
       expandedData = JSON.parse(content);
-      
+
       // Basic validation
       if (!expandedData.title || !expandedData.content || !Array.isArray(expandedData.relatedConcepts)) {
         throw new Error('Invalid response structure');
       }
+
+      // 3. Cache the response (24h TTL)
+      await apiCache.setCachedExpandedConcept(sessionId, graphHash, expandedData, 60 * 60 * 24);
     } catch (error) {
-      console.error('Error parsing OpenAI response:', error);
-      console.error('Raw response:', content);
-      return NextResponse.json({ error: 'Failed to parse expanded concept data' }, { status: 500 });
+      console.error('Error expanding concept:', error);
+      return NextResponse.json({ error: error.message || 'Error expanding concept' }, { status: 500 });
+    } finally {
+      // 4. Release the lock
+      await apiCache.releaseLock(sessionId, graphHash);
     }
 
     // Return the expanded concept data
@@ -162,4 +189,4 @@ export async function POST(req: NextRequest) {
     console.error('Error expanding concept:', error);
     return NextResponse.json({ error: error.message || 'Error expanding concept' }, { status: 500 });
   }
-} 
+}
