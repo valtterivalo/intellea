@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { UMAP } from 'umap-js'; // Import UMAP
 import type { Database } from '@/lib/database.types';
@@ -224,20 +224,20 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
 
 {
   "nodes": [ { "id": "string", "label": "string" } ], // **NEW nodes ONLY**. 'id' MUST be unique within the ENTIRE graph (existing + new). 'label' is display text. Max 2-3 new nodes.
-  "links": [ { "source": "string", "target": "string" } ], // **NEW links ONLY**. Include links connecting the clicked node to new nodes AND **potentially links connecting NEW nodes to OTHER EXISTING nodes** if a strong semantic relationship exists. 'source' and 'target' MUST match node IDs (either existing or new). Max 3-5 new links.
+  "links": [ { "source": "string", "target": "string" } ], // **NEW links ONLY**. Links should primarily connect the clicked node (provided as context) to the new nodes you are generating. You can also create links *between* the new nodes you generate if it makes sense. **DO NOT** create links from a new node to an *existing node* other than the clicked concept from which the expansion is occurring. 'source' and 'target' MUST match node IDs (either the clicked node, or new nodes). Max 3-5 new links.
   "knowledgeCards": [ { "nodeId": "string", "title": "string", "description": "string" } ] // **NEW cards ONLY**. Generate ONE card for EACH new node. 'nodeId' MUST match the new node's 'id'. 'title' should match node 'label'. 'description' MUST be 2-4 concise sentences.
 }
 
 **Constraint Checklist:**
 1. Single JSON object ONLY.
 2. Only include nodes/links/cards that are **directly relevant** and **add new information** based on the clicked node.
-3. **Identify potential cross-connections:** Evaluate if any NEWLY generated node has a strong semantic relationship with any OTHER EXISTING node in the provided graph context (besides the clicked node). If yes, add a link in the "links" array connecting the new node to that existing node. Prioritize meaningful connections.
+3. **Link Generation Rules:** Links should originate from the clicked node (identified by \`nodeToExpand.id\` in the user message context) and target a new node, OR links can be between two new nodes generated in this response. **Avoid linking new nodes to any other existing nodes from the provided \`currentGraphStructure\`**.
 4. **CRITICAL: Generate EXACTLY ONE KnowledgeCard for EACH new node generated in the 'nodes' array.** The number of objects in 'knowledgeCards' MUST equal the number of objects in 'nodes'.
 5. **Each generated KnowledgeCard object MUST have a 'nodeId' property that EXACTLY matches the 'id' of its corresponding node in the NEW 'nodes' list.** Card 'title' should match node 'label'. 'description' MUST be 2-4 concise sentences.
 6. **DO NOT** include the clicked node itself or any other existing nodes/links/cards in the response.
 7. Ensure all new node IDs are unique strings across the entire graph context (existing + new).
-8. Ensure all link source/target IDs exist in either the provided existing graph or the new nodes list.
-9. Max 2-3 new nodes, 3-5 new links (including primary and cross-links), and their corresponding cards.
+8. Ensure all link source/target IDs reference either the clicked node or one of the new nodes you are creating.
+9. Max 2-3 new nodes, 3-5 new links (following the rules above), and their corresponding cards.
 10. If no relevant expansion is possible, return { "nodes": [], "links": [], "knowledgeCards": [] }.
 `;
 
@@ -246,7 +246,33 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
 export async function POST(req: NextRequest) {
   try {
     // 1. Authenticate User & Check Subscription
-    const supabase = createRouteHandlerClient({ cookies });
+    const cookieStore = await cookies();
+    const supabase = createServerClient<Database>(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        cookies: {
+          getAll() {
+            return cookieStore.getAll();
+          },
+          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+            try {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                // For API Route Handlers, the `cookieStore` obtained from `cookies()`
+                // is read-only. We cannot set cookies directly here for the outgoing response.
+                // Cookie setting related to auth state changes (like session refresh)
+                // initiated by Supabase client calls (e.g., `auth.getUser`, `auth.refreshSession`)
+                // will be handled by the `updateSession` middleware, which *can* set cookies
+                // on the `NextResponse`.
+                // Therefore, this `setAll` can be a no-op or log for debugging.
+              });
+            } catch (error) {
+              // console.warn("Error in API route setAll (expected for read-only store):", error);
+            }
+          },
+        },
+      }
+    );
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
@@ -350,12 +376,30 @@ export async function POST(req: NextRequest) {
 
             // Combine existing and new data
             const combinedNodesRaw = [...currentVisualizationData.nodes, ...llmExpansionResponse.nodes];
-            const combinedLinks = [...currentVisualizationData.links, ...llmExpansionResponse.links];
+            let combinedLinks = [...currentVisualizationData.links, ...llmExpansionResponse.links]; // Made it let for reassignment
             const combinedKnowledgeCards = [...currentKnowledgeCards, ...llmExpansionResponse.knowledgeCards];
+
+            // --- Deduplicate links based on source and target --- 
+            if (combinedLinks.length > 0) {
+              const uniqueLinkIdentifiers = new Set<string>();
+              const dedupedLinks: GraphLink[] = [];
+              for (const link of combinedLinks) {
+                // Normalize by sorting source and target if links are considered undirected for deduplication purposes,
+                // otherwise, just use them as is for directed links.
+                // For this application, a link A->B is distinct from B->A, so order matters.
+                const identifier = JSON.stringify({ source: link.source, target: link.target });
+                if (!uniqueLinkIdentifiers.has(identifier)) {
+                  uniqueLinkIdentifiers.add(identifier);
+                  dedupedLinks.push(link);
+                }
+              }
+              combinedLinks = dedupedLinks;
+            }
+            // --- End Deduplication ---
 
             // --- DEBUG: Log Combined Links --- 
             console.log(`DEBUG: Existing Links Count: ${currentVisualizationData.links.length}`);
-            console.log(`DEBUG: Combined Links Count (Before Deduplication if any): ${combinedLinks.length}`);
+            console.log(`DEBUG: Combined Links Count (After Deduplication): ${combinedLinks.length}`); // Updated log
             // Optional: Log the full combined list if needed, but can be verbose
             // console.log("DEBUG: Final Combined Links:", JSON.stringify(combinedLinks)); 
             // --- END DEBUG --- 

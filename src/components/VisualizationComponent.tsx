@@ -4,8 +4,6 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
-import { getNodeColor as getDepthColor } from '@/lib/graphColors';
-import * as THREE from 'three'; // Keep THREE import for now, might be needed by dependencies
 import { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d'; // Import library types
 
 // Define our application-specific node structure, extending the library's base type

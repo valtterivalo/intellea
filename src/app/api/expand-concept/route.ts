@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 import * as apiCache from '@/lib/apiCache';
@@ -80,8 +80,28 @@ Your response must be a valid JSON object with this structure:
 }`;
 
 export async function POST(req: NextRequest) {
+  const cookieStore = await cookies();
   // Create Supabase client
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) => {
+              cookieStore.set(name, value, options);
+            });
+          } catch (error) {
+            // console.warn("Error setting cookies in API route handler:", error);
+          }
+        },
+      },
+    }
+  );
 
   try {
     // Verify user subscription
@@ -168,25 +188,38 @@ export async function POST(req: NextRequest) {
       // Parse and validate the response
       expandedData = JSON.parse(content);
 
-      // Basic validation
-      if (!expandedData.title || !expandedData.content || !Array.isArray(expandedData.relatedConcepts)) {
-        throw new Error('Invalid response structure');
+      // Basic validation - ensure expandedData is not null and has required properties
+      if (!expandedData || !expandedData.title || !expandedData.content || !Array.isArray(expandedData.relatedConcepts)) {
+        console.error('Invalid or empty response structure from OpenAI after parsing.', expandedData);
+        throw new Error('Invalid response structure from AI service.'); // This will be caught by the outer try-catch
       }
 
       // 3. Cache the response (24h TTL)
       await apiCache.setCachedExpandedConcept(sessionId, graphHash, expandedData, 60 * 60 * 24);
-    } catch (error) {
-      console.error('Error expanding concept:', error);
-      return NextResponse.json({ error: error.message || 'Error expanding concept' }, { status: 500 });
+    } catch (error: unknown) {
+      console.error('Error expanding concept during OpenAI call or caching:', error);
+      const message = error instanceof Error ? error.message : 'Failed to process expansion request.';
+      return NextResponse.json({ error: message }, { status: 500 });
     } finally {
       // 4. Release the lock
       await apiCache.releaseLock(sessionId, graphHash);
     }
 
+    // At this point, expandedData should be valid if no error was thrown and returned from above catch.
+    // The previous null check before this return is now redundant due to the earlier robust check.
+    // However, to be absolutely safe for the linter if it can't infer through the try/catch/finally, 
+    // we can keep a check, or rely on the fact that if it were null, an error path would have been taken.
+    // For robustness, if expandedData somehow became null without an error above (highly unlikely):
+    if (!expandedData) {
+        console.error('Critical internal error: expandedData is null before final return despite earlier checks.');
+        return NextResponse.json({ error: 'Internal server error processing expansion.' }, { status: 500 });
+    }
+
     // Return the expanded concept data
     return NextResponse.json(expandedData);
-  } catch (error: any) {
-    console.error('Error expanding concept:', error);
-    return NextResponse.json({ error: error.message || 'Error expanding concept' }, { status: 500 });
+  } catch (error: unknown) {
+    console.error('Outer error handler for /api/expand-concept:', error);
+    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

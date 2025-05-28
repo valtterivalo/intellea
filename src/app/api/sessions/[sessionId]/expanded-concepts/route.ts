@@ -1,9 +1,8 @@
-import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { Database } from '@/lib/database.types';
 import type { ExpandedConceptData } from '@/store/useAppStore';
 import { createClient as createRedisClient } from '@/lib/redis';
+import { createClient } from '@/lib/supabase/server';
 
 interface Params {
   sessionId: string;
@@ -12,7 +11,7 @@ interface Params {
 // GET handler to fetch all expanded concepts for a specific session
 export async function GET(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = await createClient();
   const redis = createRedisClient();
 
   if (!sessionId) {
@@ -22,20 +21,20 @@ export async function GET(request: Request, { params }: { params: Params }) {
   try {
     // Verify user session
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (sessionError) {
-      console.error('Error getting session:', sessionError);
-      return NextResponse.json({ error: 'Error retrieving session' }, { status: 500 });
+    if (userError) {
+      console.error('Error getting user:', userError);
+      return NextResponse.json({ error: 'Error retrieving user session' }, { status: 500 });
     }
 
-    if (!session) {
+    if (!user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // First verify the session belongs to the user
     const { data: sessionData, error: sessionCheckError } = await supabase
@@ -106,7 +105,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
 // POST handler to create a new expanded concept for a specific session
 export async function POST(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = await createClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
@@ -152,15 +151,15 @@ export async function POST(request: Request, { params }: { params: Params }) {
   try {
     // Verify user session
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // First verify the session belongs to the user
     const { data: sessionData, error: sessionCheckError } = await supabase
@@ -241,7 +240,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
 // DELETE handler to remove an expanded concept by node ID
 export async function DELETE(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = createRouteHandlerClient<Database>({ cookies });
+  const supabase = await createClient();
   const url = new URL(request.url);
   const nodeId = url.searchParams.get('nodeId');
 
@@ -256,15 +255,15 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
   try {
     // Verify user session
     const {
-      data: { session },
-      error: sessionError,
-    } = await supabase.auth.getSession();
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (sessionError || !session) {
+    if (userError || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userId = session.user.id;
+    const userId = user.id;
 
     // First verify the session belongs to the user
     const { data: sessionData, error: sessionCheckError } = await supabase

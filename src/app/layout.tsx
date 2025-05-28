@@ -6,9 +6,10 @@ import { PT_Sans } from "next/font/google"; // Add PT_Sans
 import "./globals.css";
 
 // Import Supabase components
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs'
-import { cookies } from 'next/headers'
-import SupabaseListener from '@/components/SupabaseListener'; // We will create this component next
+// import { createServerComponentClient } from '@supabase/auth-helpers-nextjs' // DELETE THIS
+// import { cookies } from 'next/headers' // DELETE THIS (handled by server client utility)
+import { createClient } from '@/lib/supabase/server'; // ADD THIS
+import SupabaseListener from '@/components/SupabaseListener'; 
 
 // Remove Geist font config
 // const geistSans = Geist({
@@ -44,8 +45,9 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createServerComponentClient({ cookies })
-  const { data: { session } } = await supabase.auth.getSession();
+  const supabase = await createClient(); 
+  const { data: { user } } = await supabase.auth.getUser(); // For auth check and user object
+  const { data: { session: initialSession } } = await supabase.auth.getSession(); // For initial access token
 
   return (
     <html lang="en">
@@ -54,7 +56,7 @@ export default async function RootLayout({
         className={`${nunito.variable} ${ptSans.variable} antialiased relative`}
       >
         {/* Add SupabaseListener to manage client-side session changes */}
-        <SupabaseListener serverAccessToken={session?.access_token} />
+        <SupabaseListener serverAccessToken={initialSession?.access_token} /> {/* Pass token from initialSession */}
         <div className="texture" /> 
         {children}
       </body>
