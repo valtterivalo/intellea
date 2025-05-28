@@ -3,9 +3,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore, IntelleaResponse, NodeObject, LinkObject, SessionSummary, GraphData, KnowledgeCard } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard } from "lucide-react";
+import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -25,8 +26,11 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
 import ExpandedConceptCard from '@/components/ExpandedConceptCard';
+import OnboardingModal from '@/components/OnboardingModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
+import { computeProgress, suggestNextNode } from '@/lib/progress';
+import SearchNodes from '@/components/SearchNodes';
 
 // Ensure Stripe publishable key is set
 if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -53,6 +57,7 @@ export default function MainAppClient() {
     error,
     subscriptionStatus,
     isSubscriptionLoading,
+    completedNodeIds,
   } = useAppStore(useShallow((state) => ({
     prompt: state.prompt,
     output: state.output,
@@ -67,7 +72,20 @@ export default function MainAppClient() {
     error: state.error,
     subscriptionStatus: state.subscriptionStatus,
     isSubscriptionLoading: state.isSubscriptionLoading,
+    completedNodeIds: state.completedNodeIds,
   })));
+
+  const knowledgeCards =
+    output && typeof output === 'object' && 'knowledgeCards' in output && Array.isArray((output as any).knowledgeCards)
+      ? (output as IntelleaResponse).knowledgeCards || []
+      : [];
+  const visualizationData =
+    output && typeof output === 'object' && 'visualizationData' in output
+      ? (output as IntelleaResponse).visualizationData
+      : null;
+
+  const progressPercent = computeProgress(knowledgeCards.length, completedNodeIds);
+  const suggestedNode = suggestNextNode(visualizationData, completedNodeIds);
 
   const {
     setPrompt,
@@ -90,6 +108,7 @@ export default function MainAppClient() {
   const [localExpandingNodeId, setLocalExpandingNodeId] = useState<string | null>(null);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -464,6 +483,7 @@ export default function MainAppClient() {
             <h1 className="text-lg font-semibold leading-none tracking-tight">New Session</h1>
           )}
           {isSavingSession && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <SearchNodes className="w-48" />
         </div>
         <div className="flex items-center gap-2">
           {isSubscriptionLoading ? (
@@ -479,16 +499,19 @@ export default function MainAppClient() {
               Manage Billing
             </Button>
           ) : (
-            <Button 
-              variant="default" 
+            <Button
+              variant="default"
               size="sm"
               onClick={handleSubscribe}
               disabled={isCheckoutLoading}
             >
-              {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} 
+              {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
               Subscribe Now
             </Button>
           )}
+          <Button variant="outline" size="icon" onClick={() => setShowOnboarding(true)}>
+            <Info className="h-4 w-4" />
+          </Button>
           <Button variant="outline" size="icon" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
           </Button>
@@ -503,6 +526,18 @@ export default function MainAppClient() {
         </Alert>
       )}
 
+      {knowledgeCards.length > 0 && (
+        <div className="px-4">
+          <div className="h-2 rounded bg-muted overflow-hidden">
+            <div className="bg-primary h-full" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground text-right mt-1">
+            {Math.round(progressPercent)}% learned
+            {suggestedNode ? ` – Next: ${suggestedNode.label}` : ''}
+          </p>
+        </div>
+      )}
+
       <main className="flex-1 overflow-hidden flex flex-col">
         {output && typeof output === 'object' ? (
           <Card className="m-4 flex-1 flex flex-col overflow-hidden">
@@ -510,8 +545,9 @@ export default function MainAppClient() {
               <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4">
-              <OutputRenderer 
-                onNodeExpand={handleNodeExpand} 
+              <Breadcrumbs />
+              <OutputRenderer
+                onNodeExpand={handleNodeExpand}
                 expandingNodeId={localExpandingNodeId}
               />
             </CardContent>
@@ -558,11 +594,12 @@ export default function MainAppClient() {
             )}
           </div>
         )}
-        <FullscreenGraphContainer 
-            onNodeExpand={handleNodeExpand} 
-            expandingNodeId={localExpandingNodeId} 
+        <FullscreenGraphContainer
+            onNodeExpand={handleNodeExpand}
+            expandingNodeId={localExpandingNodeId}
         />
         <ExpandedConceptCard />
+        <OnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
       </main>
 
       <footer className="p-4 border-t bg-background">

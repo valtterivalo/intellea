@@ -2,11 +2,7 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import ReactMarkdown, { Components } from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
-// Import the interactive quiz component
-import QuizComponent from './QuizComponent';
 import VisualizationComponent from './VisualizationComponent';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -21,6 +17,7 @@ import ExplanationSection from './ExplanationSection';
 import KnowledgeCardsSection from './KnowledgeCardsSection';
 import VisualizationSection from './VisualizationSection';
 import QuizSection from './QuizSection';
+import { markdownComponents } from './MarkdownComponents';
 
 // Define props for OutputRenderer
 interface OutputRendererProps {
@@ -37,32 +34,6 @@ function isIntelleaResponse(output: any): output is IntelleaResponse {
   );
 }
 
-// --- Custom Markdown Components (Adjusted for theme) --- 
-const CustomParagraph = ({ children }: { children?: React.ReactNode }) => {
-    return <p className="leading-relaxed">{children}</p>; 
-};
-
-const CustomH1 = ({ children }: { children?: React.ReactNode }) => {
-    return <h1 className="text-3xl font-bold mt-6 mb-4">{children}</h1>;
-};
-
-const CustomH2 = ({ children }: { children?: React.ReactNode }) => {
-    return <h2 className="text-2xl font-semibold mt-5 mb-3">{children}</h2>;
-};
-
-const CustomH3 = ({ children }: { children?: React.ReactNode }) => {
-    return <h3 className="text-xl font-semibold mt-4 mb-2">{children}</h3>;
-};
-
-// Combine custom components for ReactMarkdown
-const markdownComponents: Components = {
-    p: CustomParagraph,
-    h1: CustomH1,
-    h2: CustomH2,
-    h3: CustomH3,
-    // We can add more custom components here for lists, code blocks, etc. if needed later
-};
-// --- End Custom Markdown Components ---
 
 // Update OutputRenderer to accept props
 const OutputRenderer: React.FC<OutputRendererProps> = ({ 

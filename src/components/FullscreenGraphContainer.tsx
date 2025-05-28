@@ -1,13 +1,14 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Map } from 'lucide-react';
 import { useAppStore, NodeObject, LinkObject, GraphData } from '@/store/useAppStore';
 import VisualizationComponent from './VisualizationComponent';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
 import { ForceGraphMethods } from 'react-force-graph-3d';
+import MiniMap from './MiniMap';
 
 // Define props for the container
 interface FullscreenGraphContainerProps {
@@ -24,6 +25,11 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
     const output = useAppStore((state) => state.output);
     const containerRef = useRef<HTMLDivElement>(null);
     const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
+    const graphContainerRef = useRef<HTMLDivElement>(null);
+    const [graphDims, setGraphDims] = useState({ width: 0, height: 0 });
+    const [cameraState, setCameraState] = useState({ position: { x: 0, y: 0, z: 0 }, zoom: 1 });
+    const [showMiniMap, setShowMiniMap] = useState(true);
+    const toggleMiniMap = () => setShowMiniMap((v) => !v);
 
     // Toolbar handlers
     const handleZoomIn = () => {
@@ -51,6 +57,12 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         }
     };
 
+    const handleMiniMapCenter = (x: number, y: number) => {
+        if (!graphRef.current || !graphRef.current.cameraPosition) return;
+        const cam = graphRef.current.camera();
+        graphRef.current.cameraPosition({ x, y, z: cam.position.z }, { x, y, z: 0 }, 1000);
+    };
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
@@ -71,6 +83,34 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
             document.body.style.overflow = 'auto';
         };
     }, [isGraphFullscreen, toggleGraphFullscreen]);
+
+    // Track graph container dimensions
+    useEffect(() => {
+        const el = graphContainerRef.current;
+        if (!el) return;
+        const update = () => {
+            setGraphDims({ width: el.offsetWidth, height: el.offsetHeight });
+        };
+        update();
+        const ro = new ResizeObserver(update);
+        ro.observe(el);
+        return () => ro.disconnect();
+    }, []);
+
+    // Sync camera movements to mini map
+    useEffect(() => {
+        if (!graphRef.current) return;
+        const controls: any = graphRef.current.controls && graphRef.current.controls();
+        const update = () => {
+            const cam = graphRef.current!.camera();
+            setCameraState({ position: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, zoom: cam.zoom });
+        };
+        update();
+        if (controls && controls.addEventListener) {
+            controls.addEventListener('change', update);
+            return () => controls.removeEventListener('change', update);
+        }
+    }, [graphRef.current]);
 
     // Extract visualization data, ensuring it conforms to GraphData
     let vizData: GraphData | null = null;
@@ -99,7 +139,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
             aria-hidden={!isGraphFullscreen}
         >
             {vizData && (
-                <div className="relative h-[95vh] w-[95vw] rounded-lg border bg-card shadow-xl overflow-hidden">
+                <div ref={graphContainerRef} className="relative h-[95vh] w-[95vw] rounded-lg border bg-card shadow-xl overflow-hidden">
                     {/* Floating Toolbar */}
                     <div className="absolute top-2 left-2 z-20 flex flex-col gap-2 bg-card/80 rounded-md shadow p-2">
                         <Button variant="ghost" size="icon" onClick={handleZoomIn} aria-label="Zoom in">
@@ -114,12 +154,22 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
                         <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Reset camera">
                             <RefreshCw className="h-5 w-5" />
                         </Button>
+                        <Button variant="ghost" size="icon" onClick={toggleMiniMap} aria-label="Toggle mini map">
+                            <Map className="h-5 w-5" />
+                        </Button>
                     </div>
-                    <VisualizationComponent 
+                    <VisualizationComponent
                         ref={graphRef}
-                        visualizationData={vizData} 
+                        visualizationData={vizData}
                         onNodeExpand={onNodeExpand}
                         expandingNodeId={expandingNodeId}
+                    />
+                    <MiniMap
+                        graphData={vizData}
+                        cameraState={cameraState}
+                        mainGraphDims={graphDims}
+                        onCenter={handleMiniMapCenter}
+                        visible={showMiniMap}
                     />
                     <Button
                         variant="ghost"

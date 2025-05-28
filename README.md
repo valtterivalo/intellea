@@ -54,6 +54,15 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 
 ## Environment Variables
 
-| Variable    | Description                | Example                      |
-|-------------|---------------------------|------------------------------|
-| REDIS_URL   | Redis connection string.  | redis://localhost:6379       |
+| Variable                             | Description                                                | Example                         |
+|--------------------------------------|------------------------------------------------------------|---------------------------------|
+| REDIS_URL                            | Redis connection string.                                   | redis://localhost:6379          |
+| OPENAI_API_KEY                       | API key for OpenAI.                                        | sk-test-123                     |
+| NEXT_PUBLIC_SUPABASE_URL             | URL of your Supabase project.                              | https://xyz.supabase.co         |
+| NEXT_PUBLIC_SUPABASE_ANON_KEY        | Supabase anonymous public key.                             | public-anon-key                 |
+| STRIPE_SECRET_KEY                    | Stripe secret key for server-side API calls.               | sk_test_123                     |
+| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY   | Stripe publishable key for client-side operations.         | pk_test_123                     |
+| STRIPE_PRICE_ID                      | Stripe price ID for your subscription product.             | price_123                       |
+| NEXT_PUBLIC_SITE_URL                 | Base URL of the deployed site used for redirect callbacks. | http://localhost:3000           |
+| STRIPE_WEBHOOK_SECRET                | Signing secret to verify Stripe webhooks.                  | whsec_test_123                  |
+| SUPABASE_SERVICE_ROLE_KEY            | Supabase service role key used for secure server actions.  | service-role-key                |
