@@ -8,6 +8,7 @@ describe('Graph UX Zustand Store', () => {
       selectedNodeId: null,
       pinnedNodes: {},
       nodeNotes: {},
+      visitedNodeIds: [],
     });
     let storage: Record<string, string> = {};
     global.localStorage = {
@@ -57,5 +58,10 @@ describe('Graph UX Zustand Store', () => {
     expect(raw).not.toBeNull();
     const saved = JSON.parse(raw as string);
     expect(saved.state.nodeNotes['node-4']).toBe('memo');
+  it('tracks visited nodes without duplicates', () => {
+    useAppStore.getState().setSelectedNodeId('a');
+    useAppStore.getState().setSelectedNodeId('b');
+    useAppStore.getState().setSelectedNodeId('a');
+    expect(useAppStore.getState().visitedNodeIds).toEqual(['a', 'b']);
   });
 });
