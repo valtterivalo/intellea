@@ -291,19 +291,11 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   // Right-click: show custom context menu at mouse position
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
   const [menuNodeId, setMenuNodeId] = useState<string | null>(null);
-  const handleContextMenu = useCallback(
-    (event: MouseEvent) => {
-      event.preventDefault();
-      if (!hoveredNodeId) return;
-      setMenuPosition({ x: event.clientX, y: event.clientY });
-      setMenuNodeId(hoveredNodeId);
-    },
-    [hoveredNodeId]
-  );
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    
     const handleContextMenu = (event: MouseEvent) => {
       event.preventDefault();
       if (!hoveredNodeId) return;
@@ -325,12 +317,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         }));
       }
     };
+    
     container.addEventListener('contextmenu', handleContextMenu);
     return () => {
       container.removeEventListener('contextmenu', handleContextMenu);
     };
   }, [hoveredNodeId, visualizationData, pinnedNodes, pinNode, unpinNode, clusters]);
-  }, [handleContextMenu]);
 
   // Node hover handler - Use correct type
   const handleNodeHover = useCallback((node: NodeObject | null) => {
@@ -414,19 +406,13 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   return (
     <ContextMenu
       open={!!menuPosition}
-      onOpenChange={(open) => {
+      onOpenChange={(open: boolean) => {
         if (!open) {
           setMenuPosition(null);
           setMenuNodeId(null);
         }
       }}
     >
-      <ForceGraph3DComponent
-        ref={graphRef}
-        graphData={visibleData}
-        width={dimensions.width}
-        height={dimensions.height}
-        backgroundColor={themeColors.background}
       <ContextMenuTrigger asChild>
         <div
           ref={containerRef}
@@ -434,35 +420,35 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         >
           <ForceGraph3DComponent
             ref={graphRef}
-            graphData={visualizationData}
+            graphData={visibleData}
             width={dimensions.width}
             height={dimensions.height}
             backgroundColor={themeColors.background}
-        cooldownTime={1000}
-        // --- Node Styling ---
-        nodeRelSize={6}
-        nodeVal={getNodeVal}
-        nodeLabel="label" // Tooltip label
-        nodeColor={getNodeColor}
-        nodeOpacity={1}
-        nodeThreeObjectExtend={true}
-        nodeThreeObject={getNodeThreeObject}
-        // --- Link Styling ---
-        linkColor={() => themeColors.link}
-        linkWidth={0.5}
-        linkDirectionalParticles={1}
-        linkDirectionalParticleWidth={1.5}
-        linkDirectionalParticleSpeed={0.006}
-        // --- Interaction ---
-        onNodeClick={handleNodeClick}
-        onNodeHover={handleNodeHover}
-        enableNodeDrag={false}
-        // --- Forces & Camera ---
-        controlType="orbit"
-        // Node Configuration
-        nodeResolution={16}
-        // Performance / Simulation
-        d3AlphaDecay={0.02}
+            cooldownTime={1000}
+            // --- Node Styling ---
+            nodeRelSize={6}
+            nodeVal={getNodeVal}
+            nodeLabel="label" // Tooltip label
+            nodeColor={getNodeColor}
+            nodeOpacity={1}
+            nodeThreeObjectExtend={true}
+            nodeThreeObject={getNodeThreeObject}
+            // --- Link Styling ---
+            linkColor={() => themeColors.link}
+            linkWidth={0.5}
+            linkDirectionalParticles={1}
+            linkDirectionalParticleWidth={1.5}
+            linkDirectionalParticleSpeed={0.006}
+            // --- Interaction ---
+            onNodeClick={handleNodeClick}
+            onNodeHover={handleNodeHover}
+            enableNodeDrag={false}
+            // --- Forces & Camera ---
+            controlType="orbit"
+            // Node Configuration
+            nodeResolution={16}
+            // Performance / Simulation
+            d3AlphaDecay={0.02}
           />
         </div>
       </ContextMenuTrigger>
