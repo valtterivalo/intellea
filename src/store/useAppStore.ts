@@ -110,6 +110,7 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  onboardingDismissed: boolean;
   nodeNotes: Record<string, string>;
   visitedNodeIds: string[];
   collapsedNodes: Record<string, boolean>;
@@ -152,6 +153,7 @@ export interface AppState {
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  setOnboardingDismissed: (dismissed: boolean) => void;
   setNodeNote: (nodeId: string, note: string) => void;
   collapseNode: (nodeId: string) => void;
   expandNode: (nodeId: string) => void;
@@ -191,6 +193,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      onboardingDismissed: false,
       nodeNotes: {},
       visitedNodeIds: [],
       collapsedNodes: {},
@@ -216,6 +219,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           delete updated[nodeId];
           return { pinnedNodes: updated };
         }),
+      setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
       setNodeNote: (nodeId, note) =>
         set((state) => ({
           nodeNotes: { ...state.nodeNotes, [nodeId]: note },
@@ -877,6 +881,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       name: 'intellea-session-storage', // name of the item in the storage (must be unique)
       storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
       partialize: (state) => ({
+        currentSessionId: state.currentSessionId, // Only persist the current session ID
+        onboardingDismissed: state.onboardingDismissed,
         currentSessionId: state.currentSessionId,
         nodeNotes: state.nodeNotes,
       }),

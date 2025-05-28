@@ -26,6 +26,7 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
 import ExpandedConceptCard from '@/components/ExpandedConceptCard';
+import OnboardingModal from '@/components/OnboardingModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
 import SearchNodes from '@/components/SearchNodes';
@@ -562,11 +563,12 @@ export default function MainAppClient() {
             )}
           </div>
         )}
-        <FullscreenGraphContainer 
-            onNodeExpand={handleNodeExpand} 
-            expandingNodeId={localExpandingNodeId} 
+        <FullscreenGraphContainer
+            onNodeExpand={handleNodeExpand}
+            expandingNodeId={localExpandingNodeId}
         />
         <ExpandedConceptCard />
+        <OnboardingModal />
       </main>
 
       <footer className="p-4 border-t bg-background">
