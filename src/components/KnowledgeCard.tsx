@@ -32,7 +32,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     expandConcept,
     isExpandingConcept,
     subscriptionStatus,
-    visualizationData
+    visualizationData,
+    markCompleted,
+    completedNodeIds
   } = useAppStore(
     useShallow((state) => ({ // Use useShallow for multiple selections
       setFocusedNodeId: state.setFocusedNodeId,
@@ -42,6 +44,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
       subscriptionStatus: state.subscriptionStatus,
       // Safely access visualizationData
       visualizationData: isIntelleaResponse(state.output) ? state.output.visualizationData : null,
+      markCompleted: state.markCompleted,
+      completedNodeIds: state.completedNodeIds,
     }))
   );
 
@@ -60,6 +64,12 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     console.log(`Expand concept requested for node: ${card.nodeId}, ${card.title}`);
     expandConcept(card.nodeId, card.title, supabase);
   };
+
+  const handleCompleteClick = () => {
+    markCompleted(card.nodeId);
+  };
+
+  const isCompleted = completedNodeIds.has(card.nodeId);
 
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
@@ -89,14 +99,23 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
           >
             <Camera className="mr-1.5 h-3.5 w-3.5" /> Focus
           </Button>
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             className="flex-1 text-xs"
             onClick={handleExpandClick}
             disabled={isExpandingConcept || !isSubscriptionActive}
           >
             <Expand className="mr-1.5 h-3.5 w-3.5" /> Expand
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1 text-xs"
+            onClick={handleCompleteClick}
+            disabled={isCompleted}
+          >
+            {isCompleted ? 'Learned' : 'Mark Learned'}
           </Button>
       </div>
     </Card>

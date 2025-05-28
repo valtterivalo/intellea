@@ -110,6 +110,7 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  completedNodeIds: Set<string>;
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -149,6 +150,7 @@ export interface AppState {
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  markCompleted: (nodeId: string) => void;
 }
 
 // Explicitly type the store hook
@@ -185,6 +187,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      completedNodeIds: new Set(),
 
       // --- Action Implementations ---
       setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
@@ -197,6 +200,12 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           const updated = { ...state.pinnedNodes };
           delete updated[nodeId];
           return { pinnedNodes: updated };
+        }),
+      markCompleted: (nodeId) =>
+        set((state) => {
+          const updated = new Set(state.completedNodeIds);
+          updated.add(nodeId);
+          return { completedNodeIds: updated };
         }),
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => set({ output }),
