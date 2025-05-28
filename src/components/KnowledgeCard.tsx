@@ -3,7 +3,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Camera, Expand } from 'lucide-react'; // Add Expand icon
+import { Camera, Expand, StickyNote } from 'lucide-react';
 import { useAppStore, IntelleaResponse } from '@/store/useAppStore'; // Import the store and IntelleaResponse type
 import { useShallow } from 'zustand/react/shallow'; // Import useShallow for multiple state slices
 import type { KnowledgeCard as KnowledgeCardType, GraphData } from '@/store/useAppStore'; // Import types
@@ -35,6 +35,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     visualizationData,
     markCompleted,
     completedNodeIds
+    nodeNotes
   } = useAppStore(
     useShallow((state) => ({ // Use useShallow for multiple selections
       setFocusedNodeId: state.setFocusedNodeId,
@@ -46,6 +47,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
       visualizationData: isIntelleaResponse(state.output) ? state.output.visualizationData : null,
       markCompleted: state.markCompleted,
       completedNodeIds: state.completedNodeIds,
+      nodeNotes: state.nodeNotes,
     }))
   );
 
@@ -72,6 +74,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
   const isCompleted = completedNodeIds.has(card.nodeId);
 
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  const hasNote = !!nodeNotes[card.nodeId];
 
   return (
     <Card
@@ -83,7 +86,10 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
       )}
     >
       <CardHeader className="pb-2 pt-3 px-4"> {/* Adjusted padding */}
-        <CardTitle className="text-lg leading-tight">{card.title}</CardTitle>
+        <CardTitle className="text-lg leading-tight flex items-center gap-1">
+          {card.title}
+          {hasNote && <StickyNote className="h-4 w-4" />}
+        </CardTitle>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3"> {/* Adjusted padding */}
         <p>{card.description}</p>

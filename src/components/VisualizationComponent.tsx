@@ -4,6 +4,13 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
+import {
+  ContextMenu,
+  ContextMenuTrigger,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+} from '@/components/ContextMenu';
 import * as THREE from 'three'; // Keep THREE import for now, might be needed by dependencies
 import { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d'; // Import library types
 
@@ -49,6 +56,16 @@ const themeColors = {
   label: '#5D4037'
 };
 
+const clusterPalette = [
+  '#ef4444',
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#22d3ee'
+];
+
 const ForceGraph3DComponent = dynamic(() => import('react-force-graph-3d').then(mod => mod.default),
     { ssr: false, loading: () => <p className="text-muted-foreground italic text-sm p-4">Loading 3D Graph...</p> }
 );
@@ -66,35 +83,38 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   React.useImperativeHandle(forwardedRef, () => graphRef.current, []);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [collapsedClusters, setCollapsedClusters] = useState<Record<string, boolean>>({});
 
   // --- Store State Selectors ---
   const focusedNodeId = useAppStore((state) => state.focusedNodeId); // For camera focus (transient)
   const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds);
   const selectedNodeId = useAppStore((state) => state.selectedNodeId);
   const pinnedNodes = useAppStore((state) => state.pinnedNodes);
+  const clusters = useAppStore((state) => state.clusters);
+  const collapsedNodes = useAppStore((state) => state.collapsedNodes);
   const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId);
   const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath);
   const pinNode = useAppStore((state) => state.pinNode);
   const unpinNode = useAppStore((state) => state.unpinNode);
+  const collapseNode = useAppStore((state) => state.collapseNode);
+  const expandNodeInStore = useAppStore((state) => state.expandNode);
+  const setFocusedNodeId = useAppStore((state) => state.setFocusedNodeId);
   // --- End State Selectors ---
 
   // --- Node Color Logic (using depth helper) ---
   const getNodeColor = useCallback((node: NodeObject) => {
     const appNode = asAppNode(node);
-    // Determine node depth (assume it's stored as appNode.depth, fallback to 0)
-    const depth = typeof appNode.depth === 'number' ? appNode.depth : 0;
-    // Highlight if selected or pinned
+    const clusterId = clusters[appNode.id];
+    const paletteIndex = parseInt(clusterId || '0', 10) % clusterPalette.length;
+    const clusterColor = clusterPalette[paletteIndex];
     if (selectedNodeId === appNode.id) {
-      return '#eab308'; // yellow-500
+      return '#eab308';
     }
     if (pinnedNodes[appNode.id]) {
-      return '#22c55e'; // green-500
+      return '#22c55e';
     }
-    // Use depth-based color (hex values)
-    if (depth === 0) return '#f43f5e'; // accent-500 (pick a visible accent, e.g., rose-500)
-    if (depth === 1) return '#3b82f6'; // primary-500 (blue-500)
-    return '#64748b'; // slate-500
-  }, [selectedNodeId, pinnedNodes]);
+    return clusterColor;
+  }, [selectedNodeId, pinnedNodes, clusters]);
   // --- End Node Color Logic ---
 
   // --- Node Size Logic ---
@@ -268,8 +288,19 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     }, 300);
   }, [setSelectedNodeId, setActiveFocusPath, onNodeExpand]);
 
-  // Right-click: context menu (pin/unpin, collapse, expand again)
-  // Attach native contextmenu event to canvas and use last hovered node
+  // Right-click: show custom context menu at mouse position
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
+  const [menuNodeId, setMenuNodeId] = useState<string | null>(null);
+  const handleContextMenu = useCallback(
+    (event: MouseEvent) => {
+      event.preventDefault();
+      if (!hoveredNodeId) return;
+      setMenuPosition({ x: event.clientX, y: event.clientY });
+      setMenuNodeId(hoveredNodeId);
+    },
+    [hoveredNodeId]
+  );
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -278,23 +309,88 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       if (!hoveredNodeId) return;
       const appNode = (visualizationData?.nodes || []).find(n => n.id === hoveredNodeId);
       if (!appNode) return;
-      if (pinnedNodes[appNode.id]) {
-        unpinNode(appNode.id);
-      } else {
-        pinNode(appNode.id);
+      if (event.shiftKey) {
+        if (pinnedNodes[appNode.id]) {
+          unpinNode(appNode.id);
+        } else {
+          pinNode(appNode.id);
+        }
+        return;
       }
-      // TODO: Show context menu with more options (collapse, expand again)
+      const clusterId = clusters[appNode.id];
+      if (clusterId) {
+        setCollapsedClusters(prev => ({
+          ...prev,
+          [clusterId]: !prev[clusterId]
+        }));
+      }
     };
     container.addEventListener('contextmenu', handleContextMenu);
     return () => {
       container.removeEventListener('contextmenu', handleContextMenu);
     };
-  }, [hoveredNodeId, visualizationData, pinnedNodes, pinNode, unpinNode]);
+  }, [hoveredNodeId, visualizationData, pinnedNodes, pinNode, unpinNode, clusters]);
+  }, [handleContextMenu]);
 
   // Node hover handler - Use correct type
   const handleNodeHover = useCallback((node: NodeObject | null) => {
       setHoveredNodeId(node ? asAppNode(node).id : null);
   }, []);
+
+  // Keyboard shortcuts for selected node
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!selectedNodeId) return;
+      const key = event.key.toLowerCase();
+      if (key === 'p') {
+        if (pinnedNodes[selectedNodeId]) {
+          unpinNode(selectedNodeId);
+        } else {
+          pinNode(selectedNodeId);
+        }
+      } else if (key === 'f') {
+        const currentOutput = useAppStore.getState().output;
+        const vizData =
+          typeof currentOutput === 'object' && currentOutput?.visualizationData
+            ? currentOutput.visualizationData
+            : null;
+        setFocusedNodeId(selectedNodeId);
+        setActiveFocusPath(selectedNodeId, vizData);
+      } else if (key === 'e') {
+        expandNodeInStore(selectedNodeId);
+        const appNode = (visualizationData?.nodes || []).find(
+          (n) => n.id === selectedNodeId
+        );
+        if (onNodeExpand && appNode) {
+          onNodeExpand(selectedNodeId, appNode.label || '');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    selectedNodeId,
+    pinnedNodes,
+    pinNode,
+    unpinNode,
+    setActiveFocusPath,
+    setFocusedNodeId,
+    expandNodeInStore,
+    onNodeExpand,
+    visualizationData,
+  ]);
+  const visibleData: GraphData | undefined = React.useMemo(() => {
+    if (!visualizationData) return undefined;
+    const filteredNodes = visualizationData.nodes.filter(n => !collapsedClusters[clusters[n.id]]);
+    const visibleIds = new Set(filteredNodes.map(n => n.id));
+    const filteredLinks = visualizationData.links.filter(l => {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      return visibleIds.has(s) && visibleIds.has(t);
+    });
+    return { nodes: filteredNodes, links: filteredLinks };
+  }, [visualizationData, collapsedClusters, clusters]);
 
   // --- Render --- 
   if (!visualizationData) {
@@ -316,16 +412,32 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   // console.log("[Render] Graph Data Nodes:", visualizationData.nodes.length, "Links:", visualizationData.links.length);
 
   return (
-    <div 
-        ref={containerRef} 
-        className="w-full aspect-video bg-card rounded-md border border-border shadow-sm overflow-hidden relative min-h-[300px]"
+    <ContextMenu
+      open={!!menuPosition}
+      onOpenChange={(open) => {
+        if (!open) {
+          setMenuPosition(null);
+          setMenuNodeId(null);
+        }
+      }}
     >
       <ForceGraph3DComponent
         ref={graphRef}
-        graphData={visualizationData}
+        graphData={visibleData}
         width={dimensions.width}
         height={dimensions.height}
         backgroundColor={themeColors.background}
+      <ContextMenuTrigger asChild>
+        <div
+          ref={containerRef}
+          className="w-full aspect-video bg-card rounded-md border border-border shadow-sm overflow-hidden relative min-h-[300px]"
+        >
+          <ForceGraph3DComponent
+            ref={graphRef}
+            graphData={visualizationData}
+            width={dimensions.width}
+            height={dimensions.height}
+            backgroundColor={themeColors.background}
         cooldownTime={1000}
         // --- Node Styling ---
         nodeRelSize={6}
@@ -351,8 +463,46 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         nodeResolution={16}
         // Performance / Simulation
         d3AlphaDecay={0.02}
-      />
-    </div>
+          />
+        </div>
+      </ContextMenuTrigger>
+      {menuPosition && menuNodeId && (
+        <ContextMenuContent
+          style={{
+            position: 'fixed',
+            left: menuPosition.x,
+            top: menuPosition.y,
+          }}
+        >
+          <ContextMenuItem
+            onSelect={() => {
+              const appNode = (visualizationData?.nodes || []).find(n => n.id === menuNodeId);
+              if (!appNode) return;
+              if (pinnedNodes[appNode.id]) {
+                unpinNode(appNode.id);
+              } else {
+                pinNode(appNode.id);
+              }
+            }}
+          >
+            {pinnedNodes[menuNodeId] ? 'Unpin' : 'Pin'}
+          </ContextMenuItem>
+          <ContextMenuSeparator />
+          <ContextMenuItem onSelect={() => collapseNode(menuNodeId)}>Collapse Node</ContextMenuItem>
+          <ContextMenuItem
+            onSelect={() => {
+              expandNodeInStore(menuNodeId);
+              const appNode = (visualizationData?.nodes || []).find(n => n.id === menuNodeId);
+              if (onNodeExpand && appNode) {
+                onNodeExpand(menuNodeId, appNode.label || '');
+              }
+            }}
+          >
+            Expand Node
+          </ContextMenuItem>
+        </ContextMenuContent>
+      )}
+    </ContextMenu>
   );
 });
 
