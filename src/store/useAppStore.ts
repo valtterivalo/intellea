@@ -111,7 +111,9 @@ export interface AppState {
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
   onboardingDismissed: boolean;
-
+  nodeNotes: Record<string, string>;
+  visitedNodeIds: string[];
+  collapsedNodes: Record<string, boolean>;
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -152,6 +154,9 @@ export interface AppState {
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
   setOnboardingDismissed: (dismissed: boolean) => void;
+  setNodeNote: (nodeId: string, note: string) => void;
+  collapseNode: (nodeId: string) => void;
+  expandNode: (nodeId: string) => void;
 }
 
 // Explicitly type the store hook
@@ -189,9 +194,21 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       selectedNodeId: null,
       pinnedNodes: {},
       onboardingDismissed: false,
+      nodeNotes: {},
+      visitedNodeIds: [],
+      collapsedNodes: {},
 
       // --- Action Implementations ---
-      setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
+      setSelectedNodeId: (nodeId) =>
+        set((state) => {
+          if (nodeId === null) {
+            return { selectedNodeId: null };
+          }
+          const ids = state.visitedNodeIds.includes(nodeId)
+            ? state.visitedNodeIds
+            : [...state.visitedNodeIds, nodeId];
+          return { selectedNodeId: nodeId, visitedNodeIds: ids };
+        }),
       pinNode: (nodeId) =>
         set((state) => ({
           pinnedNodes: { ...state.pinnedNodes, [nodeId]: true },
@@ -203,6 +220,20 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           return { pinnedNodes: updated };
         }),
       setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
+      setNodeNote: (nodeId, note) =>
+        set((state) => ({
+          nodeNotes: { ...state.nodeNotes, [nodeId]: note },
+        })),
+      collapseNode: (nodeId) =>
+        set((state) => ({
+          collapsedNodes: { ...state.collapsedNodes, [nodeId]: true },
+        })),
+      expandNode: (nodeId) =>
+        set((state) => {
+          const updated = { ...state.collapsedNodes };
+          delete updated[nodeId];
+          return { collapsedNodes: updated };
+        }),
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => set({ output }),
       setLoading: (isLoading) => set({ isLoading }),
@@ -413,7 +444,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         activeClickedNodeId: null,
         isGraphFullscreen: false,
         expandedConceptData: null,
-        expandedConceptCache: new Map() // Clear the cache when resetting session
+        expandedConceptCache: new Map(), // Clear the cache when resetting session
+        visitedNodeIds: []
       }),
 
       // --- Focus Action Implementations ---
@@ -851,6 +883,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       partialize: (state) => ({
         currentSessionId: state.currentSessionId, // Only persist the current session ID
         onboardingDismissed: state.onboardingDismissed,
+        currentSessionId: state.currentSessionId,
+        nodeNotes: state.nodeNotes,
       }),
     }
   )
