@@ -34,7 +34,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     subscriptionStatus,
     visualizationData,
     markCompleted,
-    completedNodeIds
+    completedNodeIds,
     nodeNotes
   } = useAppStore(
     useShallow((state) => ({ // Use useShallow for multiple selections

@@ -4,13 +4,6 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
-import {
-  ContextMenu,
-  ContextMenuTrigger,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-} from '@/components/ContextMenu';
 import * as THREE from 'three'; // Keep THREE import for now, might be needed by dependencies
 import { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d'; // Import library types
 
@@ -83,6 +76,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   React.useImperativeHandle(forwardedRef, () => graphRef.current, []);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
   const [collapsedClusters, setCollapsedClusters] = useState<Record<string, boolean>>({});
 
   // --- Store State Selectors ---
@@ -170,33 +164,68 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     const container = containerRef.current;
     if (!container) return;
 
+    const updateDimensions = () => {
+      const rect = container.getBoundingClientRect();
+      const newWidth = rect.width;
+      const newHeight = rect.height;
+      
+      console.log('Container dimensions:', { newWidth, newHeight });
+      
+      if (newWidth > 0 && newHeight > 0) {
+        setDimensions(currentDimensions => {
+          if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
+            console.log('Updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
+            return { width: newWidth, height: newHeight };
+          }
+          return currentDimensions;
+        });
+      }
+    };
+
+    // Initial size detection with a small delay to ensure CSS is applied
+    const initialTimeout = setTimeout(updateDimensions, 100);
+
     const resizeObserver = new ResizeObserver(entries => {
       for (let entry of entries) {
         if (entry.contentRect) {
           const newWidth = entry.contentRect.width;
           const newHeight = entry.contentRect.height;
-          // Only update state if dimensions actually changed
-          setDimensions(currentDimensions => {
+          console.log('ResizeObserver triggered:', { newWidth, newHeight });
+          
+          if (newWidth > 0 && newHeight > 0) {
+            setDimensions(currentDimensions => {
               if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
-                  return { width: newWidth, height: newHeight };
+                console.log('ResizeObserver updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
+                return { width: newWidth, height: newHeight };
               }
-              return currentDimensions; // Return current state if no change
-          });
+              return currentDimensions;
+            });
+          }
         }
       }
     });
 
     resizeObserver.observe(container);
-    const initialWidth = container.offsetWidth;
-    const initialHeight = container.offsetHeight;
-    if (initialWidth > 0 && initialHeight > 0) {
-        setDimensions({ width: initialWidth, height: initialHeight });
-    }
+
+    // Fallback: if dimensions are still 0 after 2 seconds, use default dimensions
+    const fallbackTimeout = setTimeout(() => {
+      setDimensions(currentDimensions => {
+        if (currentDimensions.width === 0 || currentDimensions.height === 0) {
+          console.log('Using fallback dimensions');
+          const rect = container.getBoundingClientRect();
+          const fallbackWidth = rect.width > 0 ? rect.width : 800;
+          const fallbackHeight = rect.height > 0 ? rect.height : 600;
+          return { width: fallbackWidth, height: fallbackHeight };
+        }
+        return currentDimensions;
+      });
+    }, 2000);
 
     // Cleanup function
     return () => {
+      clearTimeout(initialTimeout);
+      clearTimeout(fallbackTimeout);
       resizeObserver.disconnect();
-      // Renderer disposal removed
     };
   }, []); // Dependencies remain empty
 
@@ -288,46 +317,43 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     }, 300);
   }, [setSelectedNodeId, setActiveFocusPath, onNodeExpand]);
 
-  // Right-click: show custom context menu at mouse position
-  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number } | null>(null);
-  const [menuNodeId, setMenuNodeId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-    
-    const handleContextMenu = (event: MouseEvent) => {
-      event.preventDefault();
-      if (!hoveredNodeId) return;
-      const appNode = (visualizationData?.nodes || []).find(n => n.id === hoveredNodeId);
-      if (!appNode) return;
-      if (event.shiftKey) {
-        if (pinnedNodes[appNode.id]) {
-          unpinNode(appNode.id);
-        } else {
-          pinNode(appNode.id);
-        }
-        return;
-      }
-      const clusterId = clusters[appNode.id];
-      if (clusterId) {
-        setCollapsedClusters(prev => ({
-          ...prev,
-          [clusterId]: !prev[clusterId]
-        }));
-      }
-    };
-    
-    container.addEventListener('contextmenu', handleContextMenu);
-    return () => {
-      container.removeEventListener('contextmenu', handleContextMenu);
-    };
-  }, [hoveredNodeId, visualizationData, pinnedNodes, pinNode, unpinNode, clusters]);
-
   // Node hover handler - Use correct type
   const handleNodeHover = useCallback((node: NodeObject | null) => {
       setHoveredNodeId(node ? asAppNode(node).id : null);
   }, []);
+
+  // Node right-click handler for context menu
+  const handleNodeRightClick = useCallback((node: NodeObject, event: MouseEvent) => {
+    console.log('Right-click detected on node:', node, event);
+    event.preventDefault(); // Prevent default browser context menu
+    event.stopPropagation(); // Stop event bubbling
+    const appNode = asAppNode(node);
+    console.log('Setting context menu for node:', appNode.id);
+    
+    // Set context menu with position
+    setContextMenu({
+      nodeId: appNode.id,
+      x: event.clientX,
+      y: event.clientY
+    });
+  }, []);
+
+  // Container right-click handler as fallback
+  const handleContainerRightClick = useCallback((event: React.MouseEvent) => {
+    console.log('Container right-click detected:', event);
+    // Close context menu if clicking on background
+    setContextMenu(null);
+  }, []);
+
+  // Close context menu on any click
+  const handleCloseContextMenu = useCallback(() => {
+    setContextMenu(null);
+  }, []);
+
+  // Debug effect for hoveredNodeId changes
+  useEffect(() => {
+    console.log('hoveredNodeId changed to:', hoveredNodeId);
+  }, [hoveredNodeId]);
 
   // Keyboard shortcuts for selected node
   useEffect(() => {
@@ -394,6 +420,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
           <div 
               ref={containerRef} 
               className="w-full aspect-video bg-card rounded-md border border-border shadow-sm min-h-[300px] flex items-center justify-center"
+              style={{ minWidth: '100%', minHeight: '300px' }}
           >
               <p className="text-muted-foreground italic text-sm p-4">Measuring container...</p>
           </div>
@@ -404,91 +431,99 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   // console.log("[Render] Graph Data Nodes:", visualizationData.nodes.length, "Links:", visualizationData.links.length);
 
   return (
-    <ContextMenu
-      open={!!menuPosition}
-      onOpenChange={(open: boolean) => {
-        if (!open) {
-          setMenuPosition(null);
-          setMenuNodeId(null);
-        }
-      }}
-    >
-      <ContextMenuTrigger asChild>
+    <div className="relative">
+      <div
+        ref={containerRef}
+        className="w-full aspect-video bg-card rounded-md border border-border shadow-sm overflow-hidden relative min-h-[300px]"
+        style={{ minWidth: '100%', minHeight: '300px' }}
+        onClick={handleCloseContextMenu}
+        onContextMenu={handleContainerRightClick}
+      >
+        <ForceGraph3DComponent
+          ref={graphRef}
+          graphData={visibleData}
+          width={dimensions.width}
+          height={dimensions.height}
+          backgroundColor={themeColors.background}
+          cooldownTime={1000}
+          // --- Node Styling ---
+          nodeRelSize={6}
+          nodeVal={getNodeVal}
+          nodeLabel="label" // Tooltip label
+          nodeColor={getNodeColor}
+          nodeOpacity={1}
+          nodeThreeObjectExtend={true}
+          nodeThreeObject={getNodeThreeObject}
+          // --- Link Styling ---
+          linkColor={() => themeColors.link}
+          linkWidth={0.5}
+          linkDirectionalParticles={1}
+          linkDirectionalParticleWidth={1.5}
+          linkDirectionalParticleSpeed={0.006}
+          // --- Interaction ---
+          onNodeClick={handleNodeClick}
+          onNodeHover={handleNodeHover}
+          onNodeRightClick={handleNodeRightClick}
+          enableNodeDrag={false}
+          // --- Forces & Camera ---
+          controlType="orbit"
+          // Node Configuration
+          nodeResolution={16}
+          // Performance / Simulation
+          d3AlphaDecay={0.02}
+        />
+      </div>
+      
+      {/* Custom Context Menu */}
+      {contextMenu && (
         <div
-          ref={containerRef}
-          className="w-full aspect-video bg-card rounded-md border border-border shadow-sm overflow-hidden relative min-h-[300px]"
-        >
-          <ForceGraph3DComponent
-            ref={graphRef}
-            graphData={visibleData}
-            width={dimensions.width}
-            height={dimensions.height}
-            backgroundColor={themeColors.background}
-            cooldownTime={1000}
-            // --- Node Styling ---
-            nodeRelSize={6}
-            nodeVal={getNodeVal}
-            nodeLabel="label" // Tooltip label
-            nodeColor={getNodeColor}
-            nodeOpacity={1}
-            nodeThreeObjectExtend={true}
-            nodeThreeObject={getNodeThreeObject}
-            // --- Link Styling ---
-            linkColor={() => themeColors.link}
-            linkWidth={0.5}
-            linkDirectionalParticles={1}
-            linkDirectionalParticleWidth={1.5}
-            linkDirectionalParticleSpeed={0.006}
-            // --- Interaction ---
-            onNodeClick={handleNodeClick}
-            onNodeHover={handleNodeHover}
-            enableNodeDrag={false}
-            // --- Forces & Camera ---
-            controlType="orbit"
-            // Node Configuration
-            nodeResolution={16}
-            // Performance / Simulation
-            d3AlphaDecay={0.02}
-          />
-        </div>
-      </ContextMenuTrigger>
-      {menuPosition && menuNodeId && (
-        <ContextMenuContent
+          className="fixed z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-md"
           style={{
-            position: 'fixed',
-            left: menuPosition.x,
-            top: menuPosition.y,
+            left: contextMenu.x,
+            top: contextMenu.y,
           }}
         >
-          <ContextMenuItem
-            onSelect={() => {
-              const appNode = (visualizationData?.nodes || []).find(n => n.id === menuNodeId);
+          <div
+            className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={() => {
+              const appNode = (visualizationData?.nodes || []).find(n => n.id === contextMenu.nodeId);
               if (!appNode) return;
               if (pinnedNodes[appNode.id]) {
                 unpinNode(appNode.id);
               } else {
                 pinNode(appNode.id);
               }
+              setContextMenu(null);
             }}
           >
-            {pinnedNodes[menuNodeId] ? 'Unpin' : 'Pin'}
-          </ContextMenuItem>
-          <ContextMenuSeparator />
-          <ContextMenuItem onSelect={() => collapseNode(menuNodeId)}>Collapse Node</ContextMenuItem>
-          <ContextMenuItem
-            onSelect={() => {
-              expandNodeInStore(menuNodeId);
-              const appNode = (visualizationData?.nodes || []).find(n => n.id === menuNodeId);
+            {pinnedNodes[contextMenu.nodeId] ? 'Unpin' : 'Pin'}
+          </div>
+          <div className="-mx-1 my-1 h-px bg-border" />
+          <div
+            className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={() => {
+              collapseNode(contextMenu.nodeId);
+              setContextMenu(null);
+            }}
+          >
+            Collapse Node
+          </div>
+          <div
+            className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
+            onClick={() => {
+              expandNodeInStore(contextMenu.nodeId);
+              const appNode = (visualizationData?.nodes || []).find(n => n.id === contextMenu.nodeId);
               if (onNodeExpand && appNode) {
-                onNodeExpand(menuNodeId, appNode.label || '');
+                onNodeExpand(contextMenu.nodeId, appNode.label || '');
               }
+              setContextMenu(null);
             }}
           >
             Expand Node
-          </ContextMenuItem>
-        </ContextMenuContent>
+          </div>
+        </div>
       )}
-    </ContextMenu>
+    </div>
   );
 });
 

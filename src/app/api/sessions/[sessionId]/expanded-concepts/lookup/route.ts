@@ -9,7 +9,7 @@ interface Params {
 
 // POST handler to lookup an expanded concept by criteria (avoiding URL query param issues)
 export async function POST(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+  const { sessionId } = await params;
   const cookieStore = await cookies(); // Await cookies() to ensure we have the store object
 
   const supabase = createServerClient<Database>(

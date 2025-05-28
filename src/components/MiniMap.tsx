@@ -2,10 +2,24 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { ForceGraphMethods } from 'react-force-graph';
 import { GraphData } from '@/store/useAppStore';
 
-const ForceGraph2D = dynamic(() => import('react-force-graph').then(m => (m.ForceGraph2D || m.default)), { ssr: false });
+// Import only the 2D component to avoid VR dependencies
+const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), { ssr: false });
+
+// Define the methods interface for the 2D graph
+interface ForceGraph2DMethods {
+  zoomToFit: (duration?: number, padding?: number) => void;
+  graph2ScreenCoords: (x: number, y: number) => { x: number; y: number };
+  screen2GraphCoords: (x: number, y: number) => { x: number; y: number };
+  zoom: (k?: number, duration?: number) => number | void;
+  centerAt: (x?: number, y?: number, duration?: number) => void;
+  d3Force: (forceName: string, force?: any) => any;
+  d3ReheatSimulation: () => void;
+  pauseAnimation: () => void;
+  resumeAnimation: () => void;
+  getGraphBbox: () => { x: [number, number]; y: [number, number] };
+}
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -21,18 +35,18 @@ interface MiniMapProps {
 }
 
 const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims, onCenter, visible }) => {
-  const fgRef = useRef<ForceGraphMethods>();
+  const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewRect, setViewRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
 
   useEffect(() => {
-    if (fgRef.current) {
+    if (fgRef.current && fgRef.current.zoomToFit) {
       fgRef.current.zoomToFit(0, 10);
     }
   }, [graphData]);
 
   useEffect(() => {
-    if (!fgRef.current) return;
+    if (!fgRef.current || !fgRef.current.graph2ScreenCoords) return;
     const { position, zoom } = cameraState;
     const center = fgRef.current.graph2ScreenCoords(position.x, position.y);
     const rectW = mainGraphDims.width / zoom;
@@ -41,7 +55,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
   }, [cameraState, mainGraphDims]);
 
   const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!fgRef.current) return;
+    if (!fgRef.current || !fgRef.current.screen2GraphCoords) return;
     const bounds = e.currentTarget.getBoundingClientRect();
     const x = e.clientX - bounds.left;
     const y = e.clientY - bounds.top;
@@ -63,7 +77,8 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
         width={160}
         height={160}
         graphData={graphData}
-        enableZoomPanInteraction={false}
+        enableZoomInteraction={false}
+        enablePanInteraction={false}
       />
       {viewRect && (
         <div

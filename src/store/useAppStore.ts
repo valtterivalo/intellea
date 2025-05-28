@@ -231,6 +231,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           const updated = new Set(state.completedNodeIds);
           updated.add(nodeId);
           return { completedNodeIds: updated };
+        }),
       setClusters: (clusters) => set({ clusters }),
       setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
       setNodeNote: (nodeId, note) =>
@@ -468,7 +469,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         isGraphFullscreen: false,
         expandedConceptData: null,
         expandedConceptCache: new Map(), // Clear the cache when resetting session
-        clusters: {}
+        clusters: {},
         visitedNodeIds: []
       }),
 
@@ -909,7 +910,6 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       partialize: (state) => ({
         currentSessionId: state.currentSessionId, // Only persist the current session ID
         onboardingDismissed: state.onboardingDismissed,
-        currentSessionId: state.currentSessionId,
         nodeNotes: state.nodeNotes,
       }),
     }

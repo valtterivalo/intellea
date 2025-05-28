@@ -10,23 +10,24 @@ interface SearchNodesProps {
 }
 
 const SearchNodes: React.FC<SearchNodesProps> = ({ className }) => {
-  const nodes = useAppStore((state) => {
-    const output = state.output;
-    return output &&
-      typeof output === 'object' &&
-      output.visualizationData &&
-      Array.isArray(output.visualizationData.nodes)
-      ? output.visualizationData.nodes
-      : [];
-  });
-
-  const visualizationData = useAppStore((state) =>
-    typeof state.output === 'object' ? state.output.visualizationData : null
-  );
-
+  const output = useAppStore((state) => state.output);
   const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId);
   const setFocusedNodeId = useAppStore((state) => state.setFocusedNodeId);
   const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath);
+
+  const nodes = useMemo(() => {
+    if (!output || typeof output !== 'object' || !output.visualizationData || !Array.isArray(output.visualizationData.nodes)) {
+      return [];
+    }
+    return output.visualizationData.nodes;
+  }, [output]);
+
+  const visualizationData = useMemo(() => {
+    if (!output || typeof output !== 'object') {
+      return null;
+    }
+    return output.visualizationData;
+  }, [output]);
 
   const [query, setQuery] = useState('');
 

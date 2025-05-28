@@ -33,17 +33,21 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
 
     // Toolbar handlers
     const handleZoomIn = () => {
-        if (graphRef.current) {
+        if (graphRef.current && graphRef.current.cameraPosition) {
+            // Use cameraPosition to zoom in by moving camera closer
             const cam = graphRef.current.camera();
-            if (cam) cam.zoom *= 1.2;
-            if (graphRef.current.cameraPosition) graphRef.current.cameraPosition();
+            const currentPos = cam.position;
+            const newZ = currentPos.z * 0.8; // Move closer
+            graphRef.current.cameraPosition({ x: currentPos.x, y: currentPos.y, z: newZ });
         }
     };
     const handleZoomOut = () => {
-        if (graphRef.current) {
+        if (graphRef.current && graphRef.current.cameraPosition) {
+            // Use cameraPosition to zoom out by moving camera further
             const cam = graphRef.current.camera();
-            if (cam) cam.zoom /= 1.2;
-            if (graphRef.current.cameraPosition) graphRef.current.cameraPosition();
+            const currentPos = cam.position;
+            const newZ = currentPos.z * 1.2; // Move further
+            graphRef.current.cameraPosition({ x: currentPos.x, y: currentPos.y, z: newZ });
         }
     };
     const handleFit = () => {
@@ -103,7 +107,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         const controls: any = graphRef.current.controls && graphRef.current.controls();
         const update = () => {
             const cam = graphRef.current!.camera();
-            setCameraState({ position: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, zoom: cam.zoom });
+            setCameraState({ position: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, zoom: 1 });
         };
         update();
         if (controls && controls.addEventListener) {
