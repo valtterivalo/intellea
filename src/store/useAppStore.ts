@@ -110,6 +110,7 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  visitedNodeIds: string[];
   collapsedNodes: Record<string, boolean>;
 
   // --- Actions ---
@@ -188,10 +189,20 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      visitedNodeIds: [],
       collapsedNodes: {},
 
       // --- Action Implementations ---
-      setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
+      setSelectedNodeId: (nodeId) =>
+        set((state) => {
+          if (nodeId === null) {
+            return { selectedNodeId: null };
+          }
+          const ids = state.visitedNodeIds.includes(nodeId)
+            ? state.visitedNodeIds
+            : [...state.visitedNodeIds, nodeId];
+          return { selectedNodeId: nodeId, visitedNodeIds: ids };
+        }),
       pinNode: (nodeId) =>
         set((state) => ({
           pinnedNodes: { ...state.pinnedNodes, [nodeId]: true },
@@ -422,7 +433,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         activeClickedNodeId: null,
         isGraphFullscreen: false,
         expandedConceptData: null,
-        expandedConceptCache: new Map() // Clear the cache when resetting session
+        expandedConceptCache: new Map(), // Clear the cache when resetting session
+        visitedNodeIds: []
       }),
 
       // --- Focus Action Implementations ---
