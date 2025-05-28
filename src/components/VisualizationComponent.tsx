@@ -98,6 +98,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   const unpinNode = useAppStore((state) => state.unpinNode);
   const collapseNode = useAppStore((state) => state.collapseNode);
   const expandNodeInStore = useAppStore((state) => state.expandNode);
+  const setFocusedNodeId = useAppStore((state) => state.setFocusedNodeId);
   // --- End State Selectors ---
 
   // --- Node Color Logic (using depth helper) ---
@@ -336,6 +337,49 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       setHoveredNodeId(node ? asAppNode(node).id : null);
   }, []);
 
+  // Keyboard shortcuts for selected node
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (!selectedNodeId) return;
+      const key = event.key.toLowerCase();
+      if (key === 'p') {
+        if (pinnedNodes[selectedNodeId]) {
+          unpinNode(selectedNodeId);
+        } else {
+          pinNode(selectedNodeId);
+        }
+      } else if (key === 'f') {
+        const currentOutput = useAppStore.getState().output;
+        const vizData =
+          typeof currentOutput === 'object' && currentOutput?.visualizationData
+            ? currentOutput.visualizationData
+            : null;
+        setFocusedNodeId(selectedNodeId);
+        setActiveFocusPath(selectedNodeId, vizData);
+      } else if (key === 'e') {
+        expandNodeInStore(selectedNodeId);
+        const appNode = (visualizationData?.nodes || []).find(
+          (n) => n.id === selectedNodeId
+        );
+        if (onNodeExpand && appNode) {
+          onNodeExpand(selectedNodeId, appNode.label || '');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [
+    selectedNodeId,
+    pinnedNodes,
+    pinNode,
+    unpinNode,
+    setActiveFocusPath,
+    setFocusedNodeId,
+    expandNodeInStore,
+    onNodeExpand,
+    visualizationData,
+  ]);
   const visibleData: GraphData | undefined = React.useMemo(() => {
     if (!visualizationData) return undefined;
     const filteredNodes = visualizationData.nodes.filter(n => !collapsedClusters[clusters[n.id]]);

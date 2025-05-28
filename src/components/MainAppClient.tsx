@@ -6,7 +6,7 @@ import OutputRenderer from '@/components/OutputRenderer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard } from "lucide-react";
+import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -93,6 +93,7 @@ export default function MainAppClient() {
   const [localExpandingNodeId, setLocalExpandingNodeId] = useState<string | null>(null);
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -483,16 +484,19 @@ export default function MainAppClient() {
               Manage Billing
             </Button>
           ) : (
-            <Button 
-              variant="default" 
+            <Button
+              variant="default"
               size="sm"
               onClick={handleSubscribe}
               disabled={isCheckoutLoading}
             >
-              {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} 
+              {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
               Subscribe Now
             </Button>
           )}
+          <Button variant="outline" size="icon" onClick={() => setShowOnboarding(true)}>
+            <Info className="h-4 w-4" />
+          </Button>
           <Button variant="outline" size="icon" onClick={handleLogout}>
             <LogOut className="h-4 w-4" />
           </Button>
@@ -568,7 +572,7 @@ export default function MainAppClient() {
             expandingNodeId={localExpandingNodeId}
         />
         <ExpandedConceptCard />
-        <OnboardingModal />
+        <OnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
       </main>
 
       <footer className="p-4 border-t bg-background">
