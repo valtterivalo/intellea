@@ -7,7 +7,21 @@ describe('Graph UX Zustand Store', () => {
     useAppStore.setState({
       selectedNodeId: null,
       pinnedNodes: {},
+      nodeNotes: {},
     });
+    let storage: Record<string, string> = {};
+    global.localStorage = {
+      getItem: (key: string) => (key in storage ? storage[key] : null),
+      setItem: (key: string, value: string) => {
+        storage[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete storage[key];
+      },
+      clear: () => {
+        storage = {};
+      },
+    } as any;
   });
 
   it('should set selectedNodeId', () => {
@@ -30,5 +44,18 @@ describe('Graph UX Zustand Store', () => {
     expect(useAppStore.getState().pinnedNodes).toMatchObject({ a: true, b: true });
     useAppStore.getState().unpinNode('a');
     expect(useAppStore.getState().pinnedNodes).toMatchObject({ b: true });
+  });
+
+  it('should set and get node notes', () => {
+    useAppStore.getState().setNodeNote('node-3', 'my note');
+    expect(useAppStore.getState().nodeNotes['node-3']).toBe('my note');
+  });
+
+  it('persists notes to localStorage', () => {
+    useAppStore.getState().setNodeNote('node-4', 'memo');
+    const raw = global.localStorage.getItem('intellea-session-storage');
+    expect(raw).not.toBeNull();
+    const saved = JSON.parse(raw as string);
+    expect(saved.state.nodeNotes['node-4']).toBe('memo');
   });
 });
