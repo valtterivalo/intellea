@@ -112,6 +112,10 @@ export interface AppState {
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
   clusters: Record<string, string>; // Mapping of nodeId to clusterId
+  onboardingDismissed: boolean;
+  nodeNotes: Record<string, string>;
+  visitedNodeIds: string[];
+  collapsedNodes: Record<string, boolean>;
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -152,6 +156,10 @@ export interface AppState {
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
   setClusters: (clusters: Record<string, string>) => void;
+  setOnboardingDismissed: (dismissed: boolean) => void;
+  setNodeNote: (nodeId: string, note: string) => void;
+  collapseNode: (nodeId: string) => void;
+  expandNode: (nodeId: string) => void;
 }
 
 // Explicitly type the store hook
@@ -189,9 +197,22 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       selectedNodeId: null,
       pinnedNodes: {},
       clusters: {},
+      onboardingDismissed: false,
+      nodeNotes: {},
+      visitedNodeIds: [],
+      collapsedNodes: {},
 
       // --- Action Implementations ---
-      setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
+      setSelectedNodeId: (nodeId) =>
+        set((state) => {
+          if (nodeId === null) {
+            return { selectedNodeId: null };
+          }
+          const ids = state.visitedNodeIds.includes(nodeId)
+            ? state.visitedNodeIds
+            : [...state.visitedNodeIds, nodeId];
+          return { selectedNodeId: nodeId, visitedNodeIds: ids };
+        }),
       pinNode: (nodeId) =>
         set((state) => ({
           pinnedNodes: { ...state.pinnedNodes, [nodeId]: true },
@@ -203,6 +224,21 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           return { pinnedNodes: updated };
         }),
       setClusters: (clusters) => set({ clusters }),
+      setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
+      setNodeNote: (nodeId, note) =>
+        set((state) => ({
+          nodeNotes: { ...state.nodeNotes, [nodeId]: note },
+        })),
+      collapseNode: (nodeId) =>
+        set((state) => ({
+          collapsedNodes: { ...state.collapsedNodes, [nodeId]: true },
+        })),
+      expandNode: (nodeId) =>
+        set((state) => {
+          const updated = { ...state.collapsedNodes };
+          delete updated[nodeId];
+          return { collapsedNodes: updated };
+        }),
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => {
         const clusters =
@@ -425,6 +461,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         expandedConceptData: null,
         expandedConceptCache: new Map(), // Clear the cache when resetting session
         clusters: {}
+        visitedNodeIds: []
       }),
 
       // --- Focus Action Implementations ---
@@ -863,7 +900,9 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
       partialize: (state) => ({
         currentSessionId: state.currentSessionId, // Only persist the current session ID
-        // Removed other persisted items like output, prompt etc.
+        onboardingDismissed: state.onboardingDismissed,
+        currentSessionId: state.currentSessionId,
+        nodeNotes: state.nodeNotes,
       }),
     }
   )
