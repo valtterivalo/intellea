@@ -111,6 +111,7 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  completedNodeIds: Set<string>;
   clusters: Record<string, string>; // Mapping of nodeId to clusterId
   onboardingDismissed: boolean;
   nodeNotes: Record<string, string>;
@@ -155,6 +156,7 @@ export interface AppState {
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  markCompleted: (nodeId: string) => void;
   setClusters: (clusters: Record<string, string>) => void;
   setOnboardingDismissed: (dismissed: boolean) => void;
   setNodeNote: (nodeId: string, note: string) => void;
@@ -196,6 +198,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      completedNodeIds: new Set(),
       clusters: {},
       onboardingDismissed: false,
       nodeNotes: {},
@@ -223,6 +226,11 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           delete updated[nodeId];
           return { pinnedNodes: updated };
         }),
+      markCompleted: (nodeId) =>
+        set((state) => {
+          const updated = new Set(state.completedNodeIds);
+          updated.add(nodeId);
+          return { completedNodeIds: updated };
       setClusters: (clusters) => set({ clusters }),
       setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
       setNodeNote: (nodeId, note) =>

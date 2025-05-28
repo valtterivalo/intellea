@@ -29,6 +29,7 @@ import ExpandedConceptCard from '@/components/ExpandedConceptCard';
 import OnboardingModal from '@/components/OnboardingModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
+import { computeProgress, suggestNextNode } from '@/lib/progress';
 import SearchNodes from '@/components/SearchNodes';
 
 // Ensure Stripe publishable key is set
@@ -56,6 +57,7 @@ export default function MainAppClient() {
     error,
     subscriptionStatus,
     isSubscriptionLoading,
+    completedNodeIds,
   } = useAppStore(useShallow((state) => ({
     prompt: state.prompt,
     output: state.output,
@@ -70,7 +72,20 @@ export default function MainAppClient() {
     error: state.error,
     subscriptionStatus: state.subscriptionStatus,
     isSubscriptionLoading: state.isSubscriptionLoading,
+    completedNodeIds: state.completedNodeIds,
   })));
+
+  const knowledgeCards =
+    output && typeof output === 'object' && 'knowledgeCards' in output && Array.isArray((output as any).knowledgeCards)
+      ? (output as IntelleaResponse).knowledgeCards || []
+      : [];
+  const visualizationData =
+    output && typeof output === 'object' && 'visualizationData' in output
+      ? (output as IntelleaResponse).visualizationData
+      : null;
+
+  const progressPercent = computeProgress(knowledgeCards.length, completedNodeIds);
+  const suggestedNode = suggestNextNode(visualizationData, completedNodeIds);
 
   const {
     setPrompt,
@@ -509,6 +524,18 @@ export default function MainAppClient() {
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
+      )}
+
+      {knowledgeCards.length > 0 && (
+        <div className="px-4">
+          <div className="h-2 rounded bg-muted overflow-hidden">
+            <div className="bg-primary h-full" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <p className="text-xs text-muted-foreground text-right mt-1">
+            {Math.round(progressPercent)}% learned
+            {suggestedNode ? ` – Next: ${suggestedNode.label}` : ''}
+          </p>
+        </div>
       )}
 
       <main className="flex-1 overflow-hidden flex flex-col">
