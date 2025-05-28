@@ -102,4 +102,37 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     expect(useAppStore.getState().collapsedNodes).not.toHaveProperty('a');
     expect(onExpand).toHaveBeenCalledWith('a', 'A');
   });
+
+  it('handles keyboard shortcuts for selected node', () => {
+    const onExpand = vi.fn();
+    useAppStore.setState({
+      selectedNodeId: 'a',
+      pinnedNodes: {},
+      collapsedNodes: { a: true },
+      focusedNodeId: null,
+      activeFocusPathIds: null,
+      output: {
+        explanationMarkdown: '',
+        knowledgeCards: [],
+        visualizationData: { nodes: mockNodes, links: mockLinks },
+      },
+    } as any);
+
+    render(
+      <VisualizationComponent
+        visualizationData={{ nodes: mockNodes, links: mockLinks }}
+        onNodeExpand={onExpand}
+      />
+    );
+
+    fireEvent.keyDown(window, { key: 'p' });
+    expect(useAppStore.getState().pinnedNodes).toHaveProperty('a', true);
+
+    fireEvent.keyDown(window, { key: 'f' });
+    expect(useAppStore.getState().focusedNodeId).toBe('a');
+
+    fireEvent.keyDown(window, { key: 'e' });
+    expect(useAppStore.getState().collapsedNodes).not.toHaveProperty('a');
+    expect(onExpand).toHaveBeenCalledWith('a', 'A');
+  });
 });
