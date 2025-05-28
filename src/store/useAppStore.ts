@@ -110,6 +110,8 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  onboardingDismissed: boolean;
+
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -149,6 +151,7 @@ export interface AppState {
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  setOnboardingDismissed: (dismissed: boolean) => void;
 }
 
 // Explicitly type the store hook
@@ -185,6 +188,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      onboardingDismissed: false,
 
       // --- Action Implementations ---
       setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
@@ -198,6 +202,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           delete updated[nodeId];
           return { pinnedNodes: updated };
         }),
+      setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => set({ output }),
       setLoading: (isLoading) => set({ isLoading }),
@@ -845,7 +850,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
       partialize: (state) => ({
         currentSessionId: state.currentSessionId, // Only persist the current session ID
-        // Removed other persisted items like output, prompt etc.
+        onboardingDismissed: state.onboardingDismissed,
       }),
     }
   )
