@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore, IntelleaResponse, NodeObject, LinkObject, SessionSummary, GraphData, KnowledgeCard } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard } from "lucide-react";
@@ -510,8 +511,9 @@ export default function MainAppClient() {
               <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4">
-              <OutputRenderer 
-                onNodeExpand={handleNodeExpand} 
+              <Breadcrumbs />
+              <OutputRenderer
+                onNodeExpand={handleNodeExpand}
                 expandingNodeId={localExpandingNodeId}
               />
             </CardContent>

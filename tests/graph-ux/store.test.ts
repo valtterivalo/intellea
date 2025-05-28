@@ -7,6 +7,7 @@ describe('Graph UX Zustand Store', () => {
     useAppStore.setState({
       selectedNodeId: null,
       pinnedNodes: {},
+      visitedNodeIds: [],
     });
   });
 
@@ -30,5 +31,12 @@ describe('Graph UX Zustand Store', () => {
     expect(useAppStore.getState().pinnedNodes).toMatchObject({ a: true, b: true });
     useAppStore.getState().unpinNode('a');
     expect(useAppStore.getState().pinnedNodes).toMatchObject({ b: true });
+  });
+
+  it('tracks visited nodes without duplicates', () => {
+    useAppStore.getState().setSelectedNodeId('a');
+    useAppStore.getState().setSelectedNodeId('b');
+    useAppStore.getState().setSelectedNodeId('a');
+    expect(useAppStore.getState().visitedNodeIds).toEqual(['a', 'b']);
   });
 });
