@@ -110,6 +110,7 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  collapsedNodes: Record<string, boolean>;
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -149,6 +150,8 @@ export interface AppState {
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  collapseNode: (nodeId: string) => void;
+  expandNode: (nodeId: string) => void;
 }
 
 // Explicitly type the store hook
@@ -185,6 +188,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      collapsedNodes: {},
 
       // --- Action Implementations ---
       setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
@@ -197,6 +201,16 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           const updated = { ...state.pinnedNodes };
           delete updated[nodeId];
           return { pinnedNodes: updated };
+        }),
+      collapseNode: (nodeId) =>
+        set((state) => ({
+          collapsedNodes: { ...state.collapsedNodes, [nodeId]: true },
+        })),
+      expandNode: (nodeId) =>
+        set((state) => {
+          const updated = { ...state.collapsedNodes };
+          delete updated[nodeId];
+          return { collapsedNodes: updated };
         }),
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => set({ output }),

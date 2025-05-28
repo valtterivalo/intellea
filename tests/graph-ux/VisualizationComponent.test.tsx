@@ -1,7 +1,18 @@
+// @vitest-environment jsdom
+
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import VisualizationComponent from '@/components/VisualizationComponent';
 import { useAppStore } from '@/store/useAppStore';
+
+// Mock the 3D graph library to capture callbacks
+let graphProps: any = null;
+vi.mock('react-force-graph-3d', () => ({
+  default: (props: any) => {
+    graphProps = props;
+    return <div data-testid="force-graph" />;
+  },
+}));
 
 const mockNodes = [
   { id: 'root', label: 'Root', depth: 0 },
@@ -18,7 +29,9 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     useAppStore.setState({
       selectedNodeId: null,
       pinnedNodes: {},
+      collapsedNodes: {},
     });
+    graphProps = null;
   });
 
   it('selects node on left-click', () => {
@@ -57,5 +70,36 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     // Simulate unpin
     useAppStore.getState().unpinNode('b');
     expect(useAppStore.getState().pinnedNodes).not.toHaveProperty('b');
+  });
+
+  it('shows context menu and dispatches actions', () => {
+    const onExpand = vi.fn();
+    const { container } = render(
+      <VisualizationComponent
+        visualizationData={{ nodes: mockNodes, links: mockLinks }}
+        onNodeExpand={onExpand}
+      />
+    );
+
+    // Simulate hovering a node via mocked graph component
+    graphProps.onNodeHover({ id: 'a', label: 'A' });
+
+    const trigger = container.querySelector('div');
+    if (!trigger) throw new Error('trigger div not found');
+
+    fireEvent.contextMenu(trigger);
+    expect(screen.getByText('Pin')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Pin'));
+    expect(useAppStore.getState().pinnedNodes).toHaveProperty('a', true);
+
+    fireEvent.contextMenu(trigger);
+    fireEvent.click(screen.getByText('Collapse Node'));
+    expect(useAppStore.getState().collapsedNodes).toHaveProperty('a', true);
+
+    fireEvent.contextMenu(trigger);
+    fireEvent.click(screen.getByText('Expand Node'));
+    expect(useAppStore.getState().collapsedNodes).not.toHaveProperty('a');
+    expect(onExpand).toHaveBeenCalledWith('a', 'A');
   });
 });
