@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAppStore, IntelleaResponse, NodeObject, LinkObject, SessionSummary, GraphData, KnowledgeCard } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
+import Breadcrumbs from '@/components/Breadcrumbs';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard, Info } from "lucide-react";
@@ -28,6 +29,7 @@ import ExpandedConceptCard from '@/components/ExpandedConceptCard';
 import OnboardingModal from '@/components/OnboardingModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
+import SearchNodes from '@/components/SearchNodes';
 
 // Ensure Stripe publishable key is set
 if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -466,6 +468,7 @@ export default function MainAppClient() {
             <h1 className="text-lg font-semibold leading-none tracking-tight">New Session</h1>
           )}
           {isSavingSession && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+          <SearchNodes className="w-48" />
         </div>
         <div className="flex items-center gap-2">
           {isSubscriptionLoading ? (
@@ -515,8 +518,9 @@ export default function MainAppClient() {
               <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 overflow-y-auto p-4">
-              <OutputRenderer 
-                onNodeExpand={handleNodeExpand} 
+              <Breadcrumbs />
+              <OutputRenderer
+                onNodeExpand={handleNodeExpand}
                 expandingNodeId={localExpandingNodeId}
               />
             </CardContent>

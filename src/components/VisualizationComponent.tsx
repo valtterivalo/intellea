@@ -56,6 +56,16 @@ const themeColors = {
   label: '#5D4037'
 };
 
+const clusterPalette = [
+  '#ef4444',
+  '#3b82f6',
+  '#10b981',
+  '#f59e0b',
+  '#8b5cf6',
+  '#ec4899',
+  '#22d3ee'
+];
+
 const ForceGraph3DComponent = dynamic(() => import('react-force-graph-3d').then(mod => mod.default),
     { ssr: false, loading: () => <p className="text-muted-foreground italic text-sm p-4">Loading 3D Graph...</p> }
 );
@@ -73,12 +83,14 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   React.useImperativeHandle(forwardedRef, () => graphRef.current, []);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [collapsedClusters, setCollapsedClusters] = useState<Record<string, boolean>>({});
 
   // --- Store State Selectors ---
   const focusedNodeId = useAppStore((state) => state.focusedNodeId); // For camera focus (transient)
   const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds);
   const selectedNodeId = useAppStore((state) => state.selectedNodeId);
   const pinnedNodes = useAppStore((state) => state.pinnedNodes);
+  const clusters = useAppStore((state) => state.clusters);
   const collapsedNodes = useAppStore((state) => state.collapsedNodes);
   const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId);
   const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath);
@@ -92,20 +104,17 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   // --- Node Color Logic (using depth helper) ---
   const getNodeColor = useCallback((node: NodeObject) => {
     const appNode = asAppNode(node);
-    // Determine node depth (assume it's stored as appNode.depth, fallback to 0)
-    const depth = typeof appNode.depth === 'number' ? appNode.depth : 0;
-    // Highlight if selected or pinned
+    const clusterId = clusters[appNode.id];
+    const paletteIndex = parseInt(clusterId || '0', 10) % clusterPalette.length;
+    const clusterColor = clusterPalette[paletteIndex];
     if (selectedNodeId === appNode.id) {
-      return '#eab308'; // yellow-500
+      return '#eab308';
     }
     if (pinnedNodes[appNode.id]) {
-      return '#22c55e'; // green-500
+      return '#22c55e';
     }
-    // Use depth-based color (hex values)
-    if (depth === 0) return '#f43f5e'; // accent-500 (pick a visible accent, e.g., rose-500)
-    if (depth === 1) return '#3b82f6'; // primary-500 (blue-500)
-    return '#64748b'; // slate-500
-  }, [selectedNodeId, pinnedNodes]);
+    return clusterColor;
+  }, [selectedNodeId, pinnedNodes, clusters]);
   // --- End Node Color Logic ---
 
   // --- Node Size Logic ---
@@ -295,10 +304,32 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    const handleContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+      if (!hoveredNodeId) return;
+      const appNode = (visualizationData?.nodes || []).find(n => n.id === hoveredNodeId);
+      if (!appNode) return;
+      if (event.shiftKey) {
+        if (pinnedNodes[appNode.id]) {
+          unpinNode(appNode.id);
+        } else {
+          pinNode(appNode.id);
+        }
+        return;
+      }
+      const clusterId = clusters[appNode.id];
+      if (clusterId) {
+        setCollapsedClusters(prev => ({
+          ...prev,
+          [clusterId]: !prev[clusterId]
+        }));
+      }
+    };
     container.addEventListener('contextmenu', handleContextMenu);
     return () => {
       container.removeEventListener('contextmenu', handleContextMenu);
     };
+  }, [hoveredNodeId, visualizationData, pinnedNodes, pinNode, unpinNode, clusters]);
   }, [handleContextMenu]);
 
   // Node hover handler - Use correct type
@@ -349,6 +380,17 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     onNodeExpand,
     visualizationData,
   ]);
+  const visibleData: GraphData | undefined = React.useMemo(() => {
+    if (!visualizationData) return undefined;
+    const filteredNodes = visualizationData.nodes.filter(n => !collapsedClusters[clusters[n.id]]);
+    const visibleIds = new Set(filteredNodes.map(n => n.id));
+    const filteredLinks = visualizationData.links.filter(l => {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      return visibleIds.has(s) && visibleIds.has(t);
+    });
+    return { nodes: filteredNodes, links: filteredLinks };
+  }, [visualizationData, collapsedClusters, clusters]);
 
   // --- Render --- 
   if (!visualizationData) {
@@ -379,6 +421,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         }
       }}
     >
+      <ForceGraph3DComponent
+        ref={graphRef}
+        graphData={visibleData}
+        width={dimensions.width}
+        height={dimensions.height}
+        backgroundColor={themeColors.background}
       <ContextMenuTrigger asChild>
         <div
           ref={containerRef}
