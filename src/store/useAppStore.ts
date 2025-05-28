@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import { Session } from '@supabase/supabase-js';
 import { UseBoundStore, StoreApi } from 'zustand'; // Import Zustand types
 import { SupabaseClient } from '@supabase/supabase-js'; // Import Supabase type
+import { computeClusters } from '@/lib/graphCluster';
 
 // Define SessionSummary if not already globally available or imported
 export interface SessionSummary {
@@ -110,6 +111,7 @@ export interface AppState {
   // --- Graph UX Upgrade State ---
   selectedNodeId: string | null;
   pinnedNodes: Record<string, boolean>;
+  clusters: Record<string, string>; // Mapping of nodeId to clusterId
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
@@ -149,6 +151,7 @@ export interface AppState {
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
+  setClusters: (clusters: Record<string, string>) => void;
 }
 
 // Explicitly type the store hook
@@ -185,6 +188,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       // --- Graph UX Upgrade State Init ---
       selectedNodeId: null,
       pinnedNodes: {},
+      clusters: {},
 
       // --- Action Implementations ---
       setSelectedNodeId: (nodeId) => set({ selectedNodeId: nodeId }),
@@ -198,8 +202,15 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           delete updated[nodeId];
           return { pinnedNodes: updated };
         }),
+      setClusters: (clusters) => set({ clusters }),
       setPrompt: (prompt) => set({ prompt }),
-      setOutput: (output) => set({ output }),
+      setOutput: (output) => {
+        const clusters =
+          output && typeof output !== 'string'
+            ? computeClusters(output.visualizationData)
+            : {};
+        set({ output, clusters });
+      },
       setLoading: (isLoading) => set({ isLoading }),
       setActivePrompt: (prompt) => set({ activePrompt: prompt }),
 
@@ -250,15 +261,17 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
             throw new Error('Loaded session data has an invalid or outdated structure.');
           }
 
+          const clusters = computeClusters(sessionData.visualizationData);
           set({
             output: sessionData as IntelleaResponse, // Cast to validated structure
-            activePrompt: loadedData.last_prompt, 
+            activePrompt: loadedData.last_prompt,
             currentSessionId: sessionId,
             currentSessionTitle: loadedData.title,
             isSessionLoading: false,
-            activeFocusPathIds: null, 
+            activeFocusPathIds: null,
             focusedNodeId: null,
-            activeClickedNodeId: null
+            activeClickedNodeId: null,
+            clusters,
           });
 
           // Load expanded concepts for this session
@@ -314,6 +327,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
           newSessionId = data.id;
 
           get().resetActiveSessionState();
+          const clusters = computeClusters(initialOutput.visualizationData);
           set({
             currentSessionId: newSessionId,
             currentSessionTitle: sessionTitle,
@@ -321,6 +335,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
             activePrompt: initialPrompt,
             isSessionLoading: false, isLoading: false,
             activeFocusPathIds: null, focusedNodeId: null, activeClickedNodeId: null,
+            clusters,
             error: null
           });
           console.log("createSession: Session created successfully, ID:", newSessionId);
@@ -408,7 +423,8 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         activeClickedNodeId: null,
         isGraphFullscreen: false,
         expandedConceptData: null,
-        expandedConceptCache: new Map() // Clear the cache when resetting session
+        expandedConceptCache: new Map(), // Clear the cache when resetting session
+        clusters: {}
       }),
 
       // --- Focus Action Implementations ---
@@ -480,6 +496,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
             visualizationData: updatedVizData,
             knowledgeCards: mergedKnowledgeCards,
           };
+          const clusters = computeClusters(updatedVizData);
 
           // Trigger focus calculation AFTER state update
           // Need to use the updated data for accurate path calculation
@@ -502,6 +519,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
 
           return {
             output: newOutputState,
+            clusters,
             isLoading: false, // Expansion is complete
             activeFocusPathIds: newFocusPathIds, // Update focus path
             activeClickedNodeId: newActiveClickedNodeId, // Update clicked node ID
