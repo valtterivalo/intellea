@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import { useAppStore, ExpandedConceptData } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 
@@ -18,10 +19,22 @@ const ExpandedConceptCard: React.FC = () => {
   const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath);
   const visualizationData = useAppStore(state => {
     const output = state.output;
-    return (output && typeof output === 'object' && 'visualizationData' in output) 
-      ? output.visualizationData 
+    return (output && typeof output === 'object' && 'visualizationData' in output)
+      ? output.visualizationData
       : null;
   });
+
+  const focusedNodeId = useAppStore(state => state.focusedNodeId);
+  const nodeNotes = useAppStore(state => state.nodeNotes);
+  const setNodeNote = useAppStore(state => state.setNodeNote);
+
+  const [noteValue, setNoteValue] = useState('');
+
+  useEffect(() => {
+    if (focusedNodeId) {
+      setNoteValue(nodeNotes[focusedNodeId] || '');
+    }
+  }, [focusedNodeId, nodeNotes]);
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -141,6 +154,21 @@ const ExpandedConceptCard: React.FC = () => {
                     </div>
                   </>
                 )}
+
+                <Separator className="my-6" />
+                <h3 className="text-xl font-bold mb-2">Your Notes</h3>
+                <Textarea
+                  value={noteValue}
+                  onChange={(e) => setNoteValue(e.target.value)}
+                  className="mb-2"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => focusedNodeId && setNodeNote(focusedNodeId, noteValue)}
+                >
+                  Save Note
+                </Button>
               </div>
             </div>
             
