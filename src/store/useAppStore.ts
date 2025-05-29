@@ -1,9 +1,15 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { Session } from '@supabase/supabase-js';
-import { UseBoundStore, StoreApi } from 'zustand'; // Import Zustand types
-import { SupabaseClient } from '@supabase/supabase-js'; // Import Supabase type
+import { UseBoundStore, StoreApi } from 'zustand';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { computeClusters } from '@/lib/graphCluster';
+import type { GraphSlice } from './graphSlice';
+import { createGraphSlice } from './graphSlice';
+import type { SessionSlice } from './sessionSlice';
+import { createSessionSlice } from './sessionSlice';
+import type { BillingSlice } from './billingSlice';
+import { createBillingSlice } from './billingSlice';
 
 // Define SessionSummary if not already globally available or imported
 export interface SessionSummary {
@@ -22,51 +28,44 @@ export interface NodeObject {
   fx?: number; // Use fx, fy, fz for fixed positions
   fy?: number;
   fz?: number;
-  // Keep x, y, z for dynamic simulation state if needed
   x?: number;
   y?: number;
   z?: number;
-  // Add other potential node properties if needed later (e.g., color, size)
   [key: string]: any; // Allow arbitrary properties for flexibility
 }
 
 export interface LinkObject {
-  source: string | NodeObject; // ID of the source node (or node object itself)
-  target: string | NodeObject; // ID of the target node (or node object itself)
-  // Add other potential link properties if needed later (e.g., label, curvature)
-  [key: string]: any; // Allow arbitrary properties for flexibility
+  source: string | NodeObject;
+  target: string | NodeObject;
+  [key: string]: any;
 }
 
 // Define structure for Knowledge Cards
 export interface KnowledgeCard {
-  nodeId: string; // RENAMED from id. Corresponds to a node ID in visualizationData.
-  title: string; // Concept title (often matches node label)
-  description: string; // Concise explanation of the concept (2-4 sentences)
-  // Add other potential fields later (e.g., relatedConcepts: string[])
+  nodeId: string;
+  title: string;
+  description: string;
 }
 
 // Define structure for the visualization part of the response (nodes/links)
 export interface GraphData {
-    nodes: NodeObject[];
-    links: LinkObject[];
-    // knowledgeCards removed from here, now top-level in IntelleaResponse
+  nodes: NodeObject[];
+  links: LinkObject[];
 }
 
 // Define the expected structure of the response from the LLM
-export interface IntelleaResponse { // Exporting for frontend use
+export interface IntelleaResponse {
   explanationMarkdown: string | null;
   knowledgeCards: KnowledgeCard[] | null;
-  visualizationData: GraphData; // Now mandatory, uses GraphData interface
+  visualizationData: GraphData;
   quiz?: { question: string; options: string[]; correctAnswerLetter: string };
 }
 
-// Define the structure of the *complete* expansion response (sent from API, used by store)
 export interface ExpansionResponse {
-    updatedVisualizationData: GraphData; // All nodes (with updated x, y, z) and all links
-    newKnowledgeCards: KnowledgeCard[]; // Only the cards corresponding to the newly added nodes
+  updatedVisualizationData: GraphData;
+  newKnowledgeCards: KnowledgeCard[];
 }
 
-// Define structure for expanded concept data
 export interface ExpandedConceptData {
   title: string;
   content: string;
@@ -79,92 +78,48 @@ export interface ExpandedConceptData {
 
 // --- End Data Structure Types ---
 
-
-export interface AppState {
+export interface AppState extends GraphSlice, SessionSlice, BillingSlice {
   prompt: string;
-  activePrompt: string | null; // Store the prompt that generated the current output
-  output: IntelleaResponse | string | null; // Can be the structured response, an error string, or null
+  activePrompt: string | null;
+  output: IntelleaResponse | string | null;
   isLoading: boolean;
-  sessionsList: SessionSummary[] | null;
-  isSessionListLoading: boolean;
-  currentSessionId: string | null;
-  currentSessionTitle: string | null;
-  isSessionLoading: boolean;
-  isSavingSession: boolean;
-  // --- Focus State ---
-  activeFocusPathIds: Set<string> | null; // IDs of node + neighbors for graph highlighting
-  focusedNodeId: string | null; // For transient camera focus animation trigger
-  activeClickedNodeId: string | null; // ID of the node the user clicked for card layout
-  // --- Error State ---
+  // Focus State
+  activeFocusPathIds: Set<string> | null;
+  focusedNodeId: string | null;
+  activeClickedNodeId: string | null;
+  // Error State
   error: string | null;
-  // --- Graph State ---
+  // Graph State
   isGraphFullscreen: boolean;
-  // --- Billing State ---
-  subscriptionStatus: 'active' | 'inactive' | 'trialing' | null; // Added
-  isSubscriptionLoading: boolean; // Added
-
-  // --- Expanded Concept State ---
+  // Expanded Concept State
   expandedConceptData: ExpandedConceptData | null;
   isExpandingConcept: boolean;
-  expandedConceptCache: Map<string, {data: ExpandedConceptData, graphHash: string}>; // Cache with hash to detect changes
-
-  // --- Graph UX Upgrade State ---
-  selectedNodeId: string | null;
-  pinnedNodes: Record<string, boolean>;
-  completedNodeIds: Set<string>;
-  clusters: Record<string, string>; // Mapping of nodeId to clusterId
-  onboardingDismissed: boolean;
-  nodeNotes: Record<string, string>;
-  visitedNodeIds: string[];
-  collapsedNodes: Record<string, boolean>;
+  expandedConceptCache: Map<string, { data: ExpandedConceptData; graphHash: string }>;
 
   // --- Actions ---
   setPrompt: (prompt: string) => void;
   setOutput: (output: IntelleaResponse | string | null) => void;
   setLoading: (isLoading: boolean) => void;
-  setActivePrompt: (prompt: string | null) => void; // Added action setter
-  fetchSessions: (supabase: SupabaseClient, userId: string) => Promise<void>;
-  loadSession: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
-  createSession: (supabase: SupabaseClient, userId: string, initialPrompt: string) => Promise<string | null>;
-  saveSession: (supabase: SupabaseClient) => Promise<void>;
-  deleteSession: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
-  updateSessionTitleLocally: (title: string) => void;
-  resetActiveSessionState: () => void;
+  setActivePrompt: (prompt: string | null) => void;
 
-  // --- Focus Actions ---
+  // Focus Actions
   setActiveFocusPath: (nodeId: string | null, vizData: GraphData | null) => void;
-  setFocusedNodeId: (nodeId: string | null) => void; // Trigger camera animation
+  setFocusedNodeId: (nodeId: string | null) => void;
 
-  // --- Graph Expansion ---
+  // Graph Expansion
   addGraphExpansion: (expansionResponse: ExpansionResponse, clickedNodeId: string, supabase: SupabaseClient) => void;
-  toggleGraphFullscreen: () => void; // Action to toggle fullscreen
+  toggleGraphFullscreen: () => void;
 
-  // --- Error Handling ---
+  // Error Handling
   setError: (error: string | null) => void;
 
-  // --- Billing Actions --- // Added
-  fetchSubscriptionStatus: (supabase: SupabaseClient, userId: string) => Promise<void>;
-
-  // --- Concept Expansion ---
+  // Concept Expansion
   expandConcept: (nodeId: string, nodeLabel: string, supabase: SupabaseClient) => Promise<void>;
   clearExpandedConcept: () => void;
 
-  // Add a new function to load expanded concepts from the database
   loadExpandedConcepts: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
-
-  // --- Graph UX Upgrade Actions ---
-  setSelectedNodeId: (nodeId: string | null) => void;
-  pinNode: (nodeId: string) => void;
-  unpinNode: (nodeId: string) => void;
-  markCompleted: (nodeId: string) => void;
-  setClusters: (clusters: Record<string, string>) => void;
-  setOnboardingDismissed: (dismissed: boolean) => void;
-  setNodeNote: (nodeId: string, note: string) => void;
-  collapseNode: (nodeId: string) => void;
-  expandNode: (nodeId: string) => void;
 }
 
-// Explicitly type the store hook
 export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()(
   persist(
     (set, get) => ({
@@ -172,82 +127,23 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       activePrompt: null,
       output: null,
       isLoading: false,
-      sessionsList: null,
-      isSessionListLoading: false,
-      currentSessionId: null,
-      currentSessionTitle: null,
-      isSessionLoading: false,
-      isSavingSession: false,
-      // --- Focus State Init ---
+      ...createSessionSlice(set, get),
+      ...createGraphSlice(set, get),
+      ...createBillingSlice(set, get),
+      // Focus state
       activeFocusPathIds: null,
       focusedNodeId: null,
       activeClickedNodeId: null,
-      // --- Error State Init ---
+      // Error state
       error: null,
-      // --- Graph State Init ---
+      // Graph state
       isGraphFullscreen: false,
-      // --- Billing State Init --- // Added
-      subscriptionStatus: null,
-      isSubscriptionLoading: false,
-
-      // --- Expanded Concept State Init ---
+      // Expanded concept state
       expandedConceptData: null,
       isExpandingConcept: false,
       expandedConceptCache: new Map(),
 
-      // --- Graph UX Upgrade State Init ---
-      selectedNodeId: null,
-      pinnedNodes: {},
-      completedNodeIds: new Set(),
-      clusters: {},
-      onboardingDismissed: false,
-      nodeNotes: {},
-      visitedNodeIds: [],
-      collapsedNodes: {},
-
-      // --- Action Implementations ---
-      setSelectedNodeId: (nodeId) =>
-        set((state) => {
-          if (nodeId === null) {
-            return { selectedNodeId: null };
-          }
-          const ids = state.visitedNodeIds.includes(nodeId)
-            ? state.visitedNodeIds
-            : [...state.visitedNodeIds, nodeId];
-          return { selectedNodeId: nodeId, visitedNodeIds: ids };
-        }),
-      pinNode: (nodeId) =>
-        set((state) => ({
-          pinnedNodes: { ...state.pinnedNodes, [nodeId]: true },
-        })),
-      unpinNode: (nodeId) =>
-        set((state) => {
-          const updated = { ...state.pinnedNodes };
-          delete updated[nodeId];
-          return { pinnedNodes: updated };
-        }),
-      markCompleted: (nodeId) =>
-        set((state) => {
-          const updated = new Set(state.completedNodeIds);
-          updated.add(nodeId);
-          return { completedNodeIds: updated };
-        }),
-      setClusters: (clusters) => set({ clusters }),
-      setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
-      setNodeNote: (nodeId, note) =>
-        set((state) => ({
-          nodeNotes: { ...state.nodeNotes, [nodeId]: note },
-        })),
-      collapseNode: (nodeId) =>
-        set((state) => ({
-          collapsedNodes: { ...state.collapsedNodes, [nodeId]: true },
-        })),
-      expandNode: (nodeId) =>
-        set((state) => {
-          const updated = { ...state.collapsedNodes };
-          delete updated[nodeId];
-          return { collapsedNodes: updated };
-        }),
+      // --- Base Action Implementations ---
       setPrompt: (prompt) => set({ prompt }),
       setOutput: (output) => {
         const clusters =
@@ -258,256 +154,30 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       },
       setLoading: (isLoading) => set({ isLoading }),
       setActivePrompt: (prompt) => set({ activePrompt: prompt }),
-
-      fetchSessions: async (supabase, userId) => {
-        set({ isSessionListLoading: true, error: null });
-        try {
-          const { data, error } = await supabase
-            .from('sessions')
-            .select('id, title, last_updated_at, last_prompt')
-            .eq('user_id', userId)
-            .order('last_updated_at', { ascending: false });
-
-          if (error) throw error;
-          set({ sessionsList: data as SessionSummary[], isSessionListLoading: false });
-        } catch (error: any) {
-          console.error('Error fetching sessions:', error);
-          set({ error: `Failed to fetch sessions: ${error.message}`, isSessionListLoading: false });
-        }
-      },
-
-      loadSession: async (sessionId, supabase) => {
-        set({ 
-          isSessionLoading: true, 
-          error: null, 
-          activeFocusPathIds: null, 
-          focusedNodeId: null, 
-          activeClickedNodeId: null 
-        });
-        try {
-          const { data: loadedData, error } = await supabase
-            .from('sessions')
-            .select('id, title, session_data, last_prompt')
-            .eq('id', sessionId)
-            .single();
-
-          if (error) throw error;
-          if (!loadedData) throw new Error('Session not found.');
-
-          // Basic validation of loaded session_data structure
-          const sessionData = loadedData.session_data as any;
-          if (!sessionData || typeof sessionData !== 'object' || 
-              !sessionData.explanationMarkdown || 
-              !sessionData.knowledgeCards || !Array.isArray(sessionData.knowledgeCards) ||
-              !sessionData.visualizationData || typeof sessionData.visualizationData !== 'object' ||
-              !sessionData.visualizationData.nodes || !Array.isArray(sessionData.visualizationData.nodes) ||
-              !sessionData.visualizationData.links || !Array.isArray(sessionData.visualizationData.links)) {
-            console.error('Loaded session data has invalid structure:', sessionData);
-            throw new Error('Loaded session data has an invalid or outdated structure.');
-          }
-
-          const clusters = computeClusters(sessionData.visualizationData);
-          set({
-            output: sessionData as IntelleaResponse, // Cast to validated structure
-            activePrompt: loadedData.last_prompt,
-            currentSessionId: sessionId,
-            currentSessionTitle: loadedData.title,
-            isSessionLoading: false,
-            activeFocusPathIds: null,
-            focusedNodeId: null,
-            activeClickedNodeId: null,
-            clusters,
-          });
-
-          // Load expanded concepts for this session
-          await get().loadExpandedConcepts(sessionId, supabase);
-
-        } catch (error: any) {
-          console.error('Error loading session:', error);
-          get().resetActiveSessionState(); 
-          set({ error: `Failed to load session: ${error.message}`, currentSessionId: null, currentSessionTitle: null, isSessionLoading: false });
-        }
-      },
-
-      createSession: async (supabase, userId, initialPrompt) => {
-        if (!initialPrompt?.trim()) {
-          set({ error: 'Cannot create session: Initial topic/prompt is required.' });
-          return null;
-        }
-        // Check subscription status BEFORE making the API call
-        const currentStatus = get().subscriptionStatus;
-        if (currentStatus !== 'active') {
-          set({ error: 'An active subscription is required to create new sessions.' });
-          return null;
-        }
-        set({ isSessionLoading: true, isLoading: true, error: null });
-        let newSessionId: string | null = null;
-        let sessionTitle: string = 'Untitled Session';
-        try {
-          console.log("createSession: Calling API with initial prompt:", initialPrompt);
-          const response = await fetch('/api/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ prompt: initialPrompt }),
-          });
-          if (!response.ok) {
-            const errorData = await response.json().catch(() => ({ error: 'API Error' }));
-            throw new Error(`API Error (${response.status}): ${errorData.error || 'Failed to generate initial data'}`);
-          }
-          const result = await response.json();
-          if (result.error) throw new Error(`API Error: ${result.error}`);
-          if (!result.output) throw new Error('API Error: Invalid response structure received.');
-          const initialOutput: IntelleaResponse = result.output;
-          const rootNode = initialOutput.visualizationData?.nodes?.find((n: NodeObject) => n.isRoot === true);
-          if (rootNode && rootNode.label) sessionTitle = rootNode.label;
-          else console.warn("createSession: Root node or label not found, using default title.");
-
-          console.log("createSession: Inserting session into DB with title:", sessionTitle);
-          const { data, error: dbError } = await supabase
-            .from('sessions')
-            .insert({ user_id: userId, title: sessionTitle, session_data: initialOutput, last_prompt: initialPrompt })
-            .select('id').single();
-          if (dbError) throw dbError;
-          if (!data) throw new Error('Failed to create session record in database.');
-          newSessionId = data.id;
-
-          get().resetActiveSessionState();
-          const clusters = computeClusters(initialOutput.visualizationData);
-          set({
-            currentSessionId: newSessionId,
-            currentSessionTitle: sessionTitle,
-            output: initialOutput,
-            activePrompt: initialPrompt,
-            isSessionLoading: false, isLoading: false,
-            activeFocusPathIds: null, focusedNodeId: null, activeClickedNodeId: null,
-            clusters,
-            error: null
-          });
-          console.log("createSession: Session created successfully, ID:", newSessionId);
-          await get().fetchSessions(supabase, userId);
-          return newSessionId;
-        } catch (error: any) {
-          console.error('Error during session creation process:', error);
-          if (newSessionId) {
-             console.warn("Attempting to clean up potentially created session record...");
-             await supabase.from('sessions').delete().eq('id', newSessionId);
-          }
-          get().resetActiveSessionState();
-          set({ error: `Failed to create session: ${error.message}`, isSessionLoading: false, isLoading: false });
-          return null;
-        }
-      },
-
-      saveSession: async (supabase) => {
-        const { currentSessionId, currentSessionTitle, output, activePrompt, subscriptionStatus } = get();
-        if (!currentSessionId) {
-          console.warn('Attempted to save without an active session ID.');
-          return;
-        }
-        if (subscriptionStatus !== 'active') {
-          console.warn('Attempted to save session without an active subscription.');
-          // Decide if saving should be blocked or allowed for inactive users
-          // set({ error: 'Cannot save session without an active subscription.' });
-          // return;
-        }
-
-        set({ isSavingSession: true, error: null });
-        try {
-          const { error } = await supabase
-            .from('sessions')
-            .update({
-              title: currentSessionTitle,
-              session_data: output,
-              last_prompt: activePrompt,
-              last_updated_at: new Date().toISOString(),
-            })
-            .eq('id', currentSessionId);
-          if (error) throw error;
-          set({ isSavingSession: false });
-          // No need to fetch sessions list here usually, title is updated locally
-        } catch (error: any) {
-          console.error('Error saving session:', error);
-          set({ error: `Failed to save session: ${error.message}`, isSavingSession: false });
-        }
-      },
-
-      deleteSession: async (sessionId, supabase) => {
-        set({ isSessionListLoading: true }); // Reuse list loading state
-        try {
-          const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
-          if (error) throw error;
-
-          // If the deleted session was the current one, reset the active state
-          if (get().currentSessionId === sessionId) {
-            get().resetActiveSessionState();
-          }
-          // Remove from list
-          set((state) => ({
-            sessionsList: state.sessionsList?.filter((s) => s.id !== sessionId) ?? null,
-            isSessionListLoading: false,
-          }));
-        } catch (error: any) {
-          console.error('Error deleting session:', error);
-          set({ error: `Failed to delete session: ${error.message}`, isSessionListLoading: false });
-        }
-      },
-
-      updateSessionTitleLocally: (title) => {
-        set({ currentSessionTitle: title });
-        // Saving happens on blur in the component now
-      },
-
-      resetActiveSessionState: () => set({
-        prompt: '',
-        activePrompt: null,
-        output: null,
-        currentSessionId: null,
-        currentSessionTitle: null,
-        activeFocusPathIds: null,
-        focusedNodeId: null,
-        activeClickedNodeId: null,
-        isGraphFullscreen: false,
-        expandedConceptData: null,
-        expandedConceptCache: new Map(), // Clear the cache when resetting session
-        clusters: {},
-        visitedNodeIds: []
-      }),
-
-      // --- Focus Action Implementations ---
       setActiveFocusPath: (nodeId, vizData) => {
-        // --- DEBUG LOG ---
         console.log(`[Store Action] setActiveFocusPath called. nodeId: ${nodeId}, hasVizData: ${!!vizData}`);
-        // ---------------
-        if (!nodeId) { // Only check nodeId for clearing focus
+        if (!nodeId) {
           console.log("[Store Action] Clearing focus path and clicked node ID.");
           set({ activeFocusPathIds: null, activeClickedNodeId: null });
           return;
         }
-
-        // If vizData is provided, calculate the full path
         if (vizData && vizData.nodes && vizData.links) {
-            const pathIds = new Set<string>();
-            pathIds.add(nodeId); // Add the clicked node itself
-
-            // Add direct neighbors
-            vizData.links.forEach(link => {
-              const sourceId = typeof link.source === 'object' && link.source !== null ? link.source.id : link.source;
-              const targetId = typeof link.target === 'object' && link.target !== null ? link.target.id : link.target;
-              if (sourceId === nodeId && targetId) pathIds.add(targetId as string); // Ensure string
-              if (targetId === nodeId && sourceId) pathIds.add(sourceId as string); // Ensure string
-            });
-            console.log(`[Store Action] Setting full focus path (size: ${pathIds.size}) for clicked node: ${nodeId}`);
-            set({ activeFocusPathIds: pathIds, activeClickedNodeId: nodeId });
+          const pathIds = new Set<string>();
+          pathIds.add(nodeId);
+          vizData.links.forEach(link => {
+            const sourceId = typeof link.source === 'object' && link.source !== null ? link.source.id : link.source;
+            const targetId = typeof link.target === 'object' && link.target !== null ? link.target.id : link.target;
+            if (sourceId === nodeId && targetId) pathIds.add(targetId as string);
+            if (targetId === nodeId && sourceId) pathIds.add(sourceId as string);
+          });
+          console.log(`[Store Action] Setting full focus path (size: ${pathIds.size}) for clicked node: ${nodeId}`);
+          set({ activeFocusPathIds: pathIds, activeClickedNodeId: nodeId });
         } else {
-            // If only nodeId is provided (like from handleNodeExpand before API call),
-            // just set the activeClickedNodeId and clear the path temporarily.
-            console.log(`[Store Action] Setting only activeClickedNodeId: ${nodeId}, clearing path.`);
-            set({ activeFocusPathIds: null, activeClickedNodeId: nodeId });
+          console.log(`[Store Action] Setting only activeClickedNodeId: ${nodeId}, clearing path.`);
+          set({ activeFocusPathIds: null, activeClickedNodeId: nodeId });
         }
-
-        // Also trigger camera focus when setting path (only if node ID is set)
         if (nodeId) {
-            get().setFocusedNodeId(nodeId);
+          get().setFocusedNodeId(nodeId);
         }
       },
 
@@ -515,113 +185,48 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         set({ focusedNodeId: nodeId });
       },
 
-      // --- Graph Expansion Implementation ---
       addGraphExpansion: (expansionResponse, clickedNodeId, supabase) => {
         set((state) => {
           if (!state.output || typeof state.output === 'string') {
             console.error("addGraphExpansion: Cannot add expansion, current output is not a valid IntelleaResponse object.");
-            return {}; // Return empty object to indicate no change
+            return {};
           }
-
-          // Directly replace visualizationData with the updated one from the API
           const updatedVizData = expansionResponse.updatedVisualizationData;
-
-          // Merge new knowledge cards, preventing duplicates based on nodeId
           const existingCardIds = new Set(state.output.knowledgeCards?.map(card => card.nodeId) || []);
-          const uniqueNewCards = expansionResponse.newKnowledgeCards.filter(
-            card => !existingCardIds.has(card.nodeId)
-          );
-          const mergedKnowledgeCards = [
-            ...(state.output.knowledgeCards || []),
-            ...uniqueNewCards,
-          ];
-
-          // Construct the new output state
+          const uniqueNewCards = expansionResponse.newKnowledgeCards.filter(card => !existingCardIds.has(card.nodeId));
+          const mergedKnowledgeCards = [ ...(state.output.knowledgeCards || []), ...uniqueNewCards ];
           const newOutputState: IntelleaResponse = {
             ...state.output,
             visualizationData: updatedVizData,
             knowledgeCards: mergedKnowledgeCards,
           };
           const clusters = computeClusters(updatedVizData);
-
-          // Trigger focus calculation AFTER state update
-          // Need to use the updated data for accurate path calculation
-          const latestState = { ...state, output: newOutputState }; // Simulate latest state for focus calc
-          const latestVizData = latestState.output && typeof latestState.output !== 'string'
-                                ? latestState.output.visualizationData : null;
-
-          let newFocusPathIds = state.activeFocusPathIds; // Keep existing focus unless recalculated
-          let newActiveClickedNodeId = state.activeClickedNodeId; // Keep existing focus unless recalculated
-          
+          const latestState = { ...state, output: newOutputState };
+          const latestVizData = latestState.output && typeof latestState.output !== 'string' ? latestState.output.visualizationData : null;
+          let newFocusPathIds = state.activeFocusPathIds;
+          let newActiveClickedNodeId = state.activeClickedNodeId;
           if (clickedNodeId && latestVizData) {
-              // Recalculate the focus path based on the new graph structure
-              const pathResult = calculateFocusPath(clickedNodeId, latestVizData);
-              newFocusPathIds = pathResult.focusPathIds;
-              // Optionally, we could reset activeClickedNodeId here or keep it 
-              // depending on desired UX after expansion. Let's keep it for now.
-              newActiveClickedNodeId = clickedNodeId; 
+            const pathResult = calculateFocusPath(clickedNodeId, latestVizData);
+            newFocusPathIds = pathResult.focusPathIds;
+            newActiveClickedNodeId = clickedNodeId;
           }
-
-
           return {
             output: newOutputState,
             clusters,
-            isLoading: false, // Expansion is complete
-            activeFocusPathIds: newFocusPathIds, // Update focus path
-            activeClickedNodeId: newActiveClickedNodeId, // Update clicked node ID
-            focusedNodeId: clickedNodeId, // Trigger camera focus on the clicked node
-            error: null, // Clear any previous errors
+            isLoading: false,
+            activeFocusPathIds: newFocusPathIds,
+            activeClickedNodeId: newActiveClickedNodeId,
+            focusedNodeId: clickedNodeId,
+            error: null,
           };
         });
-
-        // Auto-save after successful expansion
-        // Pass the supabase client received as an argument
-        get().saveSession(supabase); 
+        get().saveSession(supabase);
       },
 
       toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),
 
-      // --- Error Handling Implementation ---
       setError: (error) => set({ error }),
 
-      // --- Billing Action Implementation --- // Added
-      fetchSubscriptionStatus: async (supabase, userId) => {
-        set({ isSubscriptionLoading: true });
-        try {
-          const { data: profile, error } = await supabase
-            .from('profiles')
-            .select('subscription_status')
-            .eq('id', userId)
-            .single();
-
-          // If error occurs AND it's not the 'Row not found' error, throw it
-          if (error && error.code !== 'PGRST116') { 
-             throw error;
-          }
-          
-          // If no profile found (PGRST116 or data is null), status is inactive
-          const status = profile?.subscription_status;
-          console.log("Fetched subscription status:", status);
-          
-          if (status === 'active' || status === 'trialing') { 
-             set({ subscriptionStatus: 'active', isSubscriptionLoading: false });
-          } else {
-             set({ subscriptionStatus: 'inactive', isSubscriptionLoading: false }); // Default to inactive
-          }
-
-        } catch (error: any) {
-          console.error('Error fetching subscription status:', error); // Log the full error object
-          // Provide a more generic message if specific message is unavailable
-          const errorMessage = error?.message ? error.message : 'An unexpected error occurred while checking your subscription.';
-          set({ 
-              error: `Failed to fetch subscription status: ${errorMessage}`,
-              subscriptionStatus: 'inactive', // Assume inactive on error
-              isSubscriptionLoading: false 
-          });
-        }
-      },
-
-      // --- Concept Expansion Actions ---
       expandConcept: async (nodeId: string, nodeLabel: string, supabase: SupabaseClient) => {
         const state = get();
         
