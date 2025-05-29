@@ -2,7 +2,6 @@ from pydantic import BaseModel
 from agents import Agent # Assuming Agent is imported correctly from the library
 from backend.tools.embeddings import get_embeddings
 from backend.tools.umap_positions import calculate_positions
-from backend.deps import AppCtx # Import AppCtx if context is needed by tools
 
 class GraphInitOut(BaseModel):
     explanation_markdown: str
@@ -10,7 +9,7 @@ class GraphInitOut(BaseModel):
     visualization_data: dict # Define structure if known, e.g., nodes, edges
     quiz: dict | None
 
-GraphInitAgent = Agent( # Removed ["AppCtx"]
+GraphInitAgent = Agent(
     name="graph_init",
     instructions="generate initial graph, cards and optional quiz. "
                  "use tools when needed. output must match GraphInitOut.",

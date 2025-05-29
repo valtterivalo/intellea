@@ -10,7 +10,7 @@ interface Params {
 // POST handler to lookup an expanded concept by criteria (avoiding URL query param issues)
 export async function POST(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const cookieStore = cookies(); // Access cookies() synchronously to obtain the store object
+  const cookieStore = await cookies(); // Await the cookies() call
 
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,

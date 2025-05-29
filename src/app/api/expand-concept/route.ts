@@ -80,7 +80,7 @@ Your response must be a valid JSON object with this structure:
 }`;
 
 export async function POST(req: NextRequest) {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   // Create Supabase client
   const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
