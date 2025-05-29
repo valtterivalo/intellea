@@ -82,6 +82,8 @@ describe('Graph UX Zustand Store', () => {
     useAppStore.getState().setOutput({ explanationMarkdown: '', knowledgeCards: [], visualizationData: data2 });
     expect(useAppStore.getState().clusters['a']).toBe(first['a']);
     expect(useAppStore.getState().clusters['c']).toBeDefined();
+  });
+
   it('should set and get node notes', () => {
     useAppStore.getState().setNodeNote('node-3', 'my note');
     expect(useAppStore.getState().nodeNotes['node-3']).toBe('my note');
@@ -93,6 +95,8 @@ describe('Graph UX Zustand Store', () => {
     expect(raw).not.toBeNull();
     const saved = JSON.parse(raw as string);
     expect(saved.state.nodeNotes['node-4']).toBe('memo');
+  });
+
   it('tracks visited nodes without duplicates', () => {
     useAppStore.getState().setSelectedNodeId('a');
     useAppStore.getState().setSelectedNodeId('b');
