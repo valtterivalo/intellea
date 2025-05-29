@@ -265,7 +265,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   }, [focusedNodeId]); 
 
   // Double-click and single-click logic
-  const clickTimer = useRef<NodeJS.Timeout | null>(null);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastClickedNodeId = useRef<string | null>(null);
 
   // Left-click: select & center, and set activeClickedNodeId for card focus

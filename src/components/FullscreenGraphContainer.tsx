@@ -101,29 +101,59 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         return () => ro.disconnect();
     }, []);
 
-    // Sync camera movements to mini map
-    useEffect(() => {
-        if (!graphRef.current) return;
-        const controls: any = graphRef.current.controls && graphRef.current.controls();
-        const update = () => {
-            const cam = graphRef.current!.camera();
-            setCameraState({ position: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, zoom: 1 });
-        };
-        update();
-        if (controls && controls.addEventListener) {
-            controls.addEventListener('change', update);
-            return () => controls.removeEventListener('change', update);
-        }
-    }, [graphRef.current]);
-
     // Extract visualization data, ensuring it conforms to GraphData
     let vizData: GraphData | null = null;
     if (typeof output === 'object' && output !== null && 'visualizationData' in output && output.visualizationData) {
         // Basic structural check
         if (output.visualizationData.nodes && output.visualizationData.links) {
             vizData = output.visualizationData as GraphData;
+            console.log('FullscreenGraphContainer: Extracted vizData', {
+                nodes: vizData.nodes.length,
+                links: vizData.links.length,
+                sampleNode: vizData.nodes[0]
+            });
         }
     }
+
+    // Sync camera movements to mini map
+    useEffect(() => {
+        if (!graphRef.current) return;
+        
+        const updateCameraState = () => {
+            if (!graphRef.current) return;
+            const cam = graphRef.current.camera();
+            const controls = graphRef.current.controls() as any;
+            
+            // Calculate zoom based on camera distance from origin
+            const distance = Math.sqrt(cam.position.x ** 2 + cam.position.y ** 2 + cam.position.z ** 2);
+            const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
+            
+            console.log('FullscreenGraphContainer: Camera state updated', { 
+                position: cam.position,
+                distance,
+                zoom
+            });
+            
+            setCameraState({ 
+                position: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, 
+                zoom
+            });
+        };
+        
+        // Initial update
+        updateCameraState();
+        
+        // Set up event listeners for camera changes
+        const controls = graphRef.current.controls() as any;
+        if (controls && controls.addEventListener) {
+            controls.addEventListener('change', updateCameraState);
+            return () => controls.removeEventListener('change', updateCameraState);
+        }
+        
+        // Fallback: periodic updates
+        const interval = setInterval(updateCameraState, 100);
+        return () => clearInterval(interval);
+    }, [graphRef.current, vizData]);
 
     const variants = {
         hidden: { opacity: 0, scale: 0.95, pointerEvents: 'none' as const },

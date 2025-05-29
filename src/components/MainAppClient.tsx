@@ -519,7 +519,7 @@ export default function MainAppClient() {
       </header>
 
       {error && (
-        <Alert variant="destructive" className="m-4">
+        <Alert variant="destructive" className="m-4 max-w-6xl mx-auto w-full">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
@@ -527,7 +527,7 @@ export default function MainAppClient() {
       )}
 
       {knowledgeCards.length > 0 && (
-        <div className="px-4">
+        <div className="px-4 w-full">
           <div className="h-2 rounded bg-muted overflow-hidden">
             <div className="bg-primary h-full" style={{ width: `${progressPercent}%` }} />
           </div>
@@ -539,61 +539,63 @@ export default function MainAppClient() {
       )}
 
       <main className="flex-1 overflow-hidden flex flex-col">
-        {output && typeof output === 'object' ? (
-          <Card className="m-4 flex-1 flex flex-col overflow-hidden">
-            <CardHeader>
-              <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4">
-              <Breadcrumbs />
-              <OutputRenderer
-                onNodeExpand={handleNodeExpand}
-                expandingNodeId={localExpandingNodeId}
-              />
-            </CardContent>
-          </Card>
-        ) : output && typeof output === 'string' ? (
-          <Card className="m-4 flex-1 flex flex-col overflow-hidden">
-            <CardHeader>
-              <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4">
-                <Alert variant="destructive">
-                   <AlertCircle className="h-4 w-4" />
-                   <AlertTitle>Generation Error</AlertTitle>
-                   <AlertDescription>{output}</AlertDescription>
-                 </Alert>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="flex-1 flex items-center justify-center text-muted-foreground">
-            {isLoading || isSessionLoading ? (
-              <div className="flex flex-col items-center gap-2">
-                <Loader2 className="h-8 w-8 animate-spin" />
-                <span>{isSessionLoading ? 'Loading session...' : 'Generating response...'}</span>
-              </div> 
-              ) : isSubscriptionLoading ? (
-                 <div className="flex flex-col items-center gap-2">
-                    <Loader2 className="h-8 w-8 animate-spin" />
-                    <span>Loading subscription status...</span>
-                </div>
-              ) : subscriptionStatus !== 'active' ? (
-                 <div className="text-center space-y-2">
-                    <p>An active subscription is required to explore.</p>
-                    <Button 
-                      variant="default" 
-                      onClick={handleSubscribe}
-                      disabled={isCheckoutLoading}
-                    >
-                      {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} 
-                      Subscribe Now
-                    </Button>
-                 </div>
-              ) : (
-                 <span>Enter a topic or question below to start exploring.</span>
-            )}
-          </div>
-        )}
+        <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full">
+          {output && typeof output === 'object' ? (
+            <Card className="m-4 flex-1 flex flex-col overflow-hidden">
+              <CardHeader>
+                <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto p-4">
+                <Breadcrumbs />
+                <OutputRenderer
+                  onNodeExpand={handleNodeExpand}
+                  expandingNodeId={localExpandingNodeId}
+                />
+              </CardContent>
+            </Card>
+          ) : output && typeof output === 'string' ? (
+            <Card className="m-4 flex-1 flex flex-col overflow-hidden">
+              <CardHeader>
+                <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto p-4">
+                  <Alert variant="destructive">
+                     <AlertCircle className="h-4 w-4" />
+                     <AlertTitle>Generation Error</AlertTitle>
+                     <AlertDescription>{output}</AlertDescription>
+                   </Alert>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">
+              {isLoading || isSessionLoading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                  <span>{isSessionLoading ? 'Loading session...' : 'Generating response...'}</span>
+                </div> 
+                ) : isSubscriptionLoading ? (
+                   <div className="flex flex-col items-center gap-2">
+                      <Loader2 className="h-8 w-8 animate-spin" />
+                      <span>Loading subscription status...</span>
+                  </div>
+                ) : subscriptionStatus !== 'active' ? (
+                   <div className="text-center space-y-2">
+                      <p>An active subscription is required to explore.</p>
+                      <Button 
+                        variant="default" 
+                        onClick={handleSubscribe}
+                        disabled={isCheckoutLoading}
+                      >
+                        {isCheckoutLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />} 
+                        Subscribe Now
+                      </Button>
+                   </div>
+                ) : (
+                   <span>Enter a topic or question below to start exploring.</span>
+              )}
+            </div>
+          )}
+        </div>
         <FullscreenGraphContainer
             onNodeExpand={handleNodeExpand}
             expandingNodeId={localExpandingNodeId}
@@ -603,27 +605,29 @@ export default function MainAppClient() {
       </main>
 
       <footer className="p-4 border-t bg-background">
-        <div className="flex gap-2">
-          <Textarea
-            placeholder={promptDisabled ? "Activate a subscription or load a session to explore." : "Ask about a topic, concept, or process..."}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            disabled={promptDisabled || isLoading}
-            className="flex-1 resize-none"
-            rows={1}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (!sendDisabled) handleSubmit();
-              }
-            }}
-          />
-          <Button 
-            onClick={handleSubmit} 
-            disabled={sendDisabled}
-          >
-            {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
-          </Button>
+        <div className="max-w-6xl mx-auto w-full px-4">
+          <div className="flex gap-2">
+            <Textarea
+              placeholder={promptDisabled ? "Activate a subscription or load a session to explore." : "Ask about a topic, concept, or process..."}
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              disabled={promptDisabled || isLoading}
+              className="flex-1 resize-none"
+              rows={1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (!sendDisabled) handleSubmit();
+                }
+              }}
+            />
+            <Button 
+              onClick={handleSubmit} 
+              disabled={sendDisabled}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+            </Button>
+          </div>
         </div>
       </footer>
     </div>
