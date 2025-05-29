@@ -5,32 +5,11 @@ import dynamic from 'next/dynamic';
 import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
 import * as THREE from 'three'; // Keep THREE import for now, might be needed by dependencies
-import { ForceGraphMethods, NodeObject, LinkObject } from 'react-force-graph-3d'; // Import library types
+import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d'; // Import library types
+import { useGraphState, GraphData, AppGraphNode } from './hooks/useGraphState';
+import { useNodeInteractions } from './hooks/useNodeInteractions';
 
 // Define our application-specific node structure, extending the library's base type
-interface AppGraphNode extends NodeObject {
-  id: string; // Ensure id is a string
-  label?: string; // Make label optional
-  // Add our specific optional properties
-  x?: number; // Use x, y, z for calculated positions
-  y?: number;
-  z?: number;
-  fx?: number; // Keep fx, fy, fz for potential future use (e.g., manual pinning)
-  fy?: number;
-  fz?: number;
-}
-
-// Define our application-specific link structure
-interface AppGraphLink extends LinkObject {
-  source: string | AppGraphNode; // Use string IDs or node objects
-  target: string | AppGraphNode;
-}
-
-// Define the graph data structure using our types
-interface GraphData {
-  nodes: Array<AppGraphNode>;
-  links: Array<AppGraphLink>;
-}
 
 interface VisualizationComponentProps {
   visualizationData?: GraphData;
@@ -75,24 +54,33 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   // Forward the ref to parent if provided
   React.useImperativeHandle(forwardedRef, () => graphRef.current, []);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
 
-  // --- Store State Selectors ---
-  const focusedNodeId = useAppStore((state) => state.focusedNodeId); // For camera focus (transient)
-  const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds);
-  const selectedNodeId = useAppStore((state) => state.selectedNodeId);
-  const pinnedNodes = useAppStore((state) => state.pinnedNodes);
-  const clusters = useAppStore((state) => state.clusters);
-  const collapsedNodes = useAppStore((state) => state.collapsedNodes);
-  const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId);
-  const setActiveFocusPath = useAppStore((state) => state.setActiveFocusPath);
-  const pinNode = useAppStore((state) => state.pinNode);
-  const unpinNode = useAppStore((state) => state.unpinNode);
-  const collapseNode = useAppStore((state) => state.collapseNode);
-  const expandNodeInStore = useAppStore((state) => state.expandNode);
-  const setFocusedNodeId = useAppStore((state) => state.setFocusedNodeId);
-  // --- End State Selectors ---
+  const {
+    focusedNodeId,
+    activeFocusPathIds,
+    selectedNodeId,
+    pinnedNodes,
+    clusters,
+    collapseNode,
+    expandNodeInStore,
+    setSelectedNodeId,
+    setActiveFocusPath,
+    pinNode,
+    unpinNode,
+    setFocusedNodeId,
+    visibleData,
+  } = useGraphState(visualizationData);
+
+  const {
+    hoveredNodeId,
+    contextMenu,
+    setContextMenu,
+    handleNodeClick,
+    handleNodeHover,
+    handleNodeRightClick,
+    handleContainerRightClick,
+    handleCloseContextMenu,
+  } = useNodeInteractions(graphRef, visualizationData, onNodeExpand);
 
   // --- Node Color Logic (using depth helper) ---
   const getNodeColor = useCallback((node: NodeObject) => {
@@ -263,153 +251,6 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     }
   }, [focusedNodeId]); 
 
-  // Double-click and single-click logic
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastClickedNodeId = useRef<string | null>(null);
-
-  // Left-click: select & center, and set activeClickedNodeId for card focus
-  const handleNodeClick = useCallback((node: NodeObject) => {
-    const appNode = asAppNode(node);
-    if (!appNode.id) return;
-
-    // If the same node is clicked twice within 300ms, treat as double-click
-    if (clickTimer.current && lastClickedNodeId.current === appNode.id) {
-      clearTimeout(clickTimer.current);
-      clickTimer.current = null;
-      lastClickedNodeId.current = null;
-      // Double-click: expand concept
-      if (onNodeExpand) {
-        onNodeExpand(appNode.id, appNode.label || '');
-      }
-      return;
-    }
-
-    // Otherwise, treat as single click (with delay to allow for double-click)
-    lastClickedNodeId.current = appNode.id;
-    clickTimer.current = setTimeout(() => {
-      setSelectedNodeId(appNode.id);
-      // Set activeClickedNodeId for card focus (and focus path)
-      const currentOutput = useAppStore.getState().output;
-      const vizData =
-        typeof currentOutput === 'object' && currentOutput?.visualizationData
-          ? currentOutput.visualizationData
-          : null;
-      setActiveFocusPath(appNode.id, vizData);
-
-      // Center camera on node
-      if (graphRef.current) {
-        const focusX = appNode.fx ?? appNode.x ?? 0;
-        const focusY = appNode.fy ?? appNode.y ?? 0;
-        const focusZ = appNode.fz ?? appNode.z ?? 0;
-        const distance = 200;
-        const distRatio = 1 + distance / Math.hypot(focusX, focusY, focusZ);
-        const newCameraPosition = {
-          x: focusX * distRatio,
-          y: focusY * distRatio,
-          z: focusZ * distRatio,
-        };
-        const lookAtPosition = { x: focusX, y: focusY, z: focusZ };
-        graphRef.current.cameraPosition(newCameraPosition, lookAtPosition, 1000);
-      }
-      clickTimer.current = null;
-      lastClickedNodeId.current = null;
-    }, 300);
-  }, [setSelectedNodeId, setActiveFocusPath, onNodeExpand]);
-
-  // Node hover handler - Use correct type
-  const handleNodeHover = useCallback((node: NodeObject | null) => {
-      setHoveredNodeId(node ? asAppNode(node).id : null);
-  }, []);
-
-  // Node right-click handler for context menu
-  const handleNodeRightClick = useCallback((node: NodeObject, event: MouseEvent) => {
-    console.log('Right-click detected on node:', node, event);
-    event.preventDefault(); // Prevent default browser context menu
-    event.stopPropagation(); // Stop event bubbling
-    const appNode = asAppNode(node);
-    console.log('Setting context menu for node:', appNode.id);
-    
-    // Set context menu with position
-    setContextMenu({
-      nodeId: appNode.id,
-      x: event.clientX,
-      y: event.clientY
-    });
-  }, []);
-
-  // Container right-click handler as fallback
-  const handleContainerRightClick = useCallback((event: React.MouseEvent) => {
-    console.log('Container right-click detected:', event);
-    // Close context menu if clicking on background
-    setContextMenu(null);
-  }, []);
-
-  // Close context menu on any click
-  const handleCloseContextMenu = useCallback(() => {
-    setContextMenu(null);
-  }, []);
-
-  // Debug effect for hoveredNodeId changes
-  useEffect(() => {
-    console.log('hoveredNodeId changed to:', hoveredNodeId);
-  }, [hoveredNodeId]);
-
-  // Keyboard shortcuts for selected node
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (!selectedNodeId) return;
-      const key = event.key.toLowerCase();
-      if (key === 'p') {
-        if (pinnedNodes[selectedNodeId]) {
-          unpinNode(selectedNodeId);
-        } else {
-          pinNode(selectedNodeId);
-        }
-      } else if (key === 'f') {
-        const currentOutput = useAppStore.getState().output;
-        const vizData =
-          typeof currentOutput === 'object' && currentOutput?.visualizationData
-            ? currentOutput.visualizationData
-            : null;
-        setFocusedNodeId(selectedNodeId);
-        setActiveFocusPath(selectedNodeId, vizData);
-      } else if (key === 'e') {
-        expandNodeInStore(selectedNodeId);
-        const appNode = (visualizationData?.nodes || []).find(
-          (n) => n.id === selectedNodeId
-        );
-        if (onNodeExpand && appNode) {
-          onNodeExpand(selectedNodeId, appNode.label || '');
-        }
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [
-    selectedNodeId,
-    pinnedNodes,
-    pinNode,
-    unpinNode,
-    setActiveFocusPath,
-    setFocusedNodeId,
-    expandNodeInStore,
-    onNodeExpand,
-    visualizationData,
-  ]);
-  const visibleData: GraphData | undefined = React.useMemo(() => {
-    if (!visualizationData) return undefined;
-    const filteredNodes = visualizationData.nodes.filter(
-      n => !collapsedNodes[n.id]
-    );
-    const visibleIds = new Set(filteredNodes.map(n => n.id));
-    const filteredLinks = visualizationData.links.filter(l => {
-      const s = typeof l.source === 'string' ? l.source : l.source.id;
-      const t = typeof l.target === 'string' ? l.target : l.target.id;
-      return visibleIds.has(s) && visibleIds.has(t);
-    });
-    return { nodes: filteredNodes, links: filteredLinks };
-  }, [visualizationData, collapsedNodes]);
 
   // --- Render --- 
   if (!visualizationData) {
