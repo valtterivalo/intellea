@@ -4,8 +4,7 @@ process.env.NEXT_PUBLIC_SUPABASE_URL = 'https://dummy.supabase.co';
 process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = 'dummy-anon-key';
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import request from 'supertest';
-import Redis from 'ioredis-mock';
+
 import * as redisLib from '@/lib/redis';
 
 // Mock Redis client to use ioredis-mock
