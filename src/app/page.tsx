@@ -12,7 +12,7 @@ export default async function Home() {
   // const cookieStore = cookies();
   // Pass a function that returns the pre-fetched cookie store
   // const supabase = createServerComponentClient({ cookies: () => cookieStore });
-  const supabase = await createClient(); // Use the new utility, it handles cookies internally
+  const supabase = createClient(); // Use the new utility, it handles cookies internally
   const { data: { user }, error } = await supabase.auth.getUser(); // Use getUser() and expect { user }
 
   // If error or no user, show the Auth component
