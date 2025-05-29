@@ -132,7 +132,6 @@ export default function MainAppClient() {
     setError(null);
 
     try {
-      let sessionCreatedOrUpdated = false;
 
       if (activeSessionId === null) {
         console.log("No active session ID, attempting to create new session...");
@@ -143,7 +142,6 @@ export default function MainAppClient() {
         const newSessionId = await createSession(supabase, user.id, currentPrompt);
         if (newSessionId) {
           console.log("New session created and initial data loaded by store action. ID:", newSessionId);
-          sessionCreatedOrUpdated = true;
         } else {
           console.error("handleSubmit: createSession action failed.");
         }
@@ -165,7 +163,6 @@ export default function MainAppClient() {
         }
         setOutput(data.output as IntelleaResponse);
         setActivePrompt(currentPrompt);
-        sessionCreatedOrUpdated = true;
 
         console.log(`Attempting auto-save for session ${activeSessionId} after follow-up generation.`);
         saveSession(supabase);
