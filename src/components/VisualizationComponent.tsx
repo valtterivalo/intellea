@@ -77,7 +77,6 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{ nodeId: string; x: number; y: number } | null>(null);
-  const [collapsedClusters, setCollapsedClusters] = useState<Record<string, boolean>>({});
 
   // --- Store State Selectors ---
   const focusedNodeId = useAppStore((state) => state.focusedNodeId); // For camera focus (transient)
@@ -400,7 +399,9 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   ]);
   const visibleData: GraphData | undefined = React.useMemo(() => {
     if (!visualizationData) return undefined;
-    const filteredNodes = visualizationData.nodes.filter(n => !collapsedClusters[clusters[n.id]]);
+    const filteredNodes = visualizationData.nodes.filter(
+      n => !collapsedNodes[n.id]
+    );
     const visibleIds = new Set(filteredNodes.map(n => n.id));
     const filteredLinks = visualizationData.links.filter(l => {
       const s = typeof l.source === 'string' ? l.source : l.source.id;
@@ -408,7 +409,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       return visibleIds.has(s) && visibleIds.has(t);
     });
     return { nodes: filteredNodes, links: filteredLinks };
-  }, [visualizationData, collapsedClusters, clusters]);
+  }, [visualizationData, collapsedNodes]);
 
   // --- Render --- 
   if (!visualizationData) {
