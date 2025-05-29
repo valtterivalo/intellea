@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { UMAP } from 'umap-js'; // Import UMAP
+import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
 import type { Database } from '@/lib/database.types';
 
 // Define the expected structure for nodes and links in the graph
@@ -76,112 +76,6 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-
-// --- Helper Functions ---
-
-// Get text content for embedding (prioritize description, fallback to title/label)
-function getNodeTextForEmbedding(node: GraphNode, cards: KnowledgeCard[]): string {
-    const card = cards.find(c => c.nodeId === node.id);
-    return card?.description || node.label || node.id; // Use description if available, else label, else ID
-}
-
-// Get embeddings from OpenAI
-async function getNodeEmbeddings(texts: string[]): Promise<number[][]> {
-    if (!texts || texts.length === 0) return [];
-    try {
-        console.log(`Requesting embeddings for ${texts.length} texts...`);
-        const response = await openai.embeddings.create({
-            model: "text-embedding-3-small", // Efficient embedding model
-            input: texts,
-        });
-        console.log(`Embeddings received.`);
-        return response.data.map(emb => emb.embedding);
-    } catch (error) {
-        console.error("Error getting embeddings:", error);
-        throw new Error("Failed to generate node embeddings.");
-    }
-}
-
-// Calculate 3D positions using UMAP and center the root node
-async function calculateNodePositions(
-    embeddings: number[][],
-    nodesForPositioning: GraphNode[] // Pass the raw nodes to find the root
-): Promise<Array<{ fx: number; fy: number; fz: number }>> { 
-    if (!embeddings || embeddings.length === 0 || embeddings.length !== nodesForPositioning.length) { 
-        console.warn("Embeddings or nodes mismatch, returning empty positions.");
-        return []; 
-    }
-
-    let rawPositions: Array<{ fx: number; fy: number; fz: number }>;
-
-    // Handle edge case: only 1 node (must be root)
-    if (embeddings.length === 1) {
-        rawPositions = [{ fx: 0, fy: 0, fz: 0 }];
-    } 
-    // Handle edge case: 2 nodes (root and one other)
-    else if (embeddings.length === 2) {
-        const rootIndex = nodesForPositioning.findIndex(n => n.isRoot);
-        const otherIndex = 1 - rootIndex;
-        rawPositions = Array(2).fill({ fx: 0, fy: 0, fz: 0 });
-        // Assign non-zero position to the non-root node
-        if (rootIndex !== -1 && otherIndex !== -1) {
-             rawPositions[rootIndex] = { fx: 0, fy: 0, fz: 0 };
-             rawPositions[otherIndex] = { fx: 50, fy: 0, fz: 0 }; // Simple offset
-        } else {
-             // Fallback if root not found somehow
-             rawPositions[0] = { fx: 0, fy: 0, fz: 0 };
-             rawPositions[1] = { fx: 50, fy: 0, fz: 0 };
-        }
-    } 
-    // Normal case: 3+ nodes
-    else {
-        try {
-            console.log(`Calculating UMAP for ${embeddings.length} embeddings...`);
-            const umap = new UMAP({
-                nComponents: 3,
-                nNeighbors: Math.min(20, embeddings.length - 1),
-                minDist: 0.05,
-                spread: 1.2,
-            });
-            const umapOutput = await umap.fitAsync(embeddings);
-            console.log("UMAP calculation complete.");
-
-            const scaleFactor = 150;
-            rawPositions = umapOutput.map(pos => ({
-                fx: pos[0] * scaleFactor,
-                fy: pos[1] * scaleFactor,
-                fz: pos[2] * scaleFactor,
-            }));
-        } catch (error) {
-            console.error("Error calculating UMAP positions:", error);
-            // Fallback: return origin for all on error
-            return nodesForPositioning.map(() => ({ fx: 0, fy: 0, fz: 0 }));
-        }
-    }
-
-    // --- Center the Root Node --- 
-    const rootIndex = nodesForPositioning.findIndex(n => n.isRoot === true);
-    if (rootIndex === -1 || !rawPositions[rootIndex]) {
-        console.warn("Root node not found or missing position after UMAP. Skipping centering.");
-        return rawPositions; // Return uncentered positions if root is missing
-    }
-
-    const rootPosition = rawPositions[rootIndex];
-    const offsetX = rootPosition.fx;
-    const offsetY = rootPosition.fy;
-    const offsetZ = rootPosition.fz;
-
-    console.log(`Centering graph around root node. Offset: (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)}, ${offsetZ.toFixed(2)})`);
-
-    // Apply the offset to all nodes
-    const centeredPositions = rawPositions.map(pos => ({
-        fx: pos.fx - offsetX,
-        fy: pos.fy - offsetY,
-        fz: pos.fz - offsetZ,
-    }));
-
-    return centeredPositions;
-}
 
 
 // --- System Prompts ---
