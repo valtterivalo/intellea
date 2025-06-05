@@ -1,7 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
-import type { Database } from '@/lib/database.types';
 import type { IntelleaResponse } from '@/store/useAppStore';
 
 interface Params {
