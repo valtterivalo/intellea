@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';
+import type { KnowledgeCard, ExpandedConceptData } from '@/types/intellea';
 
 // Simplified interface for visualization data
 interface SanitizedNode {
@@ -20,23 +21,8 @@ interface SanitizedVisualizationData {
   links: SanitizedLink[];
 }
 
-// Knowledge Card interface
-interface KnowledgeCard {
-  nodeId: string;
-  title: string;
-  description: string;
-}
-
 // Response structure
-interface ExpandedConceptResponse {
-  title: string;
-  content: string;
-  relatedConcepts: Array<{
-    nodeId: string;
-    title: string;
-    relation: string;
-  }>;
-}
+type ExpandedConceptResponse = ExpandedConceptData;
 
 // Ensure API keys are available
 if (!process.env.OPENAI_API_KEY) {

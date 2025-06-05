@@ -2,6 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
+import type { Database } from '@/lib/database.types';
+import type {
+  NodeObject as GraphNode,
+  LinkObject as GraphLink,
+  GraphData,
+  KnowledgeCard,
+  IntelleaResponse,
+  ExpansionResponse
+} from '@/types/intellea';
 
 // Define the expected structure for nodes and links in the graph
 interface GraphNode {
@@ -35,31 +44,13 @@ interface KnowledgeCard {
 
 // Define structure for visualization data (used in both initial and expansion)
 // Note: GraphNode now includes optional x, y, z
-interface VisualizationData {
-    nodes: GraphNode[];
-    links: GraphLink[];
-}
+type VisualizationData = GraphData;
 
 // Define the structure returned by the LLM for expansion requests
 interface LLMExpansionResponse {
     nodes: GraphNode[]; // New nodes only
     links: GraphLink[]; // New links only (can connect to existing nodes)
     knowledgeCards: KnowledgeCard[]; // New cards only (one per new node)
-}
-
-// Define the expected structure of the *complete* initial response (sent to client)
-export interface IntelleaResponse {
-  explanationMarkdown: string | null;
-  knowledgeCards: KnowledgeCard[] | null; // All cards for the initial graph
-  visualizationData: VisualizationData; // Includes nodes with calculated x, y, z
-  quiz?: { question: string; options: string[]; correctAnswerLetter: string };
-}
-
-// Define the structure of the *complete* expansion response (sent to client)
-// Contains the full updated graph and only the newly added cards
-export interface ExpansionResponse {
-    updatedVisualizationData: VisualizationData; // All nodes (with updated x, y, z) and all links
-    newKnowledgeCards: KnowledgeCard[]; // Only the cards corresponding to the newly added nodes
 }
 
 
