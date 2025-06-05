@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
 import type { Database } from '@/lib/database.types';
 import type {
@@ -12,6 +11,36 @@ import type {
   IntelleaResponse,
   ExpansionResponse
 } from '@/types/intellea';
+
+// Define the expected structure for nodes and links in the graph
+interface GraphNode {
+  id: string; // Unique identifier for the node
+  label: string; // Text label displayed for the node
+  isRoot?: boolean; // Flag to identify the central root node
+  fx?: number; // CHANGED: Use fx for fixed X coordinate
+  fy?: number; // CHANGED: Use fy for fixed Y coordinate
+  fz?: number; // CHANGED: Use fz for fixed Z coordinate
+  // Keep x, y, z for potential dynamic simulation use if needed
+  x?: number;
+  y?: number;
+  z?: number;
+  // Add other potential node properties if needed later (e.g., color, size)
+  [key: string]: any; // Allow arbitrary properties for flexibility
+}
+
+interface GraphLink {
+  source: string; // ID of the source node
+  target: string; // ID of the target node
+  // Add other potential link properties if needed later (e.g., label, curvature)
+  [key: string]: any; // Allow arbitrary properties for flexibility
+}
+
+// Define structure for Knowledge Cards
+interface KnowledgeCard {
+  nodeId: string; // Corresponds to a node ID in visualizationData.
+  title: string; // Concept title (often matches node label)
+  description: string; // Concise explanation of the concept (2-4 sentences)
+}
 
 // Define structure for visualization data (used in both initial and expansion)
 // Note: GraphNode now includes optional x, y, z
@@ -100,33 +129,7 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
 export async function POST(req: NextRequest) {
   try {
     // 1. Authenticate User & Check Subscription
-    const cookieStore = await cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                // For API Route Handlers, the `cookieStore` obtained from `cookies()`
-                // is read-only. We cannot set cookies directly here for the outgoing response.
-                // Cookie setting related to auth state changes (like session refresh)
-                // initiated by Supabase client calls (e.g., `auth.getUser`, `auth.refreshSession`)
-                // will be handled by the `updateSession` middleware, which *can* set cookies
-                // on the `NextResponse`.
-                // Therefore, this `setAll` can be a no-op or log for debugging.
-              });
-            } catch (error) {
-              // console.warn("Error in API route setAll (expected for read-only store):", error);
-            }
-          },
-        },
-      }
-    );
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
