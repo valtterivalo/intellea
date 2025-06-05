@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
-import type { Database } from '@/lib/database.types';
 
 // Define the expected structure for nodes and links in the graph
 interface GraphNode {
@@ -140,33 +138,7 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
 export async function POST(req: NextRequest) {
   try {
     // 1. Authenticate User & Check Subscription
-    const cookieStore = await cookies();
-    const supabase = createServerClient<Database>(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll();
-          },
-          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) => {
-                // For API Route Handlers, the `cookieStore` obtained from `cookies()`
-                // is read-only. We cannot set cookies directly here for the outgoing response.
-                // Cookie setting related to auth state changes (like session refresh)
-                // initiated by Supabase client calls (e.g., `auth.getUser`, `auth.refreshSession`)
-                // will be handled by the `updateSession` middleware, which *can* set cookies
-                // on the `NextResponse`.
-                // Therefore, this `setAll` can be a no-op or log for debugging.
-              });
-            } catch (error) {
-              // console.warn("Error in API route setAll (expected for read-only store):", error);
-            }
-          },
-        },
-      }
-    );
+    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {
