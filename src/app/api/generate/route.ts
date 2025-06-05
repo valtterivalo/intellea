@@ -4,64 +4,24 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
 import type { Database } from '@/lib/database.types';
-
-// Define the expected structure for nodes and links in the graph
-interface GraphNode {
-  id: string; // Unique identifier for the node
-  label: string; // Text label displayed for the node
-  isRoot?: boolean; // Flag to identify the central root node
-  fx?: number; // CHANGED: Use fx for fixed X coordinate
-  fy?: number; // CHANGED: Use fy for fixed Y coordinate
-  fz?: number; // CHANGED: Use fz for fixed Z coordinate
-  // Keep x, y, z for potential dynamic simulation use if needed
-  x?: number;
-  y?: number;
-  z?: number;
-  // Add other potential node properties if needed later (e.g., color, size)
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-interface GraphLink {
-  source: string; // ID of the source node
-  target: string; // ID of the target node
-  // Add other potential link properties if needed later (e.g., label, curvature)
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-// Define structure for Knowledge Cards
-interface KnowledgeCard {
-  nodeId: string; // Corresponds to a node ID in visualizationData.
-  title: string; // Concept title (often matches node label)
-  description: string; // Concise explanation of the concept (2-4 sentences)
-}
+import type {
+  NodeObject as GraphNode,
+  LinkObject as GraphLink,
+  GraphData,
+  KnowledgeCard,
+  IntelleaResponse,
+  ExpansionResponse
+} from '@/types/intellea';
 
 // Define structure for visualization data (used in both initial and expansion)
 // Note: GraphNode now includes optional x, y, z
-interface VisualizationData {
-    nodes: GraphNode[];
-    links: GraphLink[];
-}
+type VisualizationData = GraphData;
 
 // Define the structure returned by the LLM for expansion requests
 interface LLMExpansionResponse {
     nodes: GraphNode[]; // New nodes only
     links: GraphLink[]; // New links only (can connect to existing nodes)
     knowledgeCards: KnowledgeCard[]; // New cards only (one per new node)
-}
-
-// Define the expected structure of the *complete* initial response (sent to client)
-export interface IntelleaResponse {
-  explanationMarkdown: string | null;
-  knowledgeCards: KnowledgeCard[] | null; // All cards for the initial graph
-  visualizationData: VisualizationData; // Includes nodes with calculated x, y, z
-  quiz?: { question: string; options: string[]; correctAnswerLetter: string };
-}
-
-// Define the structure of the *complete* expansion response (sent to client)
-// Contains the full updated graph and only the newly added cards
-export interface ExpansionResponse {
-    updatedVisualizationData: VisualizationData; // All nodes (with updated x, y, z) and all links
-    newKnowledgeCards: KnowledgeCard[]; // Only the cards corresponding to the newly added nodes
 }
 
 

@@ -4,6 +4,7 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import type { Database } from '@/lib/database.types';
 import * as apiCache from '@/lib/apiCache';
+import type { KnowledgeCard, ExpandedConceptData } from '@/types/intellea';
 
 // Simplified interface for visualization data
 interface SanitizedNode {
@@ -22,23 +23,8 @@ interface SanitizedVisualizationData {
   links: SanitizedLink[];
 }
 
-// Knowledge Card interface
-interface KnowledgeCard {
-  nodeId: string;
-  title: string;
-  description: string;
-}
-
 // Response structure
-interface ExpandedConceptResponse {
-  title: string;
-  content: string;
-  relatedConcepts: Array<{
-    nodeId: string;
-    title: string;
-    relation: string;
-  }>;
-}
+type ExpandedConceptResponse = ExpandedConceptData;
 
 // Ensure API keys are available
 if (!process.env.OPENAI_API_KEY) {

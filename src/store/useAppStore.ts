@@ -10,6 +10,24 @@ import type { SessionSlice } from './sessionSlice';
 import { createSessionSlice } from './sessionSlice';
 import type { BillingSlice } from './billingSlice';
 import { createBillingSlice } from './billingSlice';
+import type {
+  NodeObject,
+  LinkObject,
+  KnowledgeCard,
+  GraphData,
+  IntelleaResponse,
+  ExpansionResponse,
+  ExpandedConceptData
+} from '@/types/intellea';
+export type {
+  NodeObject,
+  LinkObject,
+  KnowledgeCard,
+  GraphData,
+  IntelleaResponse,
+  ExpansionResponse,
+  ExpandedConceptData
+};
 
 // Define SessionSummary if not already globally available or imported
 export interface SessionSummary {
@@ -19,64 +37,7 @@ export interface SessionSummary {
   last_prompt: string | null;
 }
 
-// --- Data Structure Types --- (Copied from API route for consistency)
-// Define the expected structure for nodes and links in the graph
-export interface NodeObject {
-  id: string; // Unique identifier for the node
-  label: string; // Text label displayed for the node
-  isRoot?: boolean; // ADDED: Flag to identify the central root node
-  fx?: number; // Use fx, fy, fz for fixed positions
-  fy?: number;
-  fz?: number;
-  x?: number;
-  y?: number;
-  z?: number;
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-export interface LinkObject {
-  source: string | NodeObject;
-  target: string | NodeObject;
-  [key: string]: any;
-}
-
-// Define structure for Knowledge Cards
-export interface KnowledgeCard {
-  nodeId: string;
-  title: string;
-  description: string;
-}
-
-// Define structure for the visualization part of the response (nodes/links)
-export interface GraphData {
-  nodes: NodeObject[];
-  links: LinkObject[];
-}
-
-// Define the expected structure of the response from the LLM
-export interface IntelleaResponse {
-  explanationMarkdown: string | null;
-  knowledgeCards: KnowledgeCard[] | null;
-  visualizationData: GraphData;
-  quiz?: { question: string; options: string[]; correctAnswerLetter: string };
-}
-
-export interface ExpansionResponse {
-  updatedVisualizationData: GraphData;
-  newKnowledgeCards: KnowledgeCard[];
-}
-
-export interface ExpandedConceptData {
-  title: string;
-  content: string;
-  relatedConcepts: Array<{
-    nodeId: string;
-    title: string;
-    relation: string;
-  }>;
-}
-
-// --- End Data Structure Types ---
+// --- Data Structure Types ---
 
 export interface AppState extends GraphSlice, SessionSlice, BillingSlice {
   prompt: string;
