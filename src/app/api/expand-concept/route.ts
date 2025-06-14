@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import type { Database } from '@/lib/database.types';
 import * as apiCache from '@/lib/apiCache';
 
@@ -80,28 +79,7 @@ Your response must be a valid JSON object with this structure:
 }`;
 
 export async function POST(req: NextRequest) {
-  const cookieStore = await cookies();
-  // Create Supabase client
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch (error) {
-            // console.warn("Error setting cookies in API route handler:", error);
-          }
-        },
-      },
-    }
-  );
+  const supabase = createClient();
 
   try {
     // Verify user subscription

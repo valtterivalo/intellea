@@ -1,5 +1,4 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { Database } from '@/lib/database.types';
 
@@ -10,28 +9,7 @@ interface Params {
 // POST handler to lookup an expanded concept by criteria (avoiding URL query param issues)
 export async function POST(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const cookieStore = await cookies(); // Await the cookies() call
-
-  const supabase = createServerClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
-            });
-          } catch (error) {
-            // console.warn("Error setting cookies in API route handler:", error);
-          }
-        },
-      },
-    }
-  );
+  const supabase = createClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });

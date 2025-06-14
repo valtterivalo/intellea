@@ -1,5 +1,4 @@
 import { createClient } from '@/lib/supabase/server';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { Database } from '@/lib/database.types';
 import type { IntelleaResponse } from '@/store/useAppStore';
@@ -11,7 +10,7 @@ interface Params {
 // GET handler for a specific session
 export async function GET(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = await createClient();
+  const supabase = createClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
@@ -73,7 +72,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
 // PUT handler to update/save a specific session
 export async function PUT(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = await createClient();
+  const supabase = createClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
@@ -160,7 +159,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 // DELETE handler for a specific session
 export async function DELETE(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = await createClient();
+  const supabase = createClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });
