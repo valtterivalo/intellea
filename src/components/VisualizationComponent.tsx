@@ -8,6 +8,7 @@ import * as THREE from 'three'; // Keep THREE import for now, might be needed by
 import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d'; // Import library types
 import { useGraphState, GraphData, AppGraphNode } from './hooks/useGraphState';
 import { useNodeInteractions } from './hooks/useNodeInteractions';
+import { getNodeColor as depthColor } from '@/lib/graphColors';
 
 // Define our application-specific node structure, extending the library's base type
 
@@ -28,15 +29,7 @@ const themeColors = {
   label: '#5D4037'
 };
 
-const clusterPalette = [
-  '#ef4444',
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#22d3ee'
-];
+// Legacy palette removed in favour of depth-based colours
 
 const ForceGraph3DComponent = dynamic(() => import('react-force-graph-3d').then(mod => mod.default),
     { ssr: false, loading: () => <p className="text-muted-foreground italic text-sm p-4">Loading 3D Graph...</p> }
@@ -60,7 +53,6 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     activeFocusPathIds,
     selectedNodeId,
     pinnedNodes,
-    clusters,
     collapseNode,
     expandNodeInStore,
     setSelectedNodeId,
@@ -82,20 +74,52 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     handleCloseContextMenu,
   } = useNodeInteractions(graphRef, visualizationData, onNodeExpand);
 
+  const nodeDepths = React.useMemo(() => {
+    if (!visibleData) return {} as Record<string, number>;
+    const depths: Record<string, number> = {};
+    const adj: Record<string, string[]> = {};
+    visibleData.nodes.forEach((n) => {
+      depths[n.id] = (n as any).depth ?? undefined as any;
+      adj[n.id] = [];
+    });
+    visibleData.links.forEach((l) => {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      if (adj[s]) adj[s].push(t);
+      if (adj[t]) adj[t].push(s);
+    });
+    const root = visibleData.nodes.find((n) => (n as any).depth === 0) || visibleData.nodes[0];
+    if (!root) return depths;
+    const queue = [root.id];
+    if (depths[root.id] === undefined) depths[root.id] = 0;
+    while (queue.length) {
+      const id = queue.shift()!;
+      const d = depths[id];
+      for (const nb of adj[id] || []) {
+        if (depths[nb] === undefined) {
+          depths[nb] = d + 1;
+          queue.push(nb);
+        }
+      }
+    }
+    return depths;
+  }, [visibleData]);
+
   // --- Node Color Logic (using depth helper) ---
-  const getNodeColor = useCallback((node: NodeObject) => {
-    const appNode = asAppNode(node);
-    const clusterId = clusters[appNode.id];
-    const paletteIndex = parseInt(clusterId || '0', 10) % clusterPalette.length;
-    const clusterColor = clusterPalette[paletteIndex];
-    if (selectedNodeId === appNode.id) {
-      return '#eab308';
-    }
-    if (pinnedNodes[appNode.id]) {
-      return '#22c55e';
-    }
-    return clusterColor;
-  }, [selectedNodeId, pinnedNodes, clusters]);
+  const getNodeColor = useCallback(
+    (node: NodeObject) => {
+      const appNode = asAppNode(node);
+      const depth = nodeDepths[appNode.id] ?? (appNode as any).depth ?? 0;
+      if (selectedNodeId === appNode.id) {
+        return '#eab308';
+      }
+      if (pinnedNodes[appNode.id]) {
+        return '#22c55e';
+      }
+      return depthColor(depth);
+    },
+    [selectedNodeId, pinnedNodes, nodeDepths]
+  );
   // --- End Node Color Logic ---
 
   // --- Node Size Logic ---
