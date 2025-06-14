@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
+import type { Database } from '@/lib/database.types';
 import * as apiCache from '@/lib/apiCache';
 import type { KnowledgeCard, ExpandedConceptData } from '@/types/intellea';
 
