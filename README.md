@@ -68,3 +68,15 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 | SUPABASE_SERVICE_ROLE_KEY            | Supabase service role key used for secure server actions.  | service-role-key                |
 | NEXT_PUBLIC_DEBUG                    | Enable client-side debug logging when set to "true".       | false                           |
 | APP_DEBUG                            | Enable backend debug logging when set.                     | true                            |
+
+## Dev Backend
+
+Session state is persisted via Supabase.  Helper functions in
+`backend/tools/supabase_io.py` expose CRUD utilities as agent tools:
+
+- `get_session_data(ctx, session_id)` – fetch a single session row
+- `save_session(ctx, session)` – insert a new session and return its ID
+- `save_concept(ctx, concept)` – insert a concept record
+
+These raise `SupabasePermissionError` when the service role credentials are
+invalid or lack permissions.
