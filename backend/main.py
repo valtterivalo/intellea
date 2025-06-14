@@ -4,7 +4,10 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel # To define request body models
 
 # Assuming these components exist in the specified paths
-from agents import Runner, stream_text # Make sure these are correctly exposed by agents pkg
+from agents import Runner
+from agents.stream_events import StreamEvent
+from openai.types.responses import ResponseTextDeltaEvent
+from typing import AsyncIterator
 from backend.deps import get_ctx, AppCtx
 from backend.agents.chat_router import RouterAgent
 # Import output types if needed for response models, though Runner might return them directly
@@ -29,8 +32,18 @@ class ExpandRequest(BaseModel):
     # Add session_id if needed for context
 
 class ChatRequest(BaseModel):
-    messages: list[dict] # Expecting format like {"role": "user", "content": "..."}
+    messages: list[dict]  # Expecting format like {"role": "user", "content": "..."}
     # Add session_id if needed for context
+
+
+async def stream_text(result: Runner.run_streamed.__annotations__["return"]) -> AsyncIterator[str]:
+    """Yield text deltas from a streamed run result."""
+    async for event in result.stream_events():
+        if (
+            event.type == "raw_response_event"
+            and isinstance(event.data, ResponseTextDeltaEvent)
+        ):
+            yield event.data.delta
 
 # --- API Routes ---
 @app.post("/generate")
@@ -71,10 +84,10 @@ async def expand(req: ExpandRequest, ctx: AppCtx = Depends(get_ctx)):
 async def chat_stream(req: ChatRequest, ctx: AppCtx = Depends(get_ctx)):
     """SSE streaming of freeform chat or agent results if RouterAgent answers directly."""
     try:
-        agent_run_stream = Runner.run_stream(RouterAgent, input=req.messages, context=ctx)
-        
+        agent_run_result = Runner.run_streamed(RouterAgent, input=req.messages, context=ctx)
+
         async def event_gen():
-            async for chunk in stream_text(agent_run_stream):
+            async for chunk in stream_text(agent_run_result):
                 # Ensure chunk is properly formatted/encoded if necessary
                 yield f"data: {chunk}\n\n"
             # You might want to yield a final confirmation or handle errors within the stream
