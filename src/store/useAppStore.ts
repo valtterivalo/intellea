@@ -10,6 +10,8 @@ import type { SessionSlice } from './sessionSlice';
 import { createSessionSlice } from './sessionSlice';
 import type { BillingSlice } from './billingSlice';
 import { createBillingSlice } from './billingSlice';
+import type { ChatSlice, ChatMessage } from './chatSlice';
+import { createChatSlice } from './chatSlice';
 import type {
   NodeObject,
   LinkObject,
@@ -26,7 +28,8 @@ export type {
   GraphData,
   IntelleaResponse,
   ExpansionResponse,
-  ExpandedConceptData
+  ExpandedConceptData,
+  ChatMessage
 };
 import type { ConceptSlice } from './conceptSlice';
 import { createConceptSlice } from './conceptSlice';
@@ -42,7 +45,7 @@ export interface SessionSummary {
 
 // --- Data Structure Types ---
 
-export interface AppState extends GraphSlice, SessionSlice, BillingSlice, ConceptSlice {
+export interface AppState extends GraphSlice, SessionSlice, BillingSlice, ConceptSlice, ChatSlice {
   prompt: string;
   activePrompt: string | null;
   output: IntelleaResponse | string | null;
@@ -85,6 +88,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       ...createGraphSlice(set, get),
       ...createBillingSlice(set, get),
       ...createConceptSlice(set, get),
+      ...createChatSlice(set, get),
       // Focus state
       activeFocusPathIds: null,
       focusedNodeId: null,
