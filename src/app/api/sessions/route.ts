@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import type { Database } from '@/lib/database.types'; // Ensure this path is correct based on your project setup
 
 export async function GET(request: Request) {
   const supabase = createClient();
