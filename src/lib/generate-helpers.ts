@@ -1,24 +1,6 @@
 import OpenAI from 'openai';
 import { UMAP } from 'umap-js';
-// Local type definitions mirroring those in the API route
-interface GraphNode {
-  id: string;
-  label: string;
-  isRoot?: boolean;
-  fx?: number;
-  fy?: number;
-  fz?: number;
-  x?: number;
-  y?: number;
-  z?: number;
-  [key: string]: any;
-}
-
-interface KnowledgeCard {
-  nodeId: string;
-  title: string;
-  description: string;
-}
+import type { NodeObject as GraphNode, KnowledgeCard } from '@/types/intellea';
 
 // Ensure API keys are available for embedding requests
 if (!process.env.OPENAI_API_KEY) {

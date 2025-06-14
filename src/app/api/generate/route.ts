@@ -2,45 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
-import type { Database } from '@/lib/database.types';
 import type {
   NodeObject as GraphNode,
   LinkObject as GraphLink,
   GraphData,
   KnowledgeCard,
   IntelleaResponse,
-  ExpansionResponse
+  ExpansionResponse,
 } from '@/types/intellea';
 
-// Define the expected structure for nodes and links in the graph
-interface GraphNode {
-  id: string; // Unique identifier for the node
-  label: string; // Text label displayed for the node
-  isRoot?: boolean; // Flag to identify the central root node
-  fx?: number; // CHANGED: Use fx for fixed X coordinate
-  fy?: number; // CHANGED: Use fy for fixed Y coordinate
-  fz?: number; // CHANGED: Use fz for fixed Z coordinate
-  // Keep x, y, z for potential dynamic simulation use if needed
-  x?: number;
-  y?: number;
-  z?: number;
-  // Add other potential node properties if needed later (e.g., color, size)
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-interface GraphLink {
-  source: string; // ID of the source node
-  target: string; // ID of the target node
-  // Add other potential link properties if needed later (e.g., label, curvature)
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-// Define structure for Knowledge Cards
-interface KnowledgeCard {
-  nodeId: string; // Corresponds to a node ID in visualizationData.
-  title: string; // Concept title (often matches node label)
-  description: string; // Concise explanation of the concept (2-4 sentences)
-}
+// Graph type definitions are imported from '@/types/intellea'
 
 // Define structure for visualization data (used in both initial and expansion)
 // Note: GraphNode now includes optional x, y, z
@@ -327,7 +298,6 @@ export async function POST(req: NextRequest) {
              if (rootNodes.length !== 1) {
                 throw new Error(`Validation Error: Expected exactly 1 root node (with isRoot: true), but found ${rootNodes.length}.`);
             }
-            const rootNodeId = rootNodes[0].id;
             // Validate initial links originate from root (optional check, could be removed if we want more complex starts)
             // if (links.length > 0 && nodes.length > 1) {
             //     for (const link of links) {
@@ -377,10 +347,14 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ output }); // Return the standard initial response structure
         }
 
-    } catch (parseOrProcessError: any) {
+    } catch (parseOrProcessError: unknown) {
       console.error('Failed to parse, validate, or process LLM response:', parseOrProcessError);
       console.error('Raw LLM response string:', rawResult); // Log raw response for debugging
-      return NextResponse.json({ error: `Error processing AI response: ${parseOrProcessError.message}` }, { status: 500 });
+      const message =
+        parseOrProcessError instanceof Error
+          ? parseOrProcessError.message
+          : String(parseOrProcessError);
+      return NextResponse.json({ error: `Error processing AI response: ${message}` }, { status: 500 });
     }
 
   } catch (error) {
