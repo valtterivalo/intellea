@@ -66,3 +66,5 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 | NEXT_PUBLIC_SITE_URL                 | Base URL of the deployed site used for redirect callbacks. | http://localhost:3000           |
 | STRIPE_WEBHOOK_SECRET                | Signing secret to verify Stripe webhooks.                  | whsec_test_123                  |
 | SUPABASE_SERVICE_ROLE_KEY            | Supabase service role key used for secure server actions.  | service-role-key                |
+| NEXT_PUBLIC_DEBUG                    | Enable client-side debug logging when set to "true".       | false                           |
+| APP_DEBUG                            | Enable backend debug logging when set.                     | true                            |

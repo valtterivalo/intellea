@@ -55,7 +55,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
   const supabase = createClient();
   
   const handleFocusClick = () => {
-    console.log(`Focus graph requested for node: ${card.nodeId}, setting active focus PATH.`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Focus graph requested for node: ${card.nodeId}, setting active focus PATH.`);
     // Set transient camera focus trigger
     setFocusedNodeId(card.nodeId);
     // Set persistent focus path and clicked node ID, passing visualizationData
@@ -63,7 +63,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
   };
 
   const handleExpandClick = () => {
-    console.log(`Expand concept requested for node: ${card.nodeId}, ${card.title}`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Expand concept requested for node: ${card.nodeId}, ${card.title}`);
     expandConcept(card.nodeId, card.title, supabase);
   };
 

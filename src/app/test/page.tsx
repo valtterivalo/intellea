@@ -32,7 +32,7 @@ export default function TestPage() {
   const [expandingNodeId, setExpandingNodeId] = useState<string | null>(null);
 
   const handleNodeExpand = (nodeId: string, nodeLabel: string) => {
-    console.log(`Expanding node: ${nodeId} - ${nodeLabel}`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Expanding node: ${nodeId} - ${nodeLabel}`);
     setExpandingNodeId(nodeId);
     // Simulate expansion delay
     setTimeout(() => {

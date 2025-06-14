@@ -142,7 +142,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       graphRef.current.d3Force('charge')?.strength(-120); // Default is often -30
       // Increase default link distance
       graphRef.current.d3Force('link')?.distance(60); // Default is often 30
-      console.log("VisualizationComponent: Adjusted graph forces.");
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("VisualizationComponent: Adjusted graph forces.");
     }
   }, []); // Run once on mount
 
@@ -156,12 +156,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       const newWidth = rect.width;
       const newHeight = rect.height;
       
-      console.log('Container dimensions:', { newWidth, newHeight });
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Container dimensions:', { newWidth, newHeight });
       
       if (newWidth > 0 && newHeight > 0) {
         setDimensions(currentDimensions => {
           if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
-            console.log('Updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
             return { width: newWidth, height: newHeight };
           }
           return currentDimensions;
@@ -177,12 +177,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         if (entry.contentRect) {
           const newWidth = entry.contentRect.width;
           const newHeight = entry.contentRect.height;
-          console.log('ResizeObserver triggered:', { newWidth, newHeight });
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('ResizeObserver triggered:', { newWidth, newHeight });
           
           if (newWidth > 0 && newHeight > 0) {
             setDimensions(currentDimensions => {
               if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
-                console.log('ResizeObserver updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
+                if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('ResizeObserver updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
                 return { width: newWidth, height: newHeight };
               }
               return currentDimensions;
@@ -198,7 +198,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     const fallbackTimeout = setTimeout(() => {
       setDimensions(currentDimensions => {
         if (currentDimensions.width === 0 || currentDimensions.height === 0) {
-          console.log('Using fallback dimensions');
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Using fallback dimensions');
           const rect = container.getBoundingClientRect();
           const fallbackWidth = rect.width > 0 ? rect.width : 800;
           const fallbackHeight = rect.height > 0 ? rect.height : 600;
