@@ -66,3 +66,15 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 | NEXT_PUBLIC_SITE_URL                 | Base URL of the deployed site used for redirect callbacks. | http://localhost:3000           |
 | STRIPE_WEBHOOK_SECRET                | Signing secret to verify Stripe webhooks.                  | whsec_test_123                  |
 | SUPABASE_SERVICE_ROLE_KEY            | Supabase service role key used for secure server actions.  | service-role-key                |
+
+## Dev Backend
+
+Session state is persisted via Supabase.  Helper functions in
+`backend/tools/supabase_io.py` expose CRUD utilities as agent tools:
+
+- `get_session_data(ctx, session_id)` – fetch a single session row
+- `save_session(ctx, session)` – insert a new session and return its ID
+- `save_concept(ctx, concept)` – insert a concept record
+
+These raise `SupabasePermissionError` when the service role credentials are
+invalid or lack permissions.
