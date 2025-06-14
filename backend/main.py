@@ -84,7 +84,7 @@ async def chat_stream(req: ChatRequest, ctx: AppCtx = Depends(get_ctx)):
         # Log the exception e
         # Cannot return HTTPException here as headers might be sent.
         # Consider logging and perhaps sending a specific SSE error event.
-        print(f"Error during chat stream setup: {str(e)}")
+        if os.getenv("APP_DEBUG"): print(f"Error during chat stream setup: {str(e)}")
         # Fallback or alternative error signaling might be needed
         async def error_stream():
              yield f"event: error\ndata: {{\"detail\": \"Error processing stream: {str(e)}\"}}\n\n"

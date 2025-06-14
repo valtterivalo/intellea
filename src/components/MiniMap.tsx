@@ -47,7 +47,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
   // Transform data to ensure compatibility with ForceGraph2D
   const transformedData = React.useMemo(() => {
     if (!graphData || !graphData.nodes || !graphData.links) {
-      console.log('MiniMap: No graph data available', { graphData });
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('MiniMap: No graph data available', { graphData });
       return { nodes: [], links: [] };
     }
 
@@ -58,7 +58,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
       val: 1, // Add a default value for node size
     }));
 
-    console.log('MiniMap: Transformed data', { 
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('MiniMap: Transformed data', {
       originalNodes: graphData.nodes.length, 
       originalLinks: graphData.links.length,
       transformedNodes: transformedNodes.length 
@@ -73,7 +73,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
   // Initialize the minimap when data is ready
   useEffect(() => {
     if (fgRef.current && transformedData.nodes.length > 0 && !isReady) {
-      console.log('MiniMap: Initializing with zoomToFit');
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('MiniMap: Initializing with zoomToFit');
       // Small delay to ensure the graph is rendered
       setTimeout(() => {
         if (fgRef.current?.zoomToFit) {
@@ -119,7 +119,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
       const y = e.clientY - bounds.top;
       const coords = fgRef.current.screen2GraphCoords(x, y);
       
-      console.log('MiniMap: Click at screen coords:', { x, y }, 'graph coords:', coords);
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('MiniMap: Click at screen coords:', { x, y }, 'graph coords:', coords);
       onCenter(coords.x, coords.y);
     } catch (error) {
       console.warn('MiniMap: Error handling click:', error);
@@ -128,7 +128,7 @@ const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims
 
   // Handle engine stop to mark as ready
   const handleEngineStop = useCallback(() => {
-    console.log('MiniMap: Force simulation stopped');
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('MiniMap: Force simulation stopped');
     if (!isReady) {
       setIsReady(true);
     }

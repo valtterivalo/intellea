@@ -106,9 +106,9 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       setLoading: (isLoading) => set({ isLoading }),
       setActivePrompt: (prompt) => set({ activePrompt: prompt }),
       setActiveFocusPath: (nodeId, vizData) => {
-        console.log(`[Store Action] setActiveFocusPath called. nodeId: ${nodeId}, hasVizData: ${!!vizData}`);
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`[Store Action] setActiveFocusPath called. nodeId: ${nodeId}, hasVizData: ${!!vizData}`);
         if (!nodeId) {
-          console.log("[Store Action] Clearing focus path and clicked node ID.");
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("[Store Action] Clearing focus path and clicked node ID.");
           set({ activeFocusPathIds: null, activeClickedNodeId: null });
           return;
         }
@@ -121,10 +121,10 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
             if (sourceId === nodeId && targetId) pathIds.add(targetId as string);
             if (targetId === nodeId && sourceId) pathIds.add(sourceId as string);
           });
-          console.log(`[Store Action] Setting full focus path (size: ${pathIds.size}) for clicked node: ${nodeId}`);
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`[Store Action] Setting full focus path (size: ${pathIds.size}) for clicked node: ${nodeId}`);
           set({ activeFocusPathIds: pathIds, activeClickedNodeId: nodeId });
         } else {
-          console.log(`[Store Action] Setting only activeClickedNodeId: ${nodeId}, clearing path.`);
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`[Store Action] Setting only activeClickedNodeId: ${nodeId}, clearing path.`);
           set({ activeFocusPathIds: null, activeClickedNodeId: nodeId });
         }
         if (nodeId) {

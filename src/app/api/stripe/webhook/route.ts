@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
 
-    console.log(`Webhook received: ${event.type}`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received: ${event.type}`);
 
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -75,7 +75,7 @@ export async function POST(req: Request) {
         if (updateError) {
           console.error(`Webhook DB Error (checkout.session.completed) for user ${supabaseUserId}:`, updateError);
         } else {
-           console.log(`Webhook Success: Updated profile for user ${supabaseUserId} to active.`);
+           if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated profile for user ${supabaseUserId} to active.`);
         }
         break;
       }
@@ -112,12 +112,12 @@ export async function POST(req: Request) {
         if (updateError) {
             console.error(`Webhook DB Error (${event.type}) for user ${supabaseUserId}:`, updateError);
         } else {
-            console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
         }
         break;
       }
       default: 
-        console.log(`Webhook received unhandled event type: ${event.type}`);
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received unhandled event type: ${event.type}`);
     }
 
     // Return 200 OK to Stripe to acknowledge receipt

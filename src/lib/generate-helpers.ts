@@ -49,12 +49,12 @@ export async function getNodeEmbeddings(
 ): Promise<number[][]> {
   if (!texts || texts.length === 0) return [];
   try {
-    console.log(`Requesting embeddings for ${texts.length} texts...`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Requesting embeddings for ${texts.length} texts...`);
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: texts,
     });
-    console.log('Embeddings received.');
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Embeddings received.');
     return response.data.map((emb) => emb.embedding);
   } catch (error) {
     console.error('Error getting embeddings:', error);
@@ -100,7 +100,7 @@ export async function calculateNodePositions(
   // Normal case: 3+ nodes
   else {
     try {
-      console.log(`Calculating UMAP for ${embeddings.length} embeddings...`);
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Calculating UMAP for ${embeddings.length} embeddings...`);
       const umap = new UMAP({
         nComponents: 3,
         nNeighbors: Math.min(20, embeddings.length - 1),
@@ -108,7 +108,7 @@ export async function calculateNodePositions(
         spread: 1.2,
       });
       const umapOutput = await umap.fitAsync(embeddings);
-      console.log('UMAP calculation complete.');
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('UMAP calculation complete.');
 
       const scaleFactor = 150;
       rawPositions = umapOutput.map((pos) => ({
@@ -136,7 +136,7 @@ export async function calculateNodePositions(
   const offsetY = rootPosition.fy;
   const offsetZ = rootPosition.fz;
 
-  console.log(
+  if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(
     `Centering graph around root node. Offset: (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)}, ${offsetZ.toFixed(2)})`
   );
 

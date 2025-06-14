@@ -45,7 +45,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
       // Differentiate between 'not found' and other errors if possible
       // Supabase might return a specific code for PGROST016 (0 rows)
       if (selectError.code === 'PGRST116') {
-          console.log(`Session not found or user mismatch: ${sessionId} for user ${userId}`);
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Session not found or user mismatch: ${sessionId} for user ${userId}`);
           return NextResponse.json({ error: 'Session not found or access denied' }, { status: 404 });
       }
       console.error(`Error fetching session ${sessionId}:`, selectError);
@@ -124,7 +124,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
       // Check if the error is due to row not found (implies wrong session ID or user mismatch)
       // The error code might vary, PGRST116 is common for no rows matching filters.
       if (updateError.code === 'PGRST116') {
-          console.log(`Update failed: Session not found or user mismatch: ${sessionId} for user ${userId}`);
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Update failed: Session not found or user mismatch: ${sessionId} for user ${userId}`);
           return NextResponse.json({ error: 'Session not found or access denied' }, { status: 404 });
       }
       // Log other update errors
@@ -193,7 +193,7 @@ export async function DELETE(request: Request, { params }: { params: Params }) {
     // Check if any row was actually deleted
     // Supabase delete() might return a count. If count is 0, the session wasn't found or didn't belong to the user.
     if (count === 0) {
-        console.log(`Delete failed: Session not found or user mismatch: ${sessionId} for user ${userId}`);
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Delete failed: Session not found or user mismatch: ${sessionId} for user ${userId}`);
         // Return 404 Not Found if no rows were deleted
         return NextResponse.json({ error: 'Session not found or access denied' }, { status: 404 });
     }

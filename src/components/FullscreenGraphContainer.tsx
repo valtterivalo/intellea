@@ -107,7 +107,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         // Basic structural check
         if (output.visualizationData.nodes && output.visualizationData.links) {
             vizData = output.visualizationData as GraphData;
-            console.log('FullscreenGraphContainer: Extracted vizData', {
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('FullscreenGraphContainer: Extracted vizData', {
                 nodes: vizData.nodes.length,
                 links: vizData.links.length,
                 sampleNode: vizData.nodes[0]
@@ -128,7 +128,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
             const distance = Math.sqrt(cam.position.x ** 2 + cam.position.y ** 2 + cam.position.z ** 2);
             const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
             
-            console.log('FullscreenGraphContainer: Camera state updated', { 
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('FullscreenGraphContainer: Camera state updated', {
                 position: cam.position,
                 distance,
                 zoom

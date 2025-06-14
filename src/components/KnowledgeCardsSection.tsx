@@ -26,9 +26,9 @@ const KnowledgeCardsSection: React.FC = () => {
     const rawOutput = useAppStore(state => state.output);
     
     // Add debug log to show what data we have in the store
-    console.log("DEBUG KnowledgeCardsSection - Store output:", 
-        typeof rawOutput === 'object' ? { 
-            type: 'object', 
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("DEBUG KnowledgeCardsSection - Store output:",
+        typeof rawOutput === 'object' ? {
+            type: 'object',
             hasCards: rawOutput?.knowledgeCards ? true : false,
             hasViz: rawOutput?.visualizationData ? true : false
         } : typeof rawOutput);
@@ -53,7 +53,7 @@ const KnowledgeCardsSection: React.FC = () => {
     const setActiveFocusPath = useAppStore(state => state.setActiveFocusPath);
 
     // Debug the actual values we're getting from selectors
-    console.log("DEBUG KnowledgeCardsSection - After selectors:", {
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("DEBUG KnowledgeCardsSection - After selectors:", {
         cardsLength: knowledgeCards?.length || 0,
         hasVizData: !!visualizationData,
         activeClickedNodeId
@@ -196,7 +196,7 @@ const KnowledgeCardsSection: React.FC = () => {
     // --- End Refactored Memoization ---
 
     // Add console log to inspect calculated data
-    console.log("Knowledge Section Render - Focus Active:", isFocusActive, "Focused:", focusedCard?.nodeId, "Ancestors:", ancestorLevels, "Children:", childCards);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Knowledge Section Render - Focus Active:", isFocusActive, "Focused:", focusedCard?.nodeId, "Ancestors:", ancestorLevels, "Children:", childCards);
 
     // Only render if there's something to show
     if (!rootCard && ancestorLevels.length === 0 && !focusedCard && childCards.length === 0 && otherCards.length === 0) {
