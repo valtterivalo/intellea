@@ -4,7 +4,8 @@ import React from 'react';
 import { createClient } from '@/lib/supabase/server'; // Import the new server client utility
 
 import AuthComponent from '@/components/AuthComponent';
-import MainAppClient from '@/components/MainAppClient'; // We will create this next
+import MainAppClient from '@/components/MainAppClient';
+import ChatPanel from '@/components/ChatPanel';
 
 // Make page component async
 export default async function Home() {
@@ -26,6 +27,31 @@ export default async function Home() {
     );
   }
 
-  // If session exists, render the main app (via a client component wrapper)
-  return <MainAppClient />;
+  // If session exists, render the client wrapper
+  return <HomeClient />;
+}
+
+function HomeClient() {
+  'use client';
+  const [viewMode, setViewMode] = React.useState<'graph' | 'chat'>('graph');
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <header className="border-b p-2 flex gap-2">
+        <button
+          onClick={() => setViewMode('graph')}
+          className={`px-2 py-1 rounded ${viewMode === 'graph' ? 'bg-primary text-primary-foreground' : ''}`}
+        >
+          Graph
+        </button>
+        <button
+          onClick={() => setViewMode('chat')}
+          className={`px-2 py-1 rounded ${viewMode === 'chat' ? 'bg-primary text-primary-foreground' : ''}`}
+        >
+          Chat
+        </button>
+      </header>
+      {viewMode === 'chat' ? <ChatPanel /> : <MainAppClient />}
+    </div>
+  );
 }

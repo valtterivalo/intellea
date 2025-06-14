@@ -25,7 +25,7 @@ export const createBillingSlice: StateCreator<BillingSlice, [], [], BillingSlice
       }
 
       const status = profile?.subscription_status;
-      console.log('Fetched subscription status:', status);
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Fetched subscription status:', status);
 
       if (status === 'active' || status === 'trialing') {
         set({ subscriptionStatus: 'active', isSubscriptionLoading: false });

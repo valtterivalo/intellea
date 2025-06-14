@@ -1,24 +1,6 @@
 import OpenAI from 'openai';
 import { UMAP } from 'umap-js';
-// Local type definitions mirroring those in the API route
-interface GraphNode {
-  id: string;
-  label: string;
-  isRoot?: boolean;
-  fx?: number;
-  fy?: number;
-  fz?: number;
-  x?: number;
-  y?: number;
-  z?: number;
-  [key: string]: any;
-}
-
-interface KnowledgeCard {
-  nodeId: string;
-  title: string;
-  description: string;
-}
+import type { NodeObject as GraphNode, KnowledgeCard } from '@/types/intellea';
 
 // Ensure API keys are available for embedding requests
 if (!process.env.OPENAI_API_KEY) {
@@ -49,12 +31,12 @@ export async function getNodeEmbeddings(
 ): Promise<number[][]> {
   if (!texts || texts.length === 0) return [];
   try {
-    console.log(`Requesting embeddings for ${texts.length} texts...`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Requesting embeddings for ${texts.length} texts...`);
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: texts,
     });
-    console.log('Embeddings received.');
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Embeddings received.');
     return response.data.map((emb) => emb.embedding);
   } catch (error) {
     console.error('Error getting embeddings:', error);
@@ -100,7 +82,7 @@ export async function calculateNodePositions(
   // Normal case: 3+ nodes
   else {
     try {
-      console.log(`Calculating UMAP for ${embeddings.length} embeddings...`);
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Calculating UMAP for ${embeddings.length} embeddings...`);
       const umap = new UMAP({
         nComponents: 3,
         nNeighbors: Math.min(20, embeddings.length - 1),
@@ -108,7 +90,7 @@ export async function calculateNodePositions(
         spread: 1.2,
       });
       const umapOutput = await umap.fitAsync(embeddings);
-      console.log('UMAP calculation complete.');
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('UMAP calculation complete.');
 
       const scaleFactor = 150;
       rawPositions = umapOutput.map((pos) => ({
@@ -136,7 +118,7 @@ export async function calculateNodePositions(
   const offsetY = rootPosition.fy;
   const offsetZ = rootPosition.fz;
 
-  console.log(
+  if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(
     `Centering graph around root node. Offset: (${offsetX.toFixed(2)}, ${offsetY.toFixed(2)}, ${offsetZ.toFixed(2)})`
   );
 

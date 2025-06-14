@@ -2,45 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { createClient } from '@/lib/supabase/server';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
-import type { Database } from '@/lib/database.types';
 import type {
   NodeObject as GraphNode,
   LinkObject as GraphLink,
   GraphData,
   KnowledgeCard,
   IntelleaResponse,
-  ExpansionResponse
+  ExpansionResponse,
 } from '@/types/intellea';
 
-// Define the expected structure for nodes and links in the graph
-interface GraphNode {
-  id: string; // Unique identifier for the node
-  label: string; // Text label displayed for the node
-  isRoot?: boolean; // Flag to identify the central root node
-  fx?: number; // CHANGED: Use fx for fixed X coordinate
-  fy?: number; // CHANGED: Use fy for fixed Y coordinate
-  fz?: number; // CHANGED: Use fz for fixed Z coordinate
-  // Keep x, y, z for potential dynamic simulation use if needed
-  x?: number;
-  y?: number;
-  z?: number;
-  // Add other potential node properties if needed later (e.g., color, size)
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-interface GraphLink {
-  source: string; // ID of the source node
-  target: string; // ID of the target node
-  // Add other potential link properties if needed later (e.g., label, curvature)
-  [key: string]: any; // Allow arbitrary properties for flexibility
-}
-
-// Define structure for Knowledge Cards
-interface KnowledgeCard {
-  nodeId: string; // Corresponds to a node ID in visualizationData.
-  title: string; // Concept title (often matches node label)
-  description: string; // Concise explanation of the concept (2-4 sentences)
-}
+// Graph type definitions are imported from '@/types/intellea'
 
 // Define structure for visualization data (used in both initial and expansion)
 // Note: GraphNode now includes optional x, y, z
@@ -164,14 +135,14 @@ export async function POST(req: NextRequest) {
       // Provide only nodes and links context to the LLM for expansion prompt
       const contextGraph = { nodes: currentVisualizationData.nodes, links: currentVisualizationData.links };
       userPromptContent = `Expand the graph from the clicked node:\nNode ID: ${nodeId}\nNode Label: ${nodeLabel}\n\nCurrent Graph Structure (for context only, do not repeat):\n${JSON.stringify(contextGraph, null, 2)}`;
-      console.log(`Calling OpenAI for EXPANSION on node: "${nodeLabel}" (ID: ${nodeId})`);
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Calling OpenAI for EXPANSION on node: "${nodeLabel}" (ID: ${nodeId})`);
 
     } else if (prompt) {
       // --- Initial Request ---
       isExpansion = false;
       systemPrompt = INITIAL_SYSTEM_PROMPT;
       userPromptContent = prompt;
-      console.log(`Calling OpenAI for INITIAL prompt: "${prompt.substring(0, 80)}..."`);
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Calling OpenAI for INITIAL prompt: "${prompt.substring(0, 80)}..."`);
 
     } else {
       return NextResponse.json({ error: 'Request must include either a prompt or node details (nodeId, nodeLabel, currentVisualizationData, currentKnowledgeCards) for expansion' }, { status: 400 });
@@ -194,7 +165,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Failed to get response from AI' }, { status: 500 });
     }
 
-    console.log(`OpenAI response received for ${isExpansion ? 'EXPANSION' : 'INITIAL'} request.`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`OpenAI response received for ${isExpansion ? 'EXPANSION' : 'INITIAL'} request.`);
 
     // 4. Parse, Validate, and Process LLM Response
     try {
@@ -226,9 +197,9 @@ export async function POST(req: NextRequest) {
                 }
             }
 
-            console.log(`LLM expansion validated: ${llmExpansionResponse.nodes.length} new nodes, ${llmExpansionResponse.links.length} new links, ${llmExpansionResponse.knowledgeCards.length} new cards.`);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`LLM expansion validated: ${llmExpansionResponse.nodes.length} new nodes, ${llmExpansionResponse.links.length} new links, ${llmExpansionResponse.knowledgeCards.length} new cards.`);
             // --- DEBUG: Log LLM Links --- 
-            console.log("DEBUG: Links received from LLM:", JSON.stringify(llmExpansionResponse.links));
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("DEBUG: Links received from LLM:", JSON.stringify(llmExpansionResponse.links));
             // --- END DEBUG --- 
 
             // Combine existing and new data
@@ -255,10 +226,10 @@ export async function POST(req: NextRequest) {
             // --- End Deduplication ---
 
             // --- DEBUG: Log Combined Links --- 
-            console.log(`DEBUG: Existing Links Count: ${currentVisualizationData.links.length}`);
-            console.log(`DEBUG: Combined Links Count (After Deduplication): ${combinedLinks.length}`); // Updated log
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`DEBUG: Existing Links Count: ${currentVisualizationData.links.length}`);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`DEBUG: Combined Links Count (After Deduplication): ${combinedLinks.length}`); // Updated log
             // Optional: Log the full combined list if needed, but can be verbose
-            // console.log("DEBUG: Final Combined Links:", JSON.stringify(combinedLinks)); 
+            // console.log("DEBUG: Final Combined Links:", JSON.stringify(combinedLinks));
             // --- END DEBUG --- 
 
             // Get text for embedding for ALL nodes
@@ -292,7 +263,7 @@ export async function POST(req: NextRequest) {
                 newKnowledgeCards: llmExpansionResponse.knowledgeCards, // Send only the new cards
             };
 
-            console.log(`Expansion processed. Returning updated graph with ${finalNodes.length} total nodes and ${combinedLinks.length} total links.`);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Expansion processed. Returning updated graph with ${finalNodes.length} total nodes and ${combinedLinks.length} total links.`);
             return NextResponse.json(responsePayload); // Return the structured expansion response
 
         } else {
@@ -327,7 +298,6 @@ export async function POST(req: NextRequest) {
              if (rootNodes.length !== 1) {
                 throw new Error(`Validation Error: Expected exactly 1 root node (with isRoot: true), but found ${rootNodes.length}.`);
             }
-            const rootNodeId = rootNodes[0].id;
             // Validate initial links originate from root (optional check, could be removed if we want more complex starts)
             // if (links.length > 0 && nodes.length > 1) {
             //     for (const link of links) {
@@ -341,7 +311,7 @@ export async function POST(req: NextRequest) {
             //     }
             // }
 
-            console.log(`Initial LLM response validated: Root="${rootNodes[0].label}", ${nodes.length} nodes, ${links.length} links, ${cards.length} cards.`);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Initial LLM response validated: Root="${rootNodes[0].label}", ${nodes.length} nodes, ${links.length} links, ${cards.length} cards.`);
 
             // Get text for embedding
             const textsToEmbed = nodes.map(node => getNodeTextForEmbedding(node, cards));
@@ -373,14 +343,18 @@ export async function POST(req: NextRequest) {
                 quiz: initialResponseRaw.quiz, // Include quiz if present
             };
 
-            console.log(`Initial response processed with semantic positions.`);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Initial response processed with semantic positions.`);
             return NextResponse.json({ output }); // Return the standard initial response structure
         }
 
-    } catch (parseOrProcessError: any) {
+    } catch (parseOrProcessError: unknown) {
       console.error('Failed to parse, validate, or process LLM response:', parseOrProcessError);
       console.error('Raw LLM response string:', rawResult); // Log raw response for debugging
-      return NextResponse.json({ error: `Error processing AI response: ${parseOrProcessError.message}` }, { status: 500 });
+      const message =
+        parseOrProcessError instanceof Error
+          ? parseOrProcessError.message
+          : String(parseOrProcessError);
+      return NextResponse.json({ error: `Error processing AI response: ${message}` }, { status: 500 });
     }
 
   } catch (error) {

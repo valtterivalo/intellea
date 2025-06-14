@@ -57,7 +57,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     }
 
     // Look up the expanded concept using a direct query instead of REST API
-    console.log(`Looking up expanded concept: sessionId=${sessionId}, nodeId=${nodeId}, graphHash=${graphHash.substring(0, 10)}...`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Looking up expanded concept: sessionId=${sessionId}, nodeId=${nodeId}, graphHash=${graphHash.substring(0, 10)}...`);
     
     const { data: expandedConcept, error: lookupError } = await supabase
       .from('expanded_concepts')

@@ -8,6 +8,7 @@ import * as THREE from 'three'; // Keep THREE import for now, might be needed by
 import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d'; // Import library types
 import { useGraphState, GraphData, AppGraphNode } from './hooks/useGraphState';
 import { useNodeInteractions } from './hooks/useNodeInteractions';
+import { getNodeColor as depthColor } from '@/lib/graphColors';
 
 // Define our application-specific node structure, extending the library's base type
 
@@ -28,15 +29,7 @@ const themeColors = {
   label: '#5D4037'
 };
 
-const clusterPalette = [
-  '#ef4444',
-  '#3b82f6',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#ec4899',
-  '#22d3ee'
-];
+// Legacy palette removed in favour of depth-based colours
 
 const ForceGraph3DComponent = dynamic(() => import('react-force-graph-3d').then(mod => mod.default),
     { ssr: false, loading: () => <p className="text-muted-foreground italic text-sm p-4">Loading 3D Graph...</p> }
@@ -60,7 +53,6 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     activeFocusPathIds,
     selectedNodeId,
     pinnedNodes,
-    clusters,
     collapseNode,
     expandNodeInStore,
     setSelectedNodeId,
@@ -82,20 +74,52 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     handleCloseContextMenu,
   } = useNodeInteractions(graphRef, visualizationData, onNodeExpand);
 
+  const nodeDepths = React.useMemo(() => {
+    if (!visibleData) return {} as Record<string, number>;
+    const depths: Record<string, number> = {};
+    const adj: Record<string, string[]> = {};
+    visibleData.nodes.forEach((n) => {
+      depths[n.id] = (n as any).depth ?? undefined as any;
+      adj[n.id] = [];
+    });
+    visibleData.links.forEach((l) => {
+      const s = typeof l.source === 'string' ? l.source : l.source.id;
+      const t = typeof l.target === 'string' ? l.target : l.target.id;
+      if (adj[s]) adj[s].push(t);
+      if (adj[t]) adj[t].push(s);
+    });
+    const root = visibleData.nodes.find((n) => (n as any).depth === 0) || visibleData.nodes[0];
+    if (!root) return depths;
+    const queue = [root.id];
+    if (depths[root.id] === undefined) depths[root.id] = 0;
+    while (queue.length) {
+      const id = queue.shift()!;
+      const d = depths[id];
+      for (const nb of adj[id] || []) {
+        if (depths[nb] === undefined) {
+          depths[nb] = d + 1;
+          queue.push(nb);
+        }
+      }
+    }
+    return depths;
+  }, [visibleData]);
+
   // --- Node Color Logic (using depth helper) ---
-  const getNodeColor = useCallback((node: NodeObject) => {
-    const appNode = asAppNode(node);
-    const clusterId = clusters[appNode.id];
-    const paletteIndex = parseInt(clusterId || '0', 10) % clusterPalette.length;
-    const clusterColor = clusterPalette[paletteIndex];
-    if (selectedNodeId === appNode.id) {
-      return '#eab308';
-    }
-    if (pinnedNodes[appNode.id]) {
-      return '#22c55e';
-    }
-    return clusterColor;
-  }, [selectedNodeId, pinnedNodes, clusters]);
+  const getNodeColor = useCallback(
+    (node: NodeObject) => {
+      const appNode = asAppNode(node);
+      const depth = nodeDepths[appNode.id] ?? (appNode as any).depth ?? 0;
+      if (selectedNodeId === appNode.id) {
+        return '#eab308';
+      }
+      if (pinnedNodes[appNode.id]) {
+        return '#22c55e';
+      }
+      return depthColor(depth);
+    },
+    [selectedNodeId, pinnedNodes, nodeDepths]
+  );
   // --- End Node Color Logic ---
 
   // --- Node Size Logic ---
@@ -142,7 +166,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       graphRef.current.d3Force('charge')?.strength(-120); // Default is often -30
       // Increase default link distance
       graphRef.current.d3Force('link')?.distance(60); // Default is often 30
-      console.log("VisualizationComponent: Adjusted graph forces.");
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("VisualizationComponent: Adjusted graph forces.");
     }
   }, []); // Run once on mount
 
@@ -156,12 +180,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       const newWidth = rect.width;
       const newHeight = rect.height;
       
-      console.log('Container dimensions:', { newWidth, newHeight });
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Container dimensions:', { newWidth, newHeight });
       
       if (newWidth > 0 && newHeight > 0) {
         setDimensions(currentDimensions => {
           if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
-            console.log('Updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
             return { width: newWidth, height: newHeight };
           }
           return currentDimensions;
@@ -177,12 +201,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         if (entry.contentRect) {
           const newWidth = entry.contentRect.width;
           const newHeight = entry.contentRect.height;
-          console.log('ResizeObserver triggered:', { newWidth, newHeight });
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('ResizeObserver triggered:', { newWidth, newHeight });
           
           if (newWidth > 0 && newHeight > 0) {
             setDimensions(currentDimensions => {
               if (currentDimensions.width !== newWidth || currentDimensions.height !== newHeight) {
-                console.log('ResizeObserver updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
+                if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('ResizeObserver updating dimensions:', { from: currentDimensions, to: { width: newWidth, height: newHeight } });
                 return { width: newWidth, height: newHeight };
               }
               return currentDimensions;
@@ -198,7 +222,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     const fallbackTimeout = setTimeout(() => {
       setDimensions(currentDimensions => {
         if (currentDimensions.width === 0 || currentDimensions.height === 0) {
-          console.log('Using fallback dimensions');
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Using fallback dimensions');
           const rect = container.getBoundingClientRect();
           const fallbackWidth = rect.width > 0 ? rect.width : 800;
           const fallbackHeight = rect.height > 0 ? rect.height : 600;

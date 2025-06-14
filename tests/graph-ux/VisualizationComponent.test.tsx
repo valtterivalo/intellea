@@ -4,6 +4,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen } from '@testing-library/react';
 import VisualizationComponent from '@/components/VisualizationComponent';
 import { useAppStore } from '@/store/useAppStore';
+import { getNodeColor as depthColor } from '@/lib/graphColors';
 
 // Mock the 3D graph library to capture callbacks
 let graphProps: any = null;
@@ -134,5 +135,22 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     fireEvent.keyDown(window, { key: 'e' });
     expect(useAppStore.getState().collapsedNodes).not.toHaveProperty('a');
     expect(onExpand).toHaveBeenCalledWith('a', 'A');
+  });
+
+  it('maps depth to consistent colors', () => {
+    const nodes = [
+      { id: 'root', depth: 0 },
+      { id: 'c1', depth: 1 },
+      { id: 'c2', depth: 2 },
+      { id: 'c3', depth: 3 },
+    ];
+    render(
+      <VisualizationComponent visualizationData={{ nodes, links: [] }} />
+    );
+    const colorFn = graphProps.nodeColor;
+    expect(colorFn(nodes[0])).toBe(depthColor(0));
+    expect(colorFn(nodes[1])).toBe(depthColor(1));
+    expect(colorFn(nodes[2])).toBe(depthColor(2));
+    expect(colorFn(nodes[3])).toBe(depthColor(3));
   });
 });

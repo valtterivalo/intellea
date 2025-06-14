@@ -125,7 +125,7 @@ export default function MainAppClient() {
     const currentPrompt = prompt;
     let activeSessionId = useAppStore.getState().currentSessionId;
 
-    console.log(`Submit triggered. Prompt: "${currentPrompt}", Current Session ID: ${activeSessionId}`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Submit triggered. Prompt: "${currentPrompt}", Current Session ID: ${activeSessionId}`);
     setLoading(true);
     setOutput(null);
     setActivePrompt(null);
@@ -134,19 +134,19 @@ export default function MainAppClient() {
     try {
 
       if (activeSessionId === null) {
-        console.log("No active session ID, attempting to create new session...");
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("No active session ID, attempting to create new session...");
         const { data: { user } } = await supabase.auth.getUser();
         if (!user) {
           throw new Error("User not logged in. Cannot create session.");
         }
         const newSessionId = await createSession(supabase, user.id, currentPrompt);
         if (newSessionId) {
-          console.log("New session created and initial data loaded by store action. ID:", newSessionId);
+          if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("New session created and initial data loaded by store action. ID:", newSessionId);
         } else {
           console.error("handleSubmit: createSession action failed.");
         }
       } else {
-        console.log(`Submitting follow-up prompt for existing session ${activeSessionId}`);
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Submitting follow-up prompt for existing session ${activeSessionId}`);
         const response = await fetch('/api/generate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -164,7 +164,7 @@ export default function MainAppClient() {
         setOutput(data.output as IntelleaResponse);
         setActivePrompt(currentPrompt);
 
-        console.log(`Attempting auto-save for session ${activeSessionId} after follow-up generation.`);
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Attempting auto-save for session ${activeSessionId} after follow-up generation.`);
         saveSession(supabase);
       }
 
@@ -200,7 +200,7 @@ export default function MainAppClient() {
       setError("You need an active subscription to expand the graph.");
       return;
     }
-    console.log(`Expanding node: ID=${nodeId}, Label="${nodeLabel}"`);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Expanding node: ID=${nodeId}, Label="${nodeLabel}"`);
     setLocalExpandingNodeId(nodeId);
     setError(null);
 
@@ -261,10 +261,10 @@ export default function MainAppClient() {
       if (data && data.updatedVisualizationData && data.newKnowledgeCards) {
         // Pass supabase client to the action
         addGraphExpansion(data, nodeId, supabase); 
-        console.log("Expansion successful, data processed by store.");
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Expansion successful, data processed by store.");
         // Autosave is now handled within the addGraphExpansion action itself
       } else {
-        console.log("Expansion API returned an unexpected response structure or no new data.");
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Expansion API returned an unexpected response structure or no new data.");
         // Optionally set an error or notification here
       }
     } catch (error) {
@@ -321,15 +321,15 @@ export default function MainAppClient() {
   };
 
   useEffect(() => {
-    console.log("MainAppClient mounted, attempting to fetch sessions and subscription status...");
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("MainAppClient mounted, attempting to fetch sessions and subscription status...");
     const getUserAndFetch = async () => {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user?.id) {
-            console.log("User found, fetching sessions and status for ID:", session.user.id);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("User found, fetching sessions and status for ID:", session.user.id);
             fetchSessions(supabase, session.user.id);
             fetchSubscriptionStatus(supabase, session.user.id);
         } else {
-            console.log("No active user session found, cannot fetch sessions or status.");
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("No active user session found, cannot fetch sessions or status.");
             resetActiveSessionState();
         }
     };
@@ -338,28 +338,28 @@ export default function MainAppClient() {
 
   useEffect(() => {
     const persistedSessionId = useAppStore.getState().currentSessionId;
-    console.log("Checking for persisted session ID on mount:", persistedSessionId);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Checking for persisted session ID on mount:", persistedSessionId);
     if (persistedSessionId) {
        const alreadyLoaded = useAppStore.getState().output !== null && useAppStore.getState().currentSessionId === persistedSessionId;
        if (!alreadyLoaded) {
-           console.log(`Persisted session ID ${persistedSessionId} found, attempting to load...`);
+           if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Persisted session ID ${persistedSessionId} found, attempting to load...`);
            loadSession(persistedSessionId, supabase);
        } else {
-           console.log(`Persisted session ID ${persistedSessionId} found, but session seems already loaded.`);
+           if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Persisted session ID ${persistedSessionId} found, but session seems already loaded.`);
        }
     } else {
-        console.log("No persisted session ID found.");
+        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("No persisted session ID found.");
     }
   }, [loadSession, supabase]);
 
   const handleCreateSession = async () => {
-    console.log("New Session button clicked. Resetting state.");
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("New Session button clicked. Resetting state.");
     setIsSheetOpen(false);
     resetActiveSessionState();
   };
 
   const handleLoadSession = async (sessionId: string) => {
-    console.log("Load session clicked:", sessionId);
+    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Load session clicked:", sessionId);
     setIsSheetOpen(false);
     if (sessionId !== currentSessionId) {
       await loadSession(sessionId, supabase);
@@ -368,7 +368,7 @@ export default function MainAppClient() {
 
    const handleDeleteSession = async (sessionId: string, sessionTitle: string) => {
         if (window.confirm(`Are you sure you want to delete the session "${sessionTitle || 'Untitled Session'}"?`)) {
-            console.log("Deleting session:", sessionId);
+            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Deleting session:", sessionId);
             setIsSheetOpen(false);
             await deleteSession(sessionId, supabase);
         }
