@@ -50,6 +50,7 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   activePrompt: string | null;
   output: IntelleaResponse | string | null;
   isLoading: boolean;
+  supabase: SupabaseClient | null;
   // Focus State
   activeFocusPathIds: Set<string> | null;
   focusedNodeId: string | null;
@@ -84,6 +85,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       activePrompt: null,
       output: null,
       isLoading: false,
+      supabase: null,
       ...createSessionSlice(set, get),
       ...createGraphSlice(set, get),
       ...createBillingSlice(set, get),
@@ -192,12 +194,5 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       }),
     }
   ));
-
-// Add Supabase client instance to the store dynamically (or handle differently)
-// This is a placeholder - you'll likely pass supabase client into actions that need it
-// like fetchSessions, loadSession, etc., as already implemented.
-// Adding a placeholder property to satisfy the saveSession call within addGraphExpansion.
-// This should ideally be handled by ensuring actions needing supabase receive it as an arg.
-useAppStore.setState({ supabase: null as SupabaseClient | null } as any);
 
 export default useAppStore;
