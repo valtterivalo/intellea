@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore, setAppStoreStorage } from '@/store/useAppStore';
 import { computeClusters } from '@/lib/graphCluster';
 
 describe('Graph UX Zustand Store', () => {
@@ -24,6 +24,7 @@ describe('Graph UX Zustand Store', () => {
         storage = {};
       },
     } as any;
+    setAppStoreStorage(global.localStorage as any);
   });
 
   it('should set selectedNodeId', () => {

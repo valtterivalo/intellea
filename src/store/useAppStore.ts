@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { Session } from '@supabase/supabase-js';
 import { UseBoundStore, StoreApi } from 'zustand';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -76,6 +76,36 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   setError: (error: string | null) => void;
 
 }
+
+// In-memory fallback storage for environments without `window` or when a custom
+// storage is provided. This mimics the `Storage` interface used by Zustand.
+let memoryStore: Record<string, string> = {};
+const inMemoryStorage: StateStorage = {
+  getItem: (name) => (name in memoryStore ? memoryStore[name] : null),
+  setItem: (name, value) => {
+    memoryStore[name] = value;
+  },
+  removeItem: (name) => {
+    delete memoryStore[name];
+  }
+};
+
+// Allow tests to override the storage mechanism used by the persisted store.
+let externalStorage: StateStorage | undefined;
+export const setAppStoreStorage = (storage?: StateStorage) => {
+  externalStorage = storage;
+  useAppStore.persist.setOptions({
+    storage: createJSONStorage(getStorage)
+  });
+};
+
+const getStorage = (): StateStorage => {
+  if (externalStorage) return externalStorage;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
+  }
+  return inMemoryStorage;
+};
 
 export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()(
   persist(
@@ -184,7 +214,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
     }),
     {
       name: 'intellea-session-storage', // name of the item in the storage (must be unique)
-      storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
+      storage: createJSONStorage(getStorage),
       partialize: (state) => ({
         currentSessionId: state.currentSessionId, // Only persist the current session ID
         onboardingDismissed: state.onboardingDismissed,
