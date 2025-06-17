@@ -1,16 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
+import { isIntelleaResponse } from '@/store/utils';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { motion } from 'framer-motion';
 import { markdownComponents } from './MarkdownComponents';
 
-// Helper type guard (Consider exporting from store or a utils file)
-function isIntelleaResponse(output: any): output is IntelleaResponse {
-    return typeof output === 'object' && output !== null && 'explanationMarkdown' in output;
-}
 
 
 const ExplanationSection: React.FC = () => {

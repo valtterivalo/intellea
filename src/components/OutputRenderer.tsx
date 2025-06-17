@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
+import { isIntelleaResponse } from '@/store/utils';
 import VisualizationComponent from './VisualizationComponent';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -25,14 +26,6 @@ interface OutputRendererProps {
   expandingNodeId: string | null;
 }
 
-// Type guard to check if the output is the structured IntelleaResponse
-function isIntelleaResponse(output: any): output is IntelleaResponse {
-  return (
-    typeof output === 'object' &&
-    output !== null &&
-    ('explanationMarkdown' in output || 'visualizationData' in output || 'knowledgeCards' in output || 'quiz' in output)
-  );
-}
 
 
 // Update OutputRenderer to accept props
