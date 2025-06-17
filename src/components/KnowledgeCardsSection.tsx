@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useCallback, useMemo } from 'react';
-import { useAppStore, IntelleaResponse, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';
+import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';
+import { isIntelleaResponse } from '@/store/utils';
 import { useShallow } from 'zustand/react/shallow';
 import { motion } from 'framer-motion';
 import { Separator } from "@/components/ui/separator";
@@ -9,17 +10,6 @@ import KnowledgeCard from './KnowledgeCard';
 import { CollapsedKnowledgeCard } from './CollapsedKnowledgeCard';
 import type { GraphData, NodeObject, LinkObject } from '@/store/useAppStore';
 
-// Helper type guard (ensure it's robust)
-function isIntelleaResponse(output: any): output is IntelleaResponse {
-    return (
-        typeof output === 'object' &&
-        output !== null &&
-        'explanationMarkdown' in output &&
-        'knowledgeCards' in output && Array.isArray(output.knowledgeCards) &&
-        'visualizationData' in output && typeof output.visualizationData === 'object' && output.visualizationData !== null && 'nodes' in output.visualizationData && Array.isArray(output.visualizationData.nodes) && 'links' in output.visualizationData && Array.isArray(output.visualizationData.links) &&
-        'quiz' in output
-    );
-}
 
 const KnowledgeCardsSection: React.FC = () => {
     // Get raw output first to debug

@@ -1,14 +1,11 @@
 'use client';
 
 import React from 'react';
-import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
+import { isIntelleaResponse } from '@/store/utils';
 import QuizComponent from './QuizComponent';
 import { Separator } from "@/components/ui/separator";
 
-// Helper type guard
-function isIntelleaResponse(output: any): output is IntelleaResponse {
-    return typeof output === 'object' && output !== null;
-}
 
 const QuizSection: React.FC = () => {
     // Select only the quiz data from the store

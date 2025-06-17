@@ -1,9 +1,22 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
-// make createClient async because next.js 15 makes cookies() asynchronous
-export async function createClient() {
-  const cookieStore = await cookies();
+export function createClient() {
+  let cookieStore: ReturnType<typeof cookies> | null = null;
+  try {
+    cookieStore = cookies();
+  } catch (err) {
+    // outside of a request context, cookies() throws. Provide a dummy store so
+    // tests and non-request code can still instantiate the client safely.
+    cookieStore = {
+      getAll() {
+        return [] as any[];
+      },
+      set() {
+        /* noop */
+      },
+    } as any;
+  }
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -11,18 +24,18 @@ export async function createClient() {
     {
       cookies: {
         getAll() {
-          // cookieStore is now awaited, so it should be the actual store object.
-          const allCookies = cookieStore.getAll(); 
-          return allCookies;
+          return cookieStore!.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) => {
-              // As before, this is likely a no-op for read-only store.
-              // If cookieStore had a .set, it would be cookieStore.set(name, value, options)
-            })
-          } catch (error) {
-            // console.warn("Error in setAll for server client (expected for read-only store)", error);
+            // only call set if the underlying cookie store supports it
+            if (typeof (cookieStore as any).set === 'function') {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                (cookieStore as any).set(name, value, options);
+              });
+            }
+          } catch {
+            // ignore errors from attempting to set cookies on read-only store
           }
         },
       },

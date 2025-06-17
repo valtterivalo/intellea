@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
+import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { Session } from '@supabase/supabase-js';
 import { UseBoundStore, StoreApi } from 'zustand';
 import { SupabaseClient } from '@supabase/supabase-js';
@@ -50,6 +50,7 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   activePrompt: string | null;
   output: IntelleaResponse | string | null;
   isLoading: boolean;
+  supabase: SupabaseClient | null;
   // Focus State
   activeFocusPathIds: Set<string> | null;
   focusedNodeId: string | null;
@@ -77,6 +78,36 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
 
 }
 
+// In-memory fallback storage for environments without `window` or when a custom
+// storage is provided. This mimics the `Storage` interface used by Zustand.
+let memoryStore: Record<string, string> = {};
+const inMemoryStorage: StateStorage = {
+  getItem: (name) => (name in memoryStore ? memoryStore[name] : null),
+  setItem: (name, value) => {
+    memoryStore[name] = value;
+  },
+  removeItem: (name) => {
+    delete memoryStore[name];
+  }
+};
+
+// Allow tests to override the storage mechanism used by the persisted store.
+let externalStorage: StateStorage | undefined;
+export const setAppStoreStorage = (storage?: StateStorage) => {
+  externalStorage = storage;
+  useAppStore.persist.setOptions({
+    storage: createJSONStorage(getStorage)
+  });
+};
+
+const getStorage = (): StateStorage => {
+  if (externalStorage) return externalStorage;
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return window.localStorage;
+  }
+  return inMemoryStorage;
+};
+
 export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()(
   persist(
     (set, get) => ({
@@ -84,6 +115,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       activePrompt: null,
       output: null,
       isLoading: false,
+      supabase: null,
       ...createSessionSlice(set, get),
       ...createGraphSlice(set, get),
       ...createBillingSlice(set, get),
@@ -184,7 +216,7 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
     }),
     {
       name: 'intellea-session-storage', // name of the item in the storage (must be unique)
-      storage: createJSONStorage(() => localStorage), // (optional) by default, 'localStorage' is used
+      storage: createJSONStorage(getStorage),
       partialize: (state) => ({
         currentSessionId: state.currentSessionId, // Only persist the current session ID
         onboardingDismissed: state.onboardingDismissed,
@@ -192,12 +224,5 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
       }),
     }
   ));
-
-// Add Supabase client instance to the store dynamically (or handle differently)
-// This is a placeholder - you'll likely pass supabase client into actions that need it
-// like fetchSessions, loadSession, etc., as already implemented.
-// Adding a placeholder property to satisfy the saveSession call within addGraphExpansion.
-// This should ideally be handled by ensuring actions needing supabase receive it as an arg.
-useAppStore.setState({ supabase: null as SupabaseClient | null } as any);
 
 export default useAppStore;

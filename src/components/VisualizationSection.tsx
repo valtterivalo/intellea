@@ -1,17 +1,14 @@
 'use client';
 
 import React from 'react';
-import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
+import { isIntelleaResponse } from '@/store/utils';
 import VisualizationComponent from './VisualizationComponent';
 import { Separator } from "@/components/ui/separator";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 
-// Helper type guard from useAppStore (might need to be exported from store)
-function isIntelleaResponse(output: any): output is IntelleaResponse {
-    return typeof output === 'object' && output !== null;
-}
 
 // --- Define Props for VisualizationSection ---
 interface VisualizationSectionProps {
