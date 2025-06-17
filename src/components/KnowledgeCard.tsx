@@ -4,20 +4,13 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Camera, Expand, StickyNote } from 'lucide-react';
-import { useAppStore, IntelleaResponse } from '@/store/useAppStore'; // Import the store and IntelleaResponse type
+import { useAppStore } from '@/store/useAppStore'; // Import the store
+import { isIntelleaResponse } from '@/store/utils';
 import { useShallow } from 'zustand/react/shallow'; // Import useShallow for multiple state slices
 import type { KnowledgeCard as KnowledgeCardType, GraphData } from '@/store/useAppStore'; // Import types
 import { cn } from '@/lib/utils';
 import { createClient } from '@/lib/supabase/client'; // Import our client creator
 
-// Helper type guard
-function isIntelleaResponse(output: any): output is IntelleaResponse {
-    return (
-        typeof output === 'object' &&
-        output !== null &&
-        'visualizationData' in output && typeof output.visualizationData === 'object' && output.visualizationData !== null
-    );
-}
 
 interface KnowledgeCardProps {
   card: KnowledgeCardType;
