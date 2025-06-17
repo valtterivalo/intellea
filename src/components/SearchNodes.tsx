@@ -34,7 +34,7 @@ const SearchNodes: React.FC<SearchNodesProps> = ({ className }) => {
   const suggestions = useMemo(() => {
     if (!query.trim()) return [] as NodeObject[];
     const lower = query.toLowerCase();
-    return nodes.filter((n) => (n.label || '').toLowerCase().includes(lower));
+    return nodes.filter((n) => (n.label || '').toLowerCase().startsWith(lower));
   }, [query, nodes]);
 
   const handleSelect = (nodeId: string) => {

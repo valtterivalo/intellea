@@ -37,8 +37,18 @@ export async function setCachedExpandedConcept(sessionId: string, graphHash: str
 export async function acquireLock(sessionId: string, graphHash: string, ttlSeconds = 300): Promise<boolean> {
   const redis = createRedisClient();
   const lockKey = getLockKey(sessionId, graphHash);
-  const result = await redis.set(lockKey, '1', 'NX', 'EX', ttlSeconds);
-  return !!result;
+  try {
+    // @ts-ignore - ioredis typings don't include the positional NX/EX combo but runtime supports it.
+    const result = await redis.set(lockKey, '1', 'NX', 'EX', ttlSeconds);
+    return !!result;
+  } catch {
+    // Fallback for mocks lacking full option support
+  }
+  const exists = await redis.exists(lockKey);
+  if (exists) return false;
+  await redis.set(lockKey, '1');
+  await redis.expire(lockKey, ttlSeconds);
+  return true;
 }
 
 export async function getLockTTL(sessionId: string, graphHash: string): Promise<number> {

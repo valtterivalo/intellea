@@ -24,7 +24,7 @@ export function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore!.getAll();
+          return (cookieStore as any)!.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
