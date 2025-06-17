@@ -100,7 +100,7 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
 export async function POST(req: NextRequest) {
   try {
     // 1. Authenticate User & Check Subscription
-    const supabase = createClient();
+    const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

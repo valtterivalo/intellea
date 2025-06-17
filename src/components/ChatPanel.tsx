@@ -5,7 +5,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 
 export default function ChatPanel() {
-  const { messages, send } = useAppStore(state => ({ messages: state.messages, send: state.send }));
+  const messages = useAppStore(state => state.messages);
+  const send = useAppStore(state => state.send);
   const [input, setInput] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
 

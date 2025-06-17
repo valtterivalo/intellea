@@ -1,34 +1,61 @@
-import { RouterAgent } from 'backend';
 import { NextRequest } from 'next/server';
+import OpenAI from 'openai';
 
 interface Message {
-  role: string;
+  role: 'user' | 'assistant' | 'system';
   content: string;
 }
 
-export async function POST(req: NextRequest) {
-  const { Runner } = await import('backend');
-  const { messages } = (await req.json()) as { messages: Message[] };
-
-  // TODO: obtain real context if available
-  const context: Record<string, unknown> = {};
-
-  const result = Runner.run_streamed(RouterAgent, { input: messages, context });
+// fallback: if no openai key just echo
+function echoStream(messages: Message[]) {
   const encoder = new TextEncoder();
-  const readableStream = new ReadableStream<Uint8Array>({
-    async start(controller) {
-      for await (const event of result.stream_events()) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify(event)}\n\n`));
-      }
-      controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+  return new ReadableStream<Uint8Array>({
+    start(controller) {
+      const last = messages[messages.length - 1];
+      const reply = `echo: ${last?.content ?? ''}`;
+      controller.enqueue(encoder.encode(reply));
       controller.close();
     }
+  });
+}
+
+export async function POST(req: NextRequest) {
+  const { messages } = (await req.json()) as { messages: Message[] };
+
+  // use openai if key exists
+  if (!process.env.OPENAI_API_KEY) {
+    return new Response(echoStream(messages), {
+      headers: { 'Content-Type': 'text/plain', 'Cache-Control': 'no-cache' }
+    });
+  }
+
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+  const responseStream = await openai.chat.completions.create({
+    model: 'gpt-3.5-turbo',
+    stream: true,
+    messages: messages.map(m => ({ role: m.role, content: m.content })),
+  });
+
+  const encoder = new TextEncoder();
+
+  const readableStream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        for await (const chunk of responseStream) {
+          const token = chunk.choices[0]?.delta?.content;
+          if (token) controller.enqueue(encoder.encode(token));
+        }
+      } finally {
+        controller.close();
+      }
+    },
   });
 
   return new Response(readableStream, {
     headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache'
-    }
+      'Content-Type': 'text/plain',
+      'Cache-Control': 'no-cache',
+    },
   });
 }

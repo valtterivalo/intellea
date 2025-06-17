@@ -4,8 +4,7 @@ import React from 'react';
 import { createClient } from '@/lib/supabase/server'; // Import the new server client utility
 
 import AuthComponent from '@/components/AuthComponent';
-import MainAppClient from '@/components/MainAppClient';
-import ChatPanel from '@/components/ChatPanel';
+import HomeClient from '@/components/HomeClient';
 
 // Make page component async
 export default async function Home() {
@@ -13,7 +12,7 @@ export default async function Home() {
   // const cookieStore = cookies();
   // Pass a function that returns the pre-fetched cookie store
   // const supabase = createServerComponentClient({ cookies: () => cookieStore });
-  const supabase = createClient(); // Use the new utility, it handles cookies internally
+  const supabase = await createClient(); // Use the new utility, it handles cookies internally
   const { data: { user }, error } = await supabase.auth.getUser(); // Use getUser() and expect { user }
 
   // If error or no user, show the Auth component
@@ -29,29 +28,4 @@ export default async function Home() {
 
   // If session exists, render the client wrapper
   return <HomeClient />;
-}
-
-function HomeClient() {
-  'use client';
-  const [viewMode, setViewMode] = React.useState<'graph' | 'chat'>('graph');
-
-  return (
-    <div className="flex flex-col min-h-screen">
-      <header className="border-b p-2 flex gap-2">
-        <button
-          onClick={() => setViewMode('graph')}
-          className={`px-2 py-1 rounded ${viewMode === 'graph' ? 'bg-primary text-primary-foreground' : ''}`}
-        >
-          Graph
-        </button>
-        <button
-          onClick={() => setViewMode('chat')}
-          className={`px-2 py-1 rounded ${viewMode === 'chat' ? 'bg-primary text-primary-foreground' : ''}`}
-        >
-          Chat
-        </button>
-      </header>
-      {viewMode === 'chat' ? <ChatPanel /> : <MainAppClient />}
-    </div>
-  );
 }

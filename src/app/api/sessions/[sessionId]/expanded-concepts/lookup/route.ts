@@ -8,7 +8,7 @@ interface Params {
 // POST handler to lookup an expanded concept by criteria (avoiding URL query param issues)
 export async function POST(request: Request, { params }: { params: Params }) {
   const { sessionId } = params;
-  const supabase = createClient();
+  const supabase = await createClient();
 
   if (!sessionId) {
     return NextResponse.json({ error: 'Session ID is required' }, { status: 400 });

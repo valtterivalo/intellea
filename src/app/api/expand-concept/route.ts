@@ -65,7 +65,7 @@ Your response must be a valid JSON object with this structure:
 }`;
 
 export async function POST(req: NextRequest) {
-  const supabase = createClient();
+  const supabase = await createClient();
 
   try {
     // Verify user subscription
