@@ -108,19 +108,19 @@ const getStorage = (): StateStorage => {
   return inMemoryStorage;
 };
 
-export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()(
+export const useAppStore = create<AppState>()(
   persist(
-    (set, get) => ({
+    (set, get, api) => ({
       prompt: '',
       activePrompt: null,
       output: null,
       isLoading: false,
       supabase: null,
-      ...createSessionSlice(set, get),
-      ...createGraphSlice(set, get),
-      ...createBillingSlice(set, get),
-      ...createConceptSlice(set, get),
-      ...createChatSlice(set, get),
+      ...createSessionSlice(set, get, api),
+      ...createGraphSlice(set, get, api),
+      ...createBillingSlice(set, get, api),
+      ...createConceptSlice(set, get, api),
+      ...createChatSlice(set, get, api),
       // Focus state
       activeFocusPathIds: null,
       focusedNodeId: null,
@@ -223,6 +223,5 @@ export const useAppStore: UseBoundStore<StoreApi<AppState>> = create<AppState>()
         nodeNotes: state.nodeNotes,
       }),
     }
-  ));
-
-export default useAppStore;
+  )
+);

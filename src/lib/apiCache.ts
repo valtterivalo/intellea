@@ -8,11 +8,11 @@ export function getGraphHash(data: any): string {
     .digest('hex');
 }
 
-export function getCacheKey(sessionId: string, graphHash: string): string {
+function getCacheKey(sessionId: string, graphHash: string): string {
   return `expand:${sessionId}:${graphHash}`;
 }
 
-export function getLockKey(sessionId: string, graphHash: string): string {
+function getLockKey(sessionId: string, graphHash: string): string {
   return `lock:${sessionId}:${graphHash}`;
 }
 

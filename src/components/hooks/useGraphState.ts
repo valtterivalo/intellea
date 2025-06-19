@@ -13,7 +13,7 @@ export interface AppGraphNode extends NodeObject {
   fz?: number;
 }
 
-export interface AppGraphLink extends LinkObject {
+interface AppGraphLink extends LinkObject {
   source: string | AppGraphNode;
   target: string | AppGraphNode;
 }

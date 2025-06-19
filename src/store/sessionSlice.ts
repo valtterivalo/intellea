@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeClusters } from '@/lib/graphCluster';
-import type { IntelleaResponse, NodeObject, SessionSummary, ExpansionResponse } from './useAppStore';
+import type { AppState, IntelleaResponse, NodeObject, SessionSummary, ExpansionResponse } from './useAppStore';
 
 export interface SessionSlice {
   sessionsList: SessionSummary[] | null;
@@ -20,7 +20,7 @@ export interface SessionSlice {
   resetActiveSessionState: () => void;
 }
 
-export const createSessionSlice: StateCreator<SessionSlice, [], [], SessionSlice> = (set, get) => ({
+export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = (set, get, api) => ({
   sessionsList: null,
   isSessionListLoading: false,
   currentSessionId: null,
@@ -107,7 +107,7 @@ export const createSessionSlice: StateCreator<SessionSlice, [], [], SessionSlice
       set({ error: 'Cannot create session: Initial topic/prompt is required.' } as any);
       return null;
     }
-    const currentStatus = get().subscriptionStatus as any;
+    const currentStatus = get().subscriptionStatus;
     if (currentStatus !== 'active') {
       set({ error: 'An active subscription is required to create new sessions.' } as any);
       return null;
@@ -170,7 +170,7 @@ export const createSessionSlice: StateCreator<SessionSlice, [], [], SessionSlice
   },
 
   saveSession: async (supabase) => {
-    const { currentSessionId, currentSessionTitle, output, activePrompt, subscriptionStatus } = get() as any;
+    const { currentSessionId, currentSessionTitle, output, activePrompt, subscriptionStatus } = get();
     if (!currentSessionId) {
       console.warn('Attempted to save without an active session ID.');
       return;

@@ -1,9 +1,9 @@
-export interface ClusterGraphData {
+interface ClusterGraphData {
   nodes: Array<{ id: string }>;
   links: Array<{ source: string | { id: string }; target: string | { id: string } }>;
 }
 
-export type ClusterMap = Record<string, string>;
+type ClusterMap = Record<string, string>;
 
 /**
  * Compute clusters for a graph.

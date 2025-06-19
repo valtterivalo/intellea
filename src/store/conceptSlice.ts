@@ -1,4 +1,4 @@
-export interface ExpandedConceptData {
+interface ExpandedConceptData {
   title: string;
   content: string;
   relatedConcepts: Array<{
@@ -10,6 +10,7 @@ export interface ExpandedConceptData {
 
 import type { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { AppState } from './useAppStore';
 
 export interface ConceptSlice {
   expandedConceptData: ExpandedConceptData | null;
@@ -21,13 +22,13 @@ export interface ConceptSlice {
   loadExpandedConcepts: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
 }
 
-export const createConceptSlice: StateCreator<ConceptSlice, [], [], ConceptSlice> = (set, get) => ({
+export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = (set, get, api) => ({
   expandedConceptData: null,
   isExpandingConcept: false,
   expandedConceptCache: new Map(),
 
   expandConcept: async (nodeId: string, nodeLabel: string, supabase: SupabaseClient) => {
-    const state = get() as any;
+    const state = get();
 
     set({ isExpandingConcept: true, error: null } as any);
 

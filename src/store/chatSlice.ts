@@ -1,4 +1,5 @@
 import { StateCreator } from 'zustand';
+import { AppState } from './useAppStore';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -10,7 +11,7 @@ export interface ChatSlice {
   send: (content: string) => Promise<void>;
 }
 
-export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set, get) => ({
+export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (set, get, api) => ({
   messages: [],
   send: async (content: string) => {
     const newMsg: ChatMessage = { role: 'user', content };
@@ -50,5 +51,3 @@ export const createChatSlice: StateCreator<ChatSlice, [], [], ChatSlice> = (set,
     }
   },
 });
-
-export default createChatSlice;
