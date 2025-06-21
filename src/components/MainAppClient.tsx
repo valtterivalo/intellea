@@ -31,6 +31,17 @@ import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
 import { computeProgress, suggestNextNode } from '@/lib/progress';
 import SearchNodes from '@/components/SearchNodes';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import VoiceAgentWidget from '@/components/VoiceAgentWidget';
 
 // Ensure Stripe publishable key is set
 if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -58,6 +69,7 @@ export default function MainAppClient() {
     subscriptionStatus,
     isSubscriptionLoading,
     completedNodeIds,
+    forceExpandRequest,
   } = useAppStore(useShallow((state) => ({
     prompt: state.prompt,
     output: state.output,
@@ -73,6 +85,7 @@ export default function MainAppClient() {
     subscriptionStatus: state.subscriptionStatus,
     isSubscriptionLoading: state.isSubscriptionLoading,
     completedNodeIds: state.completedNodeIds,
+    forceExpandRequest: state.forceExpandRequest,
   })));
 
   const knowledgeCards =
@@ -102,6 +115,8 @@ export default function MainAppClient() {
     resetActiveSessionState,
     setError,
     fetchSubscriptionStatus,
+    setForceExpandRequest,
+    removeUnpinnedChildren,
   } = useAppStore.getState();
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -389,6 +404,23 @@ export default function MainAppClient() {
   const promptDisabled = isLoading || isSubscriptionLoading || (subscriptionStatus !== 'active' && !currentSessionId);
   const sendDisabled = promptDisabled || !prompt.trim();
 
+  const handleForceExpandConfirm = () => {
+    if (forceExpandRequest) {
+      const { nodeId } = forceExpandRequest;
+      // Remove unpinned children first
+      removeUnpinnedChildren(nodeId);
+      // Then, find the node's label to proceed with expansion
+      const output = useAppStore.getState().output;
+      const vizData = output && typeof output === 'object' ? output.visualizationData : null;
+      const nodeToExpand = vizData?.nodes.find(n => n.id === nodeId);
+      if (nodeToExpand) {
+        handleNodeExpand(nodeId, nodeToExpand.label || '');
+      }
+      // Close the dialog
+      setForceExpandRequest(null);
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <header className="flex items-center justify-between p-4 border-b">
@@ -599,6 +631,28 @@ export default function MainAppClient() {
         />
         <ExpandedConceptCard />
         <OnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} />
+        
+        <AlertDialog
+          open={!!forceExpandRequest}
+          onOpenChange={(isOpen: boolean) => {
+            if (!isOpen) {
+              setForceExpandRequest(null);
+            }
+          }}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure you want to re-expand this node?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will remove all direct child nodes that you haven't pinned and generate new ones.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleForceExpandConfirm}>Continue</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
 
       <footer className="p-4 border-t bg-background">
@@ -627,6 +681,7 @@ export default function MainAppClient() {
           </div>
         </div>
       </footer>
+      <VoiceAgentWidget />
     </div>
   );
 } 

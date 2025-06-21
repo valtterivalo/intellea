@@ -1,7 +1,0 @@
-openai-agents
-fastapi
-uvicorn
-pydantic
-supabase
-redis
-umap-learn 

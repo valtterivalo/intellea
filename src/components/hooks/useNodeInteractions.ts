@@ -30,6 +30,68 @@ export function useNodeInteractions(
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastClickedNodeId = useRef<string | null>(null);
 
+  const handleExpandNode = useCallback(
+    (nodeId: string) => {
+      const state = useAppStore.getState();
+      const output = state.output;
+      const fullVisualizationData =
+        output && typeof output === 'object' ? output.visualizationData : null;
+
+      if (!fullVisualizationData) {
+        console.warn('handleExpandNode: No full visualization data available in store.');
+        return;
+      }
+
+      const childrenIds = fullVisualizationData.links
+        .filter((link) => {
+          const sourceId =
+            typeof link.source === 'object' && link.source !== null
+              ? (link.source as AppGraphNode).id
+              : link.source;
+          return sourceId === nodeId;
+        })
+        .map((link) => {
+          const targetId =
+            typeof link.target === 'object' && link.target !== null
+              ? (link.target as AppGraphNode).id
+              : (link.target as string);
+          return targetId;
+        });
+
+      const collapsedChildrenIds = childrenIds.filter(
+        (id) => id && state.collapsedNodes[id]
+      );
+
+      if (collapsedChildrenIds.length > 0) {
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true')
+          console.log(
+            `Expanding ${collapsedChildrenIds.length} collapsed child nodes for ${nodeId}`
+          );
+        collapsedChildrenIds.forEach((childId) => {
+          if (childId) expandNodeInStore(childId);
+        });
+        return;
+      }
+      
+      const hasVisibleChildren = childrenIds.some(id => id && !state.collapsedNodes[id]);
+
+      if (hasVisibleChildren) {
+          state.setForceExpandRequest({ nodeId });
+          return;
+      }
+
+      if (process.env.NEXT_PUBLIC_DEBUG === 'true')
+        console.log(
+          `No collapsed children for ${nodeId}, proceeding with API expansion.`
+        );
+      const node = fullVisualizationData.nodes.find((n) => n.id === nodeId);
+      if (onNodeExpand && node) {
+        onNodeExpand(nodeId, node.label || '');
+      }
+    },
+    [onNodeExpand, expandNodeInStore]
+  );
+
   const handleNodeClick = useCallback(
     (node: NodeObject) => {
       const appNode = node as AppGraphNode;
@@ -39,9 +101,7 @@ export function useNodeInteractions(
         clearTimeout(clickTimer.current);
         clickTimer.current = null;
         lastClickedNodeId.current = null;
-        if (onNodeExpand) {
-          onNodeExpand(appNode.id, appNode.label || '');
-        }
+        handleExpandNode(appNode.id);
         return;
       }
 
@@ -77,7 +137,7 @@ export function useNodeInteractions(
         lastClickedNodeId.current = null;
       }, 300);
     },
-    [setSelectedNodeId, setActiveFocusPath, onNodeExpand, graphRef]
+    [setSelectedNodeId, setActiveFocusPath, handleExpandNode, graphRef]
   );
 
   const handleNodeHover = useCallback((node: NodeObject | null) => {
@@ -125,13 +185,7 @@ export function useNodeInteractions(
         setFocusedNodeId(selectedNodeId);
         setActiveFocusPath(selectedNodeId, vizData);
       } else if (key === 'e') {
-        expandNodeInStore(selectedNodeId);
-        const appNode = (visualizationData?.nodes || []).find(
-          (n) => n.id === selectedNodeId
-        );
-        if (onNodeExpand && appNode) {
-          onNodeExpand(selectedNodeId, appNode.label || '');
-        }
+        handleExpandNode(selectedNodeId);
       }
     };
 
@@ -147,6 +201,7 @@ export function useNodeInteractions(
     expandNodeInStore,
     onNodeExpand,
     visualizationData,
+    handleExpandNode,
   ]);
 
   return {
@@ -158,5 +213,6 @@ export function useNodeInteractions(
     handleNodeRightClick,
     handleContainerRightClick,
     handleCloseContextMenu,
+    handleExpandNode,
   };
 }

@@ -21,15 +21,86 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
+// --- Webhook Event Handlers ---
+
+async function handleCheckoutSessionCompleted(event: Stripe.Event) {
+  const session = event.data.object as Stripe.Checkout.Session;
+  const customerId = session.customer as string;
+  const subscriptionId = session.subscription as string;
+
+  const customer = await stripe.customers.retrieve(customerId);
+  if (!customer || customer.deleted) {
+      console.error(`Webhook Error: Customer ${customerId} not found or deleted.`);
+      return;
+  }
+  
+  const supabaseUserId = (customer as Stripe.Customer).metadata.supabaseUserId;
+  if (!supabaseUserId) {
+    console.error(`Webhook Error: supabaseUserId missing from metadata for customer ${customerId}`);
+    return; 
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscriptionId,
+      subscription_status: 'active',
+    })
+    .eq('id', supabaseUserId);
+
+  if (updateError) {
+    console.error(`Webhook DB Error (checkout.session.completed) for user ${supabaseUserId}:`, updateError);
+  } else {
+     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated profile for user ${supabaseUserId} to active.`);
+  }
+}
+
+async function handleSubscriptionChange(event: Stripe.Event) {
+  const subscription = event.data.object as Stripe.Subscription;
+  const customerId = subscription.customer as string;
+
+  const customer = await stripe.customers.retrieve(customerId);
+  if (!customer || customer.deleted) {
+      console.error(`Webhook Error: Customer ${customerId} not found or deleted during subscription change.`);
+      return;
+  }
+
+  const supabaseUserId = (customer as Stripe.Customer).metadata.supabaseUserId;
+  if (!supabaseUserId) {
+    console.error(`Webhook Error: supabaseUserId missing from metadata for customer ${customerId} during subscription update/delete`);
+    return;
+  }
+
+  const { error: updateError } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      subscription_status: subscription.status, 
+      stripe_subscription_id: subscription.id, 
+    })
+    .eq('id', supabaseUserId);
+
+  if (updateError) {
+      console.error(`Webhook DB Error (${event.type}) for user ${supabaseUserId}:`, updateError);
+  } else {
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
+  }
+}
+
+const eventHandlers: Record<string, (event: Stripe.Event) => Promise<void>> = {
+  'checkout.session.completed': handleCheckoutSessionCompleted,
+  'customer.subscription.updated': handleSubscriptionChange,
+  'customer.subscription.deleted': handleSubscriptionChange,
+};
+
+// --- Main Webhook Route ---
+
 export async function POST(req: Request) {
   const body = await req.text();
   const signature = req.headers.get('stripe-signature');
 
   if (!signature) {
-    return NextResponse.json(
-      { error: 'Missing stripe signature' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Missing stripe signature' }, { status: 400 });
   }
 
   try {
@@ -41,93 +112,20 @@ export async function POST(req: Request) {
 
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received: ${event.type}`);
 
-    switch (event.type) {
-      case 'checkout.session.completed': {
-        const session = event.data.object as Stripe.Checkout.Session;
-        const customerId = session.customer as string;
-        const subscriptionId = session.subscription as string;
+    const handler = eventHandlers[event.type];
 
-        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
-        if (!customer) {
-            console.error(`Webhook Error: Customer ${customerId} not found.`);
-            break;
-        }
-        if (customer.deleted) {
-            console.error(`Webhook Error: Customer ${customerId} was deleted.`);
-            break; 
-        }
-        const supabaseUserId = customer.metadata.supabaseUserId;
-
-        if (!supabaseUserId) {
-          console.error(`Webhook Error: supabaseUserId missing from metadata for customer ${customerId}`);
-          break; 
-        }
-
-        const { error: updateError } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            stripe_customer_id: customerId,
-            stripe_subscription_id: subscriptionId,
-            subscription_status: 'active',
-          })
-          .eq('id', supabaseUserId);
-
-        if (updateError) {
-          console.error(`Webhook DB Error (checkout.session.completed) for user ${supabaseUserId}:`, updateError);
-        } else {
-           if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated profile for user ${supabaseUserId} to active.`);
-        }
-        break;
-      }
-
-      case 'customer.subscription.updated':
-      case 'customer.subscription.deleted': {
-        const subscription = event.data.object as Stripe.Subscription;
-        const customerId = subscription.customer as string;
-
-        const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
-        if (!customer) {
-            console.error(`Webhook Error: Customer ${customerId} not found during update/delete.`);
-            break;
-        }
-        if (customer.deleted) {
-            console.error(`Webhook Error: Customer ${customerId} was deleted during update/delete.`);
-            break; 
-        }
-        const supabaseUserId = customer.metadata.supabaseUserId;
-
-        if (!supabaseUserId) {
-          console.error(`Webhook Error: supabaseUserId missing from metadata for customer ${customerId} during subscription update/delete`);
-          break; 
-        }
-
-        const { error: updateError } = await supabaseAdmin
-          .from('profiles')
-          .update({
-            subscription_status: subscription.status, 
-            stripe_subscription_id: subscription.id, 
-          })
-          .eq('id', supabaseUserId);
-
-        if (updateError) {
-            console.error(`Webhook DB Error (${event.type}) for user ${supabaseUserId}:`, updateError);
-        } else {
-            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
-        }
-        break;
-      }
-      default: 
-        if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received unhandled event type: ${event.type}`);
+    if (handler) {
+      await handler(event);
+    } else {
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received unhandled event type: ${event.type}`);
     }
 
-    // Return 200 OK to Stripe to acknowledge receipt
     return NextResponse.json({ received: true });
   } catch (error: any) {
-    // Handle signature verification errors or other issues
     console.error('Stripe Webhook Error:', error.message);
     return NextResponse.json(
       { error: `Webhook handler failed: ${error.message}` },
-      { status: 400 } // Use 400 for signature/request errors
+      { status: 400 }
     );
   }
 } 

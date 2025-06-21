@@ -12,6 +12,8 @@ import type { BillingSlice } from './billingSlice';
 import { createBillingSlice } from './billingSlice';
 import type { ChatSlice, ChatMessage } from './chatSlice';
 import { createChatSlice } from './chatSlice';
+import type { VoiceSlice } from './voiceSlice';
+import { createVoiceSlice } from './voiceSlice';
 import type {
   NodeObject,
   LinkObject,
@@ -41,11 +43,12 @@ export interface SessionSummary {
   title: string | null;
   last_updated_at: string;
   last_prompt: string | null;
+  [key: string]: any;
 }
 
 // --- Data Structure Types ---
 
-export interface AppState extends GraphSlice, SessionSlice, BillingSlice, ConceptSlice, ChatSlice {
+export interface AppState extends GraphSlice, SessionSlice, BillingSlice, ConceptSlice, ChatSlice, VoiceSlice {
   prompt: string;
   activePrompt: string | null;
   output: IntelleaResponse | string | null;
@@ -59,6 +62,8 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   error: string | null;
   // Graph State
   isGraphFullscreen: boolean;
+  // Force-expand state
+  forceExpandRequest: { nodeId: string } | null;
   // --- Actions ---
   setPrompt: (prompt: string) => void;
   setOutput: (output: IntelleaResponse | string | null) => void;
@@ -72,6 +77,10 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   // Graph Expansion
   addGraphExpansion: (expansionResponse: ExpansionResponse, clickedNodeId: string, supabase: SupabaseClient) => void;
   toggleGraphFullscreen: () => void;
+  removeUnpinnedChildren: (nodeId: string) => void;
+
+  // Force-expand action
+  setForceExpandRequest: (request: { nodeId: string } | null) => void;
 
   // Error Handling
   setError: (error: string | null) => void;
@@ -121,6 +130,7 @@ export const useAppStore = create<AppState>()(
       ...createBillingSlice(set, get, api),
       ...createConceptSlice(set, get, api),
       ...createChatSlice(set, get, api),
+      ...createVoiceSlice(set, get, api),
       // Focus state
       activeFocusPathIds: null,
       focusedNodeId: null,
@@ -129,6 +139,8 @@ export const useAppStore = create<AppState>()(
       error: null,
       // Graph state
       isGraphFullscreen: false,
+      // Force-expand state
+      forceExpandRequest: null,
 
       // --- Base Action Implementations ---
       setPrompt: (prompt) => set({ prompt }),
@@ -208,6 +220,88 @@ export const useAppStore = create<AppState>()(
           };
         });
         get().saveSession(supabase);
+      },
+
+      setForceExpandRequest: (request) => set({ forceExpandRequest: request }),
+
+      removeUnpinnedChildren: (nodeId) => {
+        set((state) => {
+          if (!state.output || typeof state.output === 'string') {
+            console.error(
+              'removeUnpinnedChildren: Cannot proceed, current output is not a valid IntelleaResponse object.'
+            );
+            return {};
+          }
+
+          const { visualizationData, knowledgeCards } = state.output;
+          const { pinnedNodes } = state;
+
+          const childLinks = visualizationData.links.filter((link) => {
+            const sourceId =
+              typeof link.source === 'object' && link.source !== null
+                ? (link.source as NodeObject).id
+                : link.source;
+            return sourceId === nodeId;
+          });
+
+          const unpinnedChildrenIds = new Set(
+            childLinks
+              .map((link) => {
+                const targetId =
+                  typeof link.target === 'object' && link.target !== null
+                    ? (link.target as NodeObject).id
+                    : (link.target as string);
+                return targetId;
+              })
+              .filter((childId) => childId && !pinnedNodes[childId])
+          );
+
+          if (unpinnedChildrenIds.size === 0) {
+            if (process.env.NEXT_PUBLIC_DEBUG === 'true')
+              console.log(
+                'No unpinned children found to remove for node:',
+                nodeId
+              );
+            return {};
+          }
+
+          if (process.env.NEXT_PUBLIC_DEBUG === 'true')
+            console.log(
+              `Removing ${unpinnedChildrenIds.size} unpinned child nodes.`
+            );
+
+          const newNodes = visualizationData.nodes.filter(
+            (node) => !unpinnedChildrenIds.has(node.id)
+          );
+          const newLinks = visualizationData.links.filter((link) => {
+            const sourceId =
+              typeof link.source === 'object' && link.source !== null
+                ? link.source.id
+                : link.source;
+            const targetId =
+              typeof link.target === 'object' && link.target !== null
+                ? link.target.id
+                : link.target;
+            return (
+              !unpinnedChildrenIds.has(sourceId) &&
+              !unpinnedChildrenIds.has(targetId)
+            );
+          });
+          const newKnowledgeCards = (knowledgeCards || []).filter(
+            (card) => !unpinnedChildrenIds.has(card.nodeId)
+          );
+
+          const newOutputState: IntelleaResponse = {
+            ...state.output,
+            visualizationData: {
+              nodes: newNodes,
+              links: newLinks,
+            },
+            knowledgeCards: newKnowledgeCards,
+          };
+
+          return { output: newOutputState };
+        });
       },
 
       toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),

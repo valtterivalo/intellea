@@ -86,6 +86,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     handleNodeRightClick,
     handleContainerRightClick,
     handleCloseContextMenu,
+    handleExpandNode,
   } = useNodeInteractions(graphRef, visualizationData, onNodeExpand);
 
   const nodeDepths = React.useMemo(() => {
@@ -390,11 +391,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
           <div
             className="relative flex cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none hover:bg-accent hover:text-accent-foreground"
             onClick={() => {
-              expandNodeInStore(contextMenu.nodeId);
-              const appNode = (visualizationData?.nodes || []).find(n => n.id === contextMenu.nodeId);
-              if (onNodeExpand && appNode) {
-                onNodeExpand(contextMenu.nodeId, appNode.label || '');
-              }
+              handleExpandNode(contextMenu.nodeId);
               setContextMenu(null);
             }}
           >
