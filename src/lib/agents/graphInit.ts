@@ -35,7 +35,7 @@ const QuizSchema = z.object({
  * Zod schema for the output of the GraphInitAgent.
  * This corresponds to the `IntelleaResponse` type.
  */
-export const GraphInitOutSchema = z.object({
+const GraphInitOutSchema = z.object({
     explanationMarkdown: z.string().nullable(),
     knowledgeCards: z.array(KnowledgeCardSchema).nullable(),
     visualizationData: GraphDataSchema,

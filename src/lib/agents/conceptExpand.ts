@@ -12,7 +12,7 @@ const RelatedConceptSchema = z.object({
  * Zod schema for the output of the ConceptExpanderAgent.
  * This corresponds to the `ExpandedConceptData` type.
  */
-export const ExpandOutSchema = z.object({
+const ExpandOutSchema = z.object({
     title: z.string(),
     content: z.string(), // Expecting markdown content
     relatedConcepts: z.array(RelatedConceptSchema),

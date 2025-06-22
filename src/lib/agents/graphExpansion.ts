@@ -21,7 +21,7 @@ const KnowledgeCardSchema = z.object({
 /**
  * Zod schema for the output of the GraphExpansionAgent.
  */
-export const ExpansionResponseSchema = z.object({
+const ExpansionResponseSchema = z.object({
     nodes: z.array(NodeObjectSchema),
     links: z.array(LinkObjectSchema),
     knowledgeCards: z.array(KnowledgeCardSchema),

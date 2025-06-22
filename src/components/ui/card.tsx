@@ -73,6 +73,5 @@ export {
   CardHeader,
   CardTitle,
   CardContent,
-  CardFooter,
-  CardDescription
+  CardFooter
 }
