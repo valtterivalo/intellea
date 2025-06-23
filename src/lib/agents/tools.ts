@@ -38,6 +38,36 @@ export const selectNodeTool = tool({
   },
 });
 
+export const focusNodeTool = tool({
+  name: 'focus_node',
+  description: 'Focuses the camera on a node by ID or label without selecting it.',
+  parameters: z.object({
+    nodeId: z.string().optional().nullable().describe('The ID of the node to focus.'),
+    nodeLabel: z.string().optional().nullable().describe("The label of the node to focus. Use this if you don't know the ID."),
+  }),
+  execute: async ({ nodeId, nodeLabel }) => {
+    const { isVoiceSessionActive, setFocusedNodeId, setActiveFocusPath, output } = useAppStore.getState();
+    if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+    const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+    if (!vizData) {
+      return "The knowledge graph is not visible, so I can't focus a node.";
+    }
+    let targetNodeId = nodeId;
+    if (!targetNodeId && nodeLabel) {
+      const foundNode = vizData.nodes.find(n => n.label?.toLowerCase() === nodeLabel.toLowerCase());
+      if (foundNode) {
+        targetNodeId = foundNode.id;
+      }
+    }
+    if (targetNodeId) {
+      setFocusedNodeId(targetNodeId);
+      setActiveFocusPath(targetNodeId, vizData);
+      return `Focused on node ${targetNodeId}.`;
+    }
+    return `I could not find a node with ID "${nodeId}" or label "${nodeLabel}". Please try again with a valid ID or label.`;
+  },
+});
+
 export const expandNodeTool = tool({
   name: 'expand_node',
   description: 'Expands a node to show more details about a concept. This will open a detailed view of the concept.',
