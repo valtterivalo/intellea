@@ -50,7 +50,12 @@ The knowledge cards in Intellea can now be expanded to show detailed information
    - Ability to focus on related concepts directly from the expanded view
 3. Content is generated dynamically using the LLM, taking into account the current state of the knowledge graph and other concepts
 4. Requires an active subscription to use
-"# intellea" 
+
+### Voice Assistant
+
+Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> to connect or disconnect the voice assistant.
+
+"# intellea"
 
 ## Environment Variables
 

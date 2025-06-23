@@ -155,6 +155,23 @@ export default function VoiceAgentWidget() {
     }
   }
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        if (isConnected) {
+          handleDisconnect();
+        } else if (!isConnecting) {
+          handleConnect();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isConnected, isConnecting, handleConnect]);
+
   return (
     <>
       <div className="fixed bottom-8 right-8 z-50 flex items-end gap-2">
