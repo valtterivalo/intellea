@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mic, MicOff, Bot, Loader2, ChevronsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RealtimeAgent, RealtimeSession, type TransportLayerTranscriptDelta } from '@openai/agents/realtime';
@@ -24,6 +24,8 @@ export default function VoiceAgentWidget() {
   const [isConnected, setIsConnected] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
+  const [history, setHistory] = useState<{ speaker: 'user' | 'assistant'; text: string }[]>([]);
+  const historyRef = useRef<HTMLDivElement>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const { setVoiceSessionActive } = useAppStore.getState();
 
@@ -51,6 +53,18 @@ export default function VoiceAgentWidget() {
       });
 
       const newSession = new RealtimeSession(agent);
+
+      newSession.on('history_added', (item: any) => {
+        try {
+          if (item.type === 'message' && (item.role === 'user' || item.role === 'assistant')) {
+            const part = item.content?.find((c: any) => 'text' in c || 'transcript' in c);
+            const text = part?.text ?? part?.transcript ?? '';
+            setHistory((h) => [...h, { speaker: item.role, text }]);
+          }
+        } catch (err) {
+          console.error('Failed to parse history item', err);
+        }
+      });
 
       newSession.transport.on('audio_transcript_delta', (delta: TransportLayerTranscriptDelta) => {
         setTranscript(prev => prev + delta.delta);
@@ -93,6 +107,8 @@ export default function VoiceAgentWidget() {
 
   const handleDisconnect = () => {
     setVoiceSessionActive(false);
+    setHistory([]);
+    setTranscript('');
     session?.close();
   };
   
@@ -102,6 +118,17 @@ export default function VoiceAgentWidget() {
       session.mute(newMutedState);
       setIsMuted(newMutedState);
     }
+  }
+
+  useEffect(() => {
+    const el = historyRef.current;
+    if (el) {
+      el.scrollTop = el.scrollHeight;
+    }
+  }, [history, transcript]);
+
+  const handleClearHistory = () => {
+    setHistory([]);
   }
 
   const togglePanel = () => {
@@ -144,11 +171,38 @@ export default function VoiceAgentWidget() {
                 </div>
               </CardHeader>
               <CardContent className="p-3 h-40 overflow-y-auto text-sm">
-                <p>{transcript || "Listening..."}</p>
+                <div ref={historyRef} className="space-y-2">
+                  {history.map((item, idx) => (
+                    <div
+                      key={idx}
+                      className={item.speaker === 'user' ? 'text-right' : 'text-left'}
+                    >
+                      <span
+                        className={
+                          item.speaker === 'user'
+                            ? 'bg-primary text-primary-foreground inline-block rounded px-2 py-1'
+                            : 'bg-muted inline-block rounded px-2 py-1'
+                        }
+                      >
+                        {item.text}
+                      </span>
+                    </div>
+                  ))}
+                  {transcript && (
+                    <div className="text-right">
+                      <span className="bg-primary text-primary-foreground inline-block rounded px-2 py-1">
+                        {transcript}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </CardContent>
               <CardFooter className="p-3 border-t flex justify-end gap-2">
                 <Button onClick={handleToggleMute} variant="outline" size="sm">
                   {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
+                </Button>
+                <Button onClick={handleClearHistory} variant="outline" size="sm">
+                  Clear
                 </Button>
                 <Button onClick={handleDisconnect} variant="destructive" size="sm">
                   Disconnect
