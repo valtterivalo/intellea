@@ -212,3 +212,17 @@ export const scrollToExplanationTool = tool({
         return 'Scrolled to the explanation section.';
     }
 });
+
+export const markNodeLearnedTool = tool({
+    name: 'mark_node_learned',
+    description: 'Marks a node in the knowledge graph as learned.',
+    parameters: z.object({
+        nodeId: z.string().describe('The ID of the node that has been learned.')
+    }),
+    execute: async ({ nodeId }) => {
+        const { isVoiceSessionActive, markCompleted } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        markCompleted(nodeId);
+        return `Node ${nodeId} marked as learned.`;
+    }
+});
