@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent, screen, waitFor } from '@testing-library/react';
+import { render, fireEvent, screen, waitFor, act } from '@testing-library/react';
 import VoiceAgentWidget from '@/components/VoiceAgentWidget';
 
 let mockSession: any = null;
@@ -28,13 +28,17 @@ describe('VoiceAgentWidget', () => {
 
     render(<VoiceAgentWidget />);
     const fab = screen.getAllByRole('button')[0];
-    fireEvent.click(fab);
+    await act(async () => {
+      fireEvent.click(fab);
+    });
     await waitFor(() => expect((global.fetch as any)).toHaveBeenCalled());
 
     // simulate connection and history events
-    mockSession.transport.emit('connection_change', 'connected');
-    mockSession.emit('history_added', { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hi' }] });
-    mockSession.emit('history_added', { type: 'message', role: 'assistant', content: [{ type: 'text', text: 'hello' }] });
+    act(() => {
+      mockSession.transport.emit('connection_change', 'connected');
+      mockSession.emit('history_added', { type: 'message', role: 'user', content: [{ type: 'input_text', text: 'hi' }] });
+      mockSession.emit('history_added', { type: 'message', role: 'assistant', content: [{ type: 'text', text: 'hello' }] });
+    });
 
     expect(await screen.findByText('hi')).toBeInTheDocument();
     expect(await screen.findByText('hello')).toBeInTheDocument();

@@ -15,6 +15,7 @@ import {
   scrollToKnowledgeCardsTool,
   scrollToExplanationTool,
   zoomToFitGraphTool,
+  markNodeLearnedTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -55,6 +56,7 @@ export default function VoiceAgentWidget() {
           scrollToKnowledgeCardsTool,
           scrollToExplanationTool,
           zoomToFitGraphTool,
+          markNodeLearnedTool,
         ],
       });
 
@@ -156,6 +158,23 @@ export default function VoiceAgentWidget() {
       handleConnect();
     }
   }
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'v') {
+        if (isConnected) {
+          handleDisconnect();
+        } else if (!isConnecting) {
+          handleConnect();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isConnected, isConnecting, handleConnect]);
 
   return (
     <>

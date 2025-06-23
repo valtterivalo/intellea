@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { zoomToFitGraphTool } from '@/lib/agents/tools';
 import { useAppStore } from '@/store/useAppStore';
+import { act } from '@testing-library/react';
 
 // simple test for the voice agent tool
 
@@ -10,7 +11,9 @@ describe('zoom_to_fit_graph tool', () => {
   });
 
   it('triggers zoomGraphToFit action when executed', async () => {
-    await zoomToFitGraphTool.invoke({} as any, '{}');
+    await act(async () => {
+      await zoomToFitGraphTool.invoke({} as any, '{}');
+    });
     expect(useAppStore.getState().zoomToFitCount).toBe(1);
   });
 });
