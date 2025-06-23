@@ -294,6 +294,8 @@ export const getNodeNoteTool = tool({
         }
         const note = nodeNotes[targetNodeId];
         return note ? note : `No note found for node ${targetNodeId}.`;
+    }
+});
 
 export const markNodeLearnedTool = tool({
     name: 'mark_node_learned',
@@ -306,5 +308,33 @@ export const markNodeLearnedTool = tool({
         if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
         markCompleted(nodeId);
         return `Node ${nodeId} marked as learned.`;
+    }
+});
+
+export const pinNodeTool = tool({
+    name: 'pin_node',
+    description: 'Pins a node in the knowledge graph so that it remains visible.',
+    parameters: z.object({
+        nodeId: z.string().describe('The ID of the node to pin.')
+    }),
+    execute: async ({ nodeId }) => {
+        const { isVoiceSessionActive, pinNode } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        pinNode(nodeId);
+        return `Node ${nodeId} pinned.`;
+    }
+});
+
+export const unpinNodeTool = tool({
+    name: 'unpin_node',
+    description: 'Unpins a node in the knowledge graph.',
+    parameters: z.object({
+        nodeId: z.string().describe('The ID of the node to unpin.')
+    }),
+    execute: async ({ nodeId }) => {
+        const { isVoiceSessionActive, unpinNode } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        unpinNode(nodeId);
+        return `Node ${nodeId} unpinned.`;
     }
 });
