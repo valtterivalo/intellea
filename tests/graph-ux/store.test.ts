@@ -111,7 +111,7 @@ describe('Graph UX Zustand Store', () => {
     expect(useAppStore.getState().zoomToFitCount).toBe(1);
     useAppStore.getState().zoomGraphToFit();
     expect(useAppStore.getState().zoomToFitCount).toBe(2);
-    
+  });
   it('scrolls to knowledge cards section', () => {
     const el = document.createElement('div');
     const spy = vi.fn();
