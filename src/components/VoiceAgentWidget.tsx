@@ -13,6 +13,7 @@ import {
   scrollToKnowledgeCardsTool,
   scrollToExplanationTool,
   zoomToFitGraphTool,
+  markNodeLearnedTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -51,6 +52,7 @@ export default function VoiceAgentWidget() {
           scrollToKnowledgeCardsTool,
           scrollToExplanationTool,
           zoomToFitGraphTool,
+          markNodeLearnedTool,
         ],
       });
 
