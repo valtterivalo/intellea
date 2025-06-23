@@ -219,6 +219,32 @@ export const scrollToExplanationTool = tool({
     }
 });
 
+export const readKnowledgeCardTool = tool({
+    name: 'read_knowledge_card',
+    description: 'Reads the description of a knowledge card, optionally including any personal note.',
+    parameters: z.object({
+        nodeId: z.string().optional().nullable().describe('ID of the node whose card should be read'),
+        nodeLabel: z.string().optional().nullable().describe('Label/title of the node if the ID is unknown'),
+    }),
+    execute: async ({ nodeId, nodeLabel }) => {
+        const { isVoiceSessionActive, output, nodeNotes } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        if (!isIntelleaResponse(output) || !output.knowledgeCards) {
+            return 'No knowledge cards are available to read.';
+        }
+
+        let card = output.knowledgeCards.find(c => c.nodeId === nodeId);
+        if (!card && nodeLabel) {
+            card = output.knowledgeCards.find(c => c.title.toLowerCase() === nodeLabel.toLowerCase());
+        }
+
+        if (!card) {
+            return `Could not find a knowledge card with ID "${nodeId}" or label "${nodeLabel}".`;
+        }
+
+        const note = nodeNotes[card.nodeId];
+        return note ? `${card.description}\nNote: ${note}` : card.description;
+
 export const addNodeNoteTool = tool({
     name: 'add_node_note',
     description: 'Adds or updates a note for a node in the knowledge graph.',
