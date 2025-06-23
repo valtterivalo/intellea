@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';
 import { isIntelleaResponse } from '@/store/utils';
 import { createClient } from '@/lib/supabase/client';
+import { computeProgress } from '@/lib/progress';
 
 export const selectNodeTool = tool({
   name: 'select_node',
@@ -149,7 +150,7 @@ export const getCurrentViewContextTool = tool({
     description: "Gets a summary of what is currently visible on the user's screen, including the main topic, visible nodes in the graph, and any open panels.",
     parameters: z.object({}),
     execute: async () => {
-        const { isVoiceSessionActive, output, activePrompt, selectedNodeId, expandedConceptData, isGraphFullscreen } = useAppStore.getState();
+        const { isVoiceSessionActive, output, activePrompt, selectedNodeId, expandedConceptData, isGraphFullscreen, pinnedNodes, completedNodeIds } = useAppStore.getState();
         if (!isVoiceSessionActive) return "Cannot execute tool: voice session is not active.";
 
         if (!isIntelleaResponse(output)) {
@@ -184,6 +185,11 @@ export const getCurrentViewContextTool = tool({
         if (knowledgeCards && knowledgeCards.length > 0) {
             summary += `There are ${knowledgeCards.length} knowledge cards displayed, including topics like: ${knowledgeCards.slice(0, 3).map(c => `"${c.title}"`).join(', ')}.\n`;
         }
+
+        const pinnedCount = Object.keys(pinnedNodes).length;
+        const progress = computeProgress(knowledgeCards.length, completedNodeIds);
+        summary += `There are ${pinnedCount} pinned nodes.\n`;
+        summary += `Completion progress is ${progress.toFixed(0)}%.\n`;
 
         return summary;
     }
@@ -238,5 +244,67 @@ export const readKnowledgeCardTool = tool({
 
         const note = nodeNotes[card.nodeId];
         return note ? `${card.description}\nNote: ${note}` : card.description;
+
+export const addNodeNoteTool = tool({
+    name: 'add_node_note',
+    description: 'Adds or updates a note for a node in the knowledge graph.',
+    parameters: z.object({
+        nodeId: z.string().optional().nullable().describe('The ID of the node to annotate.'),
+        nodeLabel: z.string().optional().nullable().describe("The label of the node to annotate. Use this if you don't know the ID."),
+        note: z.string().describe('The note to save for the node.')
+    }),
+    execute: async ({ nodeId, nodeLabel, note }) => {
+        const { isVoiceSessionActive, setNodeNote, nodeNotes, output } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        let targetNodeId = nodeId;
+        const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+        if (!targetNodeId && nodeLabel && vizData) {
+            const found = vizData.nodes.find(n => n.label?.toLowerCase() === nodeLabel.toLowerCase());
+            if (found) targetNodeId = found.id;
+        }
+        if (!targetNodeId) {
+            return `I could not find a node with ID "${nodeId}" or label "${nodeLabel}".`;
+        }
+        const existed = !!nodeNotes[targetNodeId];
+        setNodeNote(targetNodeId, note);
+        return existed
+            ? `Updated note for node ${targetNodeId}.`
+            : `Added note for node ${targetNodeId}.`;
+    }
+});
+
+export const getNodeNoteTool = tool({
+    name: 'get_node_note',
+    description: 'Retrieves a previously saved note for a node.',
+    parameters: z.object({
+        nodeId: z.string().optional().nullable().describe('The ID of the node.'),
+        nodeLabel: z.string().optional().nullable().describe("The label of the node. Use this if you don't know the ID.")
+    }),
+    execute: async ({ nodeId, nodeLabel }) => {
+        const { isVoiceSessionActive, nodeNotes, output } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        let targetNodeId = nodeId;
+        const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+        if (!targetNodeId && nodeLabel && vizData) {
+            const found = vizData.nodes.find(n => n.label?.toLowerCase() === nodeLabel.toLowerCase());
+            if (found) targetNodeId = found.id;
+        }
+        if (!targetNodeId) {
+            return `I could not find a node with ID "${nodeId}" or label "${nodeLabel}".`;
+        }
+        const note = nodeNotes[targetNodeId];
+        return note ? note : `No note found for node ${targetNodeId}.`;
+
+export const markNodeLearnedTool = tool({
+    name: 'mark_node_learned',
+    description: 'Marks a node in the knowledge graph as learned.',
+    parameters: z.object({
+        nodeId: z.string().describe('The ID of the node that has been learned.')
+    }),
+    execute: async ({ nodeId }) => {
+        const { isVoiceSessionActive, markCompleted } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        markCompleted(nodeId);
+        return `Node ${nodeId} marked as learned.`;
     }
 });

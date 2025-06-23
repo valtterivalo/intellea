@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
+import { act } from '@testing-library/react';
 import { focusNodeTool } from '@/lib/agents/tools';
 import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
 
@@ -26,7 +27,9 @@ describe('focus_node tool', () => {
   });
 
   it('focuses a node without changing selectedNodeId', async () => {
-    await focusNodeTool.invoke({} as any, JSON.stringify({ nodeLabel: 'Two' }));
+    await act(async () => {
+      await focusNodeTool.invoke({} as any, JSON.stringify({ nodeLabel: 'Two' }));
+    });
     expect(useAppStore.getState().focusedNodeId).toBe('2');
     expect(useAppStore.getState().selectedNodeId).toBe('1');
     expect(useAppStore.getState().activeClickedNodeId).toBe('2');
