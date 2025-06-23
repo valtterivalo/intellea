@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';
 import { isIntelleaResponse } from '@/store/utils';
 import { createClient } from '@/lib/supabase/client';
+import { computeProgress } from '@/lib/progress';
 
 export const selectNodeTool = tool({
   name: 'select_node',
@@ -149,7 +150,7 @@ export const getCurrentViewContextTool = tool({
     description: "Gets a summary of what is currently visible on the user's screen, including the main topic, visible nodes in the graph, and any open panels.",
     parameters: z.object({}),
     execute: async () => {
-        const { isVoiceSessionActive, output, activePrompt, selectedNodeId, expandedConceptData, isGraphFullscreen } = useAppStore.getState();
+        const { isVoiceSessionActive, output, activePrompt, selectedNodeId, expandedConceptData, isGraphFullscreen, pinnedNodes, completedNodeIds } = useAppStore.getState();
         if (!isVoiceSessionActive) return "Cannot execute tool: voice session is not active.";
 
         if (!isIntelleaResponse(output)) {
@@ -184,6 +185,11 @@ export const getCurrentViewContextTool = tool({
         if (knowledgeCards && knowledgeCards.length > 0) {
             summary += `There are ${knowledgeCards.length} knowledge cards displayed, including topics like: ${knowledgeCards.slice(0, 3).map(c => `"${c.title}"`).join(', ')}.\n`;
         }
+
+        const pinnedCount = Object.keys(pinnedNodes).length;
+        const progress = computeProgress(knowledgeCards.length, completedNodeIds);
+        summary += `There are ${pinnedCount} pinned nodes.\n`;
+        summary += `Completion progress is ${progress.toFixed(0)}%.\n`;
 
         return summary;
     }
