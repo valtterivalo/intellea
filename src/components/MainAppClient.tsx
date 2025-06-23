@@ -124,6 +124,13 @@ export default function MainAppClient() {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const explanationRef = React.useRef<HTMLDivElement | null>(null);
+  const knowledgeCardsRef = React.useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    useAppStore.getState().setExplanationRef(explanationRef.current);
+    useAppStore.getState().setKnowledgeCardsRef(knowledgeCardsRef.current);
+  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -579,6 +586,8 @@ export default function MainAppClient() {
                 <OutputRenderer
                   onNodeExpand={handleNodeExpand}
                   expandingNodeId={localExpandingNodeId}
+                  explanationRef={explanationRef}
+                  knowledgeCardsRef={knowledgeCardsRef}
                 />
               </CardContent>
             </Card>
