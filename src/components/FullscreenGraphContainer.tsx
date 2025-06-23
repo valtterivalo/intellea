@@ -23,6 +23,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
     const isGraphFullscreen = useAppStore((state) => state.isGraphFullscreen);
     const toggleGraphFullscreen = useAppStore((state) => state.toggleGraphFullscreen);
     const output = useAppStore((state) => state.output);
+    const zoomToFitCount = useAppStore((state) => state.zoomToFitCount);
     const containerRef = useRef<HTMLDivElement>(null);
     const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
     const graphContainerRef = useRef<HTMLDivElement>(null);
@@ -66,6 +67,13 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         const cam = graphRef.current.camera();
         graphRef.current.cameraPosition({ x, y, z: cam.position.z }, { x, y, z: 0 }, 1000);
     };
+
+    // Respond to zoom-to-fit requests from the store
+    useEffect(() => {
+        if (zoomToFitCount > 0 && graphRef.current?.zoomToFit) {
+            graphRef.current.zoomToFit(400, 50);
+        }
+    }, [zoomToFitCount]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {

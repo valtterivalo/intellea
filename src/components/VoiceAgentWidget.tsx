@@ -11,6 +11,7 @@ import {
   getCurrentViewContextTool,
   scrollToKnowledgeCardsTool,
   scrollToExplanationTool,
+  zoomToFitGraphTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -45,6 +46,7 @@ export default function VoiceAgentWidget() {
           getCurrentViewContextTool,
           scrollToKnowledgeCardsTool,
           scrollToExplanationTool,
+          zoomToFitGraphTool,
         ],
       });
 
