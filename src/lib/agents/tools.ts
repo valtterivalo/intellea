@@ -219,6 +219,56 @@ export const scrollToExplanationTool = tool({
     }
 });
 
+export const addNodeNoteTool = tool({
+    name: 'add_node_note',
+    description: 'Adds or updates a note for a node in the knowledge graph.',
+    parameters: z.object({
+        nodeId: z.string().optional().nullable().describe('The ID of the node to annotate.'),
+        nodeLabel: z.string().optional().nullable().describe("The label of the node to annotate. Use this if you don't know the ID."),
+        note: z.string().describe('The note to save for the node.')
+    }),
+    execute: async ({ nodeId, nodeLabel, note }) => {
+        const { isVoiceSessionActive, setNodeNote, nodeNotes, output } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        let targetNodeId = nodeId;
+        const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+        if (!targetNodeId && nodeLabel && vizData) {
+            const found = vizData.nodes.find(n => n.label?.toLowerCase() === nodeLabel.toLowerCase());
+            if (found) targetNodeId = found.id;
+        }
+        if (!targetNodeId) {
+            return `I could not find a node with ID "${nodeId}" or label "${nodeLabel}".`;
+        }
+        const existed = !!nodeNotes[targetNodeId];
+        setNodeNote(targetNodeId, note);
+        return existed
+            ? `Updated note for node ${targetNodeId}.`
+            : `Added note for node ${targetNodeId}.`;
+    }
+});
+
+export const getNodeNoteTool = tool({
+    name: 'get_node_note',
+    description: 'Retrieves a previously saved note for a node.',
+    parameters: z.object({
+        nodeId: z.string().optional().nullable().describe('The ID of the node.'),
+        nodeLabel: z.string().optional().nullable().describe("The label of the node. Use this if you don't know the ID.")
+    }),
+    execute: async ({ nodeId, nodeLabel }) => {
+        const { isVoiceSessionActive, nodeNotes, output } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        let targetNodeId = nodeId;
+        const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+        if (!targetNodeId && nodeLabel && vizData) {
+            const found = vizData.nodes.find(n => n.label?.toLowerCase() === nodeLabel.toLowerCase());
+            if (found) targetNodeId = found.id;
+        }
+        if (!targetNodeId) {
+            return `I could not find a node with ID "${nodeId}" or label "${nodeLabel}".`;
+        }
+        const note = nodeNotes[targetNodeId];
+        return note ? note : `No note found for node ${targetNodeId}.`;
+
 export const markNodeLearnedTool = tool({
     name: 'mark_node_learned',
     description: 'Marks a node in the knowledge graph as learned.',
