@@ -89,6 +89,18 @@ export const expandNodeTool = tool({
   }
 });
 
+export const zoomToFitGraphTool = tool({
+  name: 'zoom_to_fit_graph',
+  description: 'Zooms and pans the graph so that all nodes fit within view.',
+  parameters: z.object({}),
+  execute: async () => {
+    const { isVoiceSessionActive, zoomGraphToFit } = useAppStore.getState();
+    if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+    zoomGraphToFit();
+    return 'Graph view adjusted to fit all nodes.';
+  }
+});
+
 export const toggleGraphFullscreenTool = tool({
     name: 'toggle_graph_fullscreen',
     description: 'Toggles the graph view between fullscreen and normal view.',

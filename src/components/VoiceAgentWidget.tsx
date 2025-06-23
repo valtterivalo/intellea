@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Mic, MicOff, Bot, Loader2, ChevronsDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RealtimeAgent, RealtimeSession, type TransportLayerTranscriptDelta } from '@openai/agents/realtime';
-import { selectNodeTool, expandNodeTool, toggleGraphFullscreenTool, getCurrentViewContextTool } from '@/lib/agents/tools';
+import { selectNodeTool, expandNodeTool, toggleGraphFullscreenTool, getCurrentViewContextTool, zoomToFitGraphTool } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
@@ -31,7 +31,7 @@ export default function VoiceAgentWidget() {
       const agent = new RealtimeAgent({
         name: 'Intellea Voice Assistant',
         instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. To understand what is currently on the screen, use the `get_current_view_context` tool.',
-        tools: [selectNodeTool, expandNodeTool, toggleGraphFullscreenTool, getCurrentViewContextTool],
+        tools: [selectNodeTool, expandNodeTool, toggleGraphFullscreenTool, getCurrentViewContextTool, zoomToFitGraphTool],
       });
 
       const newSession = new RealtimeSession(agent);

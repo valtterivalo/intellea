@@ -104,4 +104,12 @@ describe('Graph UX Zustand Store', () => {
     useAppStore.getState().setSelectedNodeId('a');
     expect(useAppStore.getState().visitedNodeIds).toEqual(['a', 'b']);
   });
+
+  it('increments zoomToFitCount when zoomGraphToFit is called', () => {
+    useAppStore.setState({ zoomToFitCount: 0 });
+    useAppStore.getState().zoomGraphToFit();
+    expect(useAppStore.getState().zoomToFitCount).toBe(1);
+    useAppStore.getState().zoomGraphToFit();
+    expect(useAppStore.getState().zoomToFitCount).toBe(2);
+  });
 });

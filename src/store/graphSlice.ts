@@ -9,6 +9,11 @@ export interface GraphSlice {
   nodeNotes: Record<string, string>;
   visitedNodeIds: string[];
   collapsedNodes: Record<string, boolean>;
+  /**
+   * Incrementing counter used to trigger a zoom-to-fit action
+   * in graph components via store subscription.
+   */
+  zoomToFitCount: number;
 
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
@@ -19,6 +24,8 @@ export interface GraphSlice {
   setNodeNote: (nodeId: string, note: string) => void;
   collapseNode: (nodeId: string) => void;
   expandNode: (nodeId: string) => void;
+  /** Trigger the graph to zoom/pan so all nodes fit in view */
+  zoomGraphToFit: () => void;
 }
 
 export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (set, get) => ({
@@ -30,6 +37,7 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
   nodeNotes: {},
   visitedNodeIds: [],
   collapsedNodes: {},
+  zoomToFitCount: 0,
 
   setSelectedNodeId: (nodeId) =>
     set((state) => {
@@ -73,5 +81,7 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
       delete updated[nodeId];
       return { collapsedNodes: updated };
     }),
+  zoomGraphToFit: () =>
+    set((state) => ({ zoomToFitCount: state.zoomToFitCount + 1 })),
 });
 
