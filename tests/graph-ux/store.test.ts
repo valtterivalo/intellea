@@ -104,4 +104,22 @@ describe('Graph UX Zustand Store', () => {
     useAppStore.getState().setSelectedNodeId('a');
     expect(useAppStore.getState().visitedNodeIds).toEqual(['a', 'b']);
   });
+
+  it('scrolls to knowledge cards section', () => {
+    const el = document.createElement('div');
+    const spy = vi.fn();
+    (el as any).scrollIntoView = spy;
+    useAppStore.getState().setKnowledgeCardsRef(el);
+    useAppStore.getState().scrollToKnowledgeCards();
+    expect(spy).toHaveBeenCalledWith({ behavior: 'smooth' });
+  });
+
+  it('scrolls to explanation section', () => {
+    const el = document.createElement('div');
+    const spy = vi.fn();
+    (el as any).scrollIntoView = spy;
+    useAppStore.getState().setExplanationRef(el);
+    useAppStore.getState().scrollToExplanation();
+    expect(spy).toHaveBeenCalledWith({ behavior: 'smooth' });
+  });
 });

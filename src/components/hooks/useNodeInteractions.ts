@@ -42,6 +42,11 @@ export function useNodeInteractions(
         return;
       }
 
+      if (state.collapsedNodes[nodeId]) {
+        expandNodeInStore(nodeId);
+        return;
+      }
+
       const childrenIds = fullVisualizationData.links
         .filter((link) => {
           const sourceId =
