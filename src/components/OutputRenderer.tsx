@@ -24,14 +24,18 @@ import { markdownComponents } from './MarkdownComponents';
 interface OutputRendererProps {
   onNodeExpand: (nodeId: string, nodeLabel: string) => void;
   expandingNodeId: string | null;
+  explanationRef?: React.Ref<HTMLDivElement>;
+  knowledgeCardsRef?: React.Ref<HTMLDivElement>;
 }
 
 
 
 // Update OutputRenderer to accept props
-const OutputRenderer: React.FC<OutputRendererProps> = ({ 
+const OutputRenderer: React.FC<OutputRendererProps> = ({
   onNodeExpand,
-  expandingNodeId
+  expandingNodeId,
+  explanationRef,
+  knowledgeCardsRef,
 }) => {
   // Select the output state to determine rendering mode
   const output = useAppStore((state) => state.output);
@@ -67,8 +71,12 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
 
     return (
       <div className="space-y-6">
-        <ExplanationSection />
-        <KnowledgeCardsSection />
+        <div ref={explanationRef as React.RefObject<HTMLDivElement> | undefined}>
+          <ExplanationSection />
+        </div>
+        <div ref={knowledgeCardsRef as React.RefObject<HTMLDivElement> | undefined}>
+          <KnowledgeCardsSection />
+        </div>
 
         {/* Use motion.div to control visibility of the non-fullscreen graph */}
         <motion.div

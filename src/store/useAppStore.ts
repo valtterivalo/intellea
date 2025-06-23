@@ -82,6 +82,14 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   // Force-expand action
   setForceExpandRequest: (request: { nodeId: string } | null) => void;
 
+  // Section refs for smooth scrolling
+  knowledgeCardsRef: HTMLElement | null;
+  explanationRef: HTMLElement | null;
+  setKnowledgeCardsRef: (el: HTMLElement | null) => void;
+  setExplanationRef: (el: HTMLElement | null) => void;
+  scrollToKnowledgeCards: () => void;
+  scrollToExplanation: () => void;
+
   // Error Handling
   setError: (error: string | null) => void;
 
@@ -141,6 +149,9 @@ export const useAppStore = create<AppState>()(
       isGraphFullscreen: false,
       // Force-expand state
       forceExpandRequest: null,
+      // Section refs
+      knowledgeCardsRef: null,
+      explanationRef: null,
 
       // --- Base Action Implementations ---
       setPrompt: (prompt) => set({ prompt }),
@@ -291,17 +302,28 @@ export const useAppStore = create<AppState>()(
             (card) => !unpinnedChildrenIds.has(card.nodeId)
           );
 
-          const newOutputState: IntelleaResponse = {
-            ...state.output,
-            visualizationData: {
-              nodes: newNodes,
-              links: newLinks,
-            },
-            knowledgeCards: newKnowledgeCards,
-          };
+        const newOutputState: IntelleaResponse = {
+          ...state.output,
+          visualizationData: {
+            nodes: newNodes,
+            links: newLinks,
+          },
+          knowledgeCards: newKnowledgeCards,
+        };
 
-          return { output: newOutputState };
-        });
+        return { output: newOutputState };
+      });
+      },
+
+      setKnowledgeCardsRef: (el) => set({ knowledgeCardsRef: el }),
+      setExplanationRef: (el) => set({ explanationRef: el }),
+      scrollToKnowledgeCards: () => {
+        const el = get().knowledgeCardsRef;
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      },
+      scrollToExplanation: () => {
+        const el = get().explanationRef;
+        if (el) el.scrollIntoView({ behavior: 'smooth' });
       },
 
       toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),

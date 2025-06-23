@@ -157,4 +157,28 @@ export const getCurrentViewContextTool = tool({
 
         return summary;
     }
-}); 
+});
+
+export const scrollToKnowledgeCardsTool = tool({
+    name: 'scroll_to_knowledge_cards',
+    description: 'Smoothly scrolls the application view to the knowledge cards section.',
+    parameters: z.object({}),
+    execute: async () => {
+        const { isVoiceSessionActive, scrollToKnowledgeCards } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        scrollToKnowledgeCards();
+        return 'Scrolled to the knowledge cards.';
+    }
+});
+
+export const scrollToExplanationTool = tool({
+    name: 'scroll_to_explanation',
+    description: 'Smoothly scrolls the application view to the explanation section.',
+    parameters: z.object({}),
+    execute: async () => {
+        const { isVoiceSessionActive, scrollToExplanation } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        scrollToExplanation();
+        return 'Scrolled to the explanation section.';
+    }
+});

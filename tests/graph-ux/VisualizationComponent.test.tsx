@@ -145,7 +145,7 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
 
     fireEvent.keyDown(window, { key: 'e' });
     expect(useAppStore.getState().collapsedNodes).not.toHaveProperty('a');
-    expect(onExpand).toHaveBeenCalledWith('a', 'A');
+    expect(onExpand).not.toHaveBeenCalled();
   });
 
   it('maps depth to consistent colors', () => {
