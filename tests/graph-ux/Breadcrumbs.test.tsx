@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, act } from '@testing-library/react';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -30,12 +30,16 @@ describe('Breadcrumbs component', () => {
     const setSelected = vi.spyOn(useAppStore.getState(), 'setSelectedNodeId');
     const setFocus = vi.spyOn(useAppStore.getState(), 'setActiveFocusPath');
 
-    useAppStore.getState().setSelectedNodeId('a');
-    useAppStore.getState().setSelectedNodeId('b');
+    act(() => {
+      useAppStore.getState().setSelectedNodeId('a');
+      useAppStore.getState().setSelectedNodeId('b');
+    });
 
     render(<Breadcrumbs />);
     const first = screen.getByText('A');
-    fireEvent.click(first);
+    act(() => {
+      fireEvent.click(first);
+    });
     expect(setSelected).toHaveBeenCalledWith('a');
     expect(setFocus).toHaveBeenCalled();
     expect(screen.getAllByRole('button').length).toBe(2);

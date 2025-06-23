@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, fireEvent, screen } from '@testing-library/react';
+import { render, fireEvent, screen, act } from '@testing-library/react';
 import VisualizationComponent from '@/components/VisualizationComponent';
 import { useAppStore } from '@/store/useAppStore';
 import { getNodeColor as depthColor } from '@/lib/graphColors';
@@ -53,7 +53,9 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
       />
     );
     // Simulate left-click on node label (SpriteText is rendered in canvas, so we simulate store action directly)
-    useAppStore.getState().setSelectedNodeId('a');
+    act(() => {
+      useAppStore.getState().setSelectedNodeId('a');
+    });
     expect(useAppStore.getState().selectedNodeId).toBe('a');
   });
 
@@ -77,10 +79,14 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
       />
     );
     // Simulate pin
-    useAppStore.getState().pinNode('b');
+    act(() => {
+      useAppStore.getState().pinNode('b');
+    });
     expect(useAppStore.getState().pinnedNodes).toHaveProperty('b', true);
     // Simulate unpin
-    useAppStore.getState().unpinNode('b');
+    act(() => {
+      useAppStore.getState().unpinNode('b');
+    });
     expect(useAppStore.getState().pinnedNodes).not.toHaveProperty('b');
   });
 
@@ -137,13 +143,17 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
       />
     );
 
-    fireEvent.keyDown(window, { key: 'p' });
+    act(() => {
+      fireEvent.keyDown(window, { key: 'p' });
+    });
     expect(useAppStore.getState().pinnedNodes).toHaveProperty('a', true);
-
-    fireEvent.keyDown(window, { key: 'f' });
+    act(() => {
+      fireEvent.keyDown(window, { key: 'f' });
+    });
     expect(useAppStore.getState().focusedNodeId).toBe('a');
-
-    fireEvent.keyDown(window, { key: 'e' });
+    act(() => {
+      fireEvent.keyDown(window, { key: 'e' });
+    });
     expect(useAppStore.getState().collapsedNodes).not.toHaveProperty('a');
     expect(onExpand).not.toHaveBeenCalled();
   });
