@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { RealtimeAgent, RealtimeSession, type TransportLayerTranscriptDelta } from '@openai/agents/realtime';
 import {
   selectNodeTool,
+  focusNodeTool,
   expandNodeTool,
   toggleGraphFullscreenTool,
   getCurrentViewContextTool,
@@ -40,9 +41,10 @@ export default function VoiceAgentWidget() {
 
       const agent = new RealtimeAgent({
         name: 'Intellea Voice Assistant',
-        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. To understand what is currently on the screen, use the `get_current_view_context` tool.',
+        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. You can also focus the camera on a node using the `focus_node` tool. To understand what is currently on the screen, use the `get_current_view_context` tool.',
         tools: [
           selectNodeTool,
+          focusNodeTool,
           expandNodeTool,
           toggleGraphFullscreenTool,
           getCurrentViewContextTool,
