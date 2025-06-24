@@ -12,6 +12,11 @@ export interface GraphSlice {
   visitedNodeIds: string[];
   collapsedNodes: Record<string, boolean>;
   /**
+   * Set of node IDs currently visible in the graph after applying
+   * collapse/expand operations.
+   */
+  visibleNodeIds: Set<string>;
+  /**
    * Incrementing counter used to trigger a zoom-to-fit action
    * in graph components via store subscription.
    */
@@ -26,6 +31,8 @@ export interface GraphSlice {
   setNodeNote: (nodeId: string, note: string) => void;
   collapseNode: (nodeId: string) => void;
   expandNode: (nodeId: string) => void;
+  /** Replace the currently visible node ID set */
+  setVisibleNodeIds: (ids: Set<string>) => void;
   /** Trigger the graph to zoom/pan so all nodes fit in view */
   zoomGraphToFit: () => void;
   setColorByCluster: (value: boolean) => void;
@@ -41,6 +48,7 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
   nodeNotes: {},
   visitedNodeIds: [],
   collapsedNodes: {},
+  visibleNodeIds: new Set(),
   zoomToFitCount: 0,
 
   setSelectedNodeId: (nodeId) =>
@@ -85,6 +93,7 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
       delete updated[nodeId];
       return { collapsedNodes: updated };
     }),
+  setVisibleNodeIds: (ids) => set({ visibleNodeIds: new Set(ids) }),
   setColorByCluster: (value) => set({ colorByCluster: value }),
   zoomGraphToFit: () =>
     set((state) => ({ zoomToFitCount: state.zoomToFitCount + 1 })),
