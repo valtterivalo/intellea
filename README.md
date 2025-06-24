@@ -57,6 +57,10 @@ Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> to connect or disconnect the
 
 - Say **"read expanded concept"** to have the assistant read the currently expanded concept and any saved notes.
 
+### Graph Visualization
+
+Nodes are coloured by depth by default. Use the **Cluster Colors** toggle below the graph to switch to colouring nodes by their community clusters.
+
 "# intellea"
 
 ## Environment Variables

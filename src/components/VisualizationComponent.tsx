@@ -8,7 +8,7 @@ import * as THREE from 'three'; // Keep THREE import for now, might be needed by
 import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d'; // Import library types
 import { useGraphState, GraphData, AppGraphNode } from './hooks/useGraphState';
 import { useNodeInteractions } from './hooks/useNodeInteractions';
-import { getNodeColor as depthColor } from '@/lib/graphColors';
+import { getNodeColor as depthColor, getClusterColor } from '@/lib/graphColors';
 
 // Define our application-specific node structure, extending the library's base type
 
@@ -74,8 +74,11 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     pinNode,
     unpinNode,
     setFocusedNodeId,
+    clusters,
     visibleData,
   } = useGraphState(visualizationData);
+
+  const colorByCluster = useAppStore((state) => state.colorByCluster);
 
   const {
     hoveredNodeId,
@@ -131,9 +134,15 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       if (pinnedNodes[appNode.id]) {
         return '#22c55e';
       }
+      if (colorByCluster) {
+        const cid = clusters[appNode.id];
+        if (cid !== undefined) {
+          return getClusterColor(cid);
+        }
+      }
       return depthColor(depth);
     },
-    [selectedNodeId, pinnedNodes, nodeDepths]
+    [selectedNodeId, pinnedNodes, nodeDepths, colorByCluster, clusters]
   );
   // --- End Node Color Logic ---
 
