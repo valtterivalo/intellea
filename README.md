@@ -55,6 +55,9 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 
 Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> to connect or disconnect the voice assistant.
 
+Use `search_and_select_node` to select a node by a partial label. Example:
+`search_and_select_node{"labelStartsWith":"Gam"}` will focus the first matching node.
+
 - Say **"read expanded concept"** to have the assistant read the currently expanded concept and any saved notes.
 
 ### Graph Visualization
