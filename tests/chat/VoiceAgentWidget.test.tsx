@@ -68,4 +68,37 @@ describe('VoiceAgentWidget', () => {
     });
     expect(mockSession.mute).toHaveBeenCalledWith(false);
   });
+
+  it('handles push-to-talk key events', async () => {
+    global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: async () => ({ token: 't' }) })) as any;
+
+    render(<VoiceAgentWidget />);
+    const fab = screen.getAllByRole('button')[0];
+    await act(async () => {
+      fireEvent.click(fab);
+    });
+    await waitFor(() => expect((global.fetch as any)).toHaveBeenCalled());
+
+    act(() => {
+      mockSession.transport.emit('connection_change', 'connected');
+    });
+
+    const pttButton = screen.getByText('PTT Off');
+    act(() => {
+      fireEvent.click(pttButton);
+    });
+    expect(mockSession.mute).toHaveBeenCalledWith(true);
+    mockSession.mute.mockClear();
+
+    act(() => {
+      fireEvent.keyDown(window, { key: ' ' });
+    });
+    expect(mockSession.mute).toHaveBeenCalledWith(false);
+    mockSession.mute.mockClear();
+
+    act(() => {
+      fireEvent.keyUp(window, { key: ' ' });
+    });
+    expect(mockSession.mute).toHaveBeenCalledWith(true);
+  });
 });

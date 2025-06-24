@@ -55,6 +55,8 @@ The knowledge cards in Intellea can now be expanded to show detailed information
 
 Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> to connect or disconnect the voice assistant.
 
+When push-to-talk is enabled, hold <kbd>Space</kbd> to speak.
+
 - Say **"read expanded concept"** to have the assistant read the currently expanded concept and any saved notes.
 
 ### Graph Visualization
