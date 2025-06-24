@@ -37,6 +37,8 @@ export default function VoiceAgentWidget() {
   const [isConnected, setIsConnected] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [isMuted, setIsMuted] = useState(false);
+  const [isPTT, setIsPTT] = useState(false);
+  const [isPressing, setIsPressing] = useState(false);
   const [history, setHistory] = useState<{ speaker: 'user' | 'assistant'; text: string }[]>([]);
   const historyRef = useRef<HTMLDivElement>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
@@ -106,6 +108,10 @@ export default function VoiceAgentWidget() {
           setIsConnecting(false);
           setIsPanelOpen(true);
           setVoiceSessionActive(true);
+          if (isPTT) {
+            newSession.mute(true);
+            setIsMuted(true);
+          }
         } else if (status === 'disconnected') {
           setIsConnected(false);
           setSession(null);
@@ -144,7 +150,16 @@ export default function VoiceAgentWidget() {
       session.mute(newMutedState);
       setIsMuted(newMutedState);
     }
-  }
+  };
+
+  const handleTogglePTT = () => {
+    const newPTT = !isPTT;
+    setIsPTT(newPTT);
+    if (session) {
+      session.mute(newPTT);
+    }
+    setIsMuted(newPTT);
+  };
 
   useEffect(() => {
     const el = historyRef.current;
@@ -190,13 +205,26 @@ export default function VoiceAgentWidget() {
         e.preventDefault();
         handleToggleMute();
       }
+      if (isPTT && e.key === ' ' && !isPressing) {
+        setIsPressing(true);
+        session?.mute(false);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (isPTT && e.key === ' ' && isPressing) {
+        setIsPressing(false);
+        session?.mute(true);
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isConnected, isConnecting, handleConnect, handleToggleMute]);
+  }, [isConnected, isConnecting, handleConnect, handleToggleMute, isPTT, isPressing, session]);
 
   return (
     <>
@@ -247,6 +275,9 @@ export default function VoiceAgentWidget() {
               <CardFooter className="p-3 border-t flex justify-end gap-2">
                 <Button onClick={() => setShowHelp(true)} variant="outline" size="sm">
                   <HelpCircle size={16} />
+                </Button>
+                <Button onClick={handleTogglePTT} variant="outline" size="sm">
+                  {isPTT ? 'PTT On' : 'PTT Off'}
                 </Button>
                 <Button onClick={handleToggleMute} variant="outline" size="sm">
                   {isMuted ? <MicOff size={16} /> : <Mic size={16} />}

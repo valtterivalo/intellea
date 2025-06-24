@@ -38,6 +38,7 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onClose }) => {
           <li><span className="font-mono">F</span> - Focus selected node</li>
           <li><span className="font-mono">P</span> - Pin or unpin selected node</li>
           <li><span className="font-mono">E</span> - Expand selected node</li>
+          <li><span className="font-mono">Space</span> - Push to talk</li>
         </ul>
         <Separator className="my-4" />
         <Button onClick={onClose} className="w-full">Got it</Button>
