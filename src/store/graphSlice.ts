@@ -5,6 +5,8 @@ export interface GraphSlice {
   pinnedNodes: Record<string, boolean>;
   completedNodeIds: Set<string>;
   clusters: Record<string, string>;
+  /** When true, nodes are coloured by cluster instead of depth */
+  colorByCluster: boolean;
   onboardingDismissed: boolean;
   nodeNotes: Record<string, string>;
   visitedNodeIds: string[];
@@ -26,6 +28,7 @@ export interface GraphSlice {
   expandNode: (nodeId: string) => void;
   /** Trigger the graph to zoom/pan so all nodes fit in view */
   zoomGraphToFit: () => void;
+  setColorByCluster: (value: boolean) => void;
 }
 
 export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (set, get) => ({
@@ -33,6 +36,7 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
   pinnedNodes: {},
   completedNodeIds: new Set(),
   clusters: {},
+  colorByCluster: false,
   onboardingDismissed: false,
   nodeNotes: {},
   visitedNodeIds: [],
@@ -81,6 +85,7 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
       delete updated[nodeId];
       return { collapsedNodes: updated };
     }),
+  setColorByCluster: (value) => set({ colorByCluster: value }),
   zoomGraphToFit: () =>
     set((state) => ({ zoomToFitCount: state.zoomToFitCount + 1 })),
 });

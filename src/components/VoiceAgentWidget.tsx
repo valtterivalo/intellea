@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { Mic, MicOff, Bot, Loader2, ChevronsDown } from 'lucide-react';
+import { Mic, MicOff, Bot, Loader2, ChevronsDown, HelpCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { RealtimeAgent, RealtimeSession, type TransportLayerTranscriptDelta } from '@openai/agents/realtime';
 import {
   selectNodeTool,
+  searchAndSelectNodeTool,
   focusNodeTool,
   expandNodeTool,
   addNodeNoteTool,
@@ -17,6 +18,7 @@ import {
   scrollToKnowledgeCardsTool,
   scrollToExplanationTool,
   readKnowledgeCardTool,
+  readExpandedConceptTool,
   zoomToFitGraphTool,
   markNodeLearnedTool,
   showChatPanelTool,
@@ -24,6 +26,7 @@ import {
   exitFullscreenTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
+import VoiceHelpOverlay from '@/components/VoiceHelpOverlay';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
@@ -37,6 +40,7 @@ export default function VoiceAgentWidget() {
   const [history, setHistory] = useState<{ speaker: 'user' | 'assistant'; text: string }[]>([]);
   const historyRef = useRef<HTMLDivElement>(null);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const { setVoiceSessionActive } = useAppStore.getState();
 
   const handleConnect = useCallback(async () => {
@@ -50,9 +54,10 @@ export default function VoiceAgentWidget() {
 
       const agent = new RealtimeAgent({
         name: 'Intellea Voice Assistant',
-        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. You can read out a knowledge card using the `read_knowledge_card` tool. You can also focus the camera on a node using the `focus_node` tool. You can add notes to nodes with `add_node_note` and read them with `get_node_note`. To understand what is currently on the screen, use the `get_current_view_context` tool. You can switch views with `show_chat_panel` and `show_graph_panel`, and exit fullscreen with `exit_fullscreen`.',
+        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. You can read out a knowledge card using the `read_knowledge_card` tool. You can also read the currently expanded concept using `read_expanded_concept`. You can focus the camera on a node using the `focus_node` tool. You can add notes to nodes with `add_node_note` and read them with `get_node_note`. To understand what is currently on the screen, use the `get_current_view_context` tool. You can switch views with `show_chat_panel` and `show_graph_panel`, and exit fullscreen with `exit_fullscreen`.'
         tools: [
           selectNodeTool,
+          searchAndSelectNodeTool,
           focusNodeTool,
           expandNodeTool,
           addNodeNoteTool,
@@ -65,6 +70,7 @@ export default function VoiceAgentWidget() {
           scrollToExplanationTool,
           zoomToFitGraphTool,
           readKnowledgeCardTool,
+          readExpandedConceptTool,
           markNodeLearnedTool,
           showChatPanelTool,
           showGraphPanelTool,
@@ -180,13 +186,17 @@ export default function VoiceAgentWidget() {
           handleConnect();
         }
       }
+      if (e.ctrlKey && e.key.toLowerCase() === 'm') {
+        e.preventDefault();
+        handleToggleMute();
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isConnected, isConnecting, handleConnect]);
+  }, [isConnected, isConnecting, handleConnect, handleToggleMute]);
 
   return (
     <>
@@ -235,6 +245,9 @@ export default function VoiceAgentWidget() {
                 </div>
               </CardContent>
               <CardFooter className="p-3 border-t flex justify-end gap-2">
+                <Button onClick={() => setShowHelp(true)} variant="outline" size="sm">
+                  <HelpCircle size={16} />
+                </Button>
                 <Button onClick={handleToggleMute} variant="outline" size="sm">
                   {isMuted ? <MicOff size={16} /> : <Mic size={16} />}
                 </Button>
@@ -257,6 +270,7 @@ export default function VoiceAgentWidget() {
         >
           {isConnecting ? <Loader2 className="animate-spin" /> : isConnected ? (isPanelOpen ? <ChevronsDown /> : <Mic />) : <Bot />}
         </Button>
+        <VoiceHelpOverlay open={showHelp} onClose={() => setShowHelp(false)} />
       </div>
     </>
   );

@@ -5,6 +5,7 @@ import { useAppStore } from '@/store/useAppStore';
 import { isIntelleaResponse } from '@/store/utils';
 import VisualizationComponent from './VisualizationComponent';
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
@@ -29,6 +30,8 @@ const VisualizationSection: React.FC<VisualizationSectionProps> = ({
         }
         return undefined;
     });
+    const colorByCluster = useAppStore(state => state.colorByCluster);
+    const setColorByCluster = useAppStore(state => state.setColorByCluster);
 
     if (!visualizationData) {
         return null;
@@ -70,6 +73,14 @@ const VisualizationSection: React.FC<VisualizationSectionProps> = ({
                     <span className="inline-block w-4 h-4 rounded-full bg-green-500 border border-green-600" />
                     Pinned
                   </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="ml-auto"
+                    onClick={() => setColorByCluster(!colorByCluster)}
+                  >
+                    {colorByCluster ? 'Depth Colors' : 'Cluster Colors'}
+                  </Button>
                 </div>
             </section>
         </>

@@ -9,3 +9,21 @@ export function getNodeColor(depth: number): string {
   if (depth === 3) return '#f59e0b';
   return '#8b5cf6';
 }
+
+const clusterPalette = [
+  '#1f77b4',
+  '#ff7f0e',
+  '#2ca02c',
+  '#d62728',
+  '#9467bd',
+  '#8c564b',
+  '#e377c2',
+  '#7f7f7f',
+  '#bcbd22',
+  '#17becf',
+];
+
+export function getClusterColor(clusterId: string | number): string {
+  const idx = parseInt(String(clusterId), 10);
+  return clusterPalette[idx % clusterPalette.length];
+}
