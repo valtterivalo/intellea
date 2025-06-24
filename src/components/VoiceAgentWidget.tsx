@@ -19,6 +19,9 @@ import {
   readKnowledgeCardTool,
   zoomToFitGraphTool,
   markNodeLearnedTool,
+  showChatPanelTool,
+  showGraphPanelTool,
+  exitFullscreenTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -47,7 +50,7 @@ export default function VoiceAgentWidget() {
 
       const agent = new RealtimeAgent({
         name: 'Intellea Voice Assistant',
-        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. You can read out a knowledge card using the `read_knowledge_card` tool. You can also focus the camera on a node using the `focus_node` tool. You can add notes to nodes with `add_node_note` and read them with `get_node_note`. To understand what is currently on the screen, use the `get_current_view_context` tool.',
+        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. You can read out a knowledge card using the `read_knowledge_card` tool. You can also focus the camera on a node using the `focus_node` tool. You can add notes to nodes with `add_node_note` and read them with `get_node_note`. To understand what is currently on the screen, use the `get_current_view_context` tool. You can switch views with `show_chat_panel` and `show_graph_panel`, and exit fullscreen with `exit_fullscreen`.',
         tools: [
           selectNodeTool,
           focusNodeTool,
@@ -63,6 +66,9 @@ export default function VoiceAgentWidget() {
           zoomToFitGraphTool,
           readKnowledgeCardTool,
           markNodeLearnedTool,
+          showChatPanelTool,
+          showGraphPanelTool,
+          exitFullscreenTool,
         ],
       });
 

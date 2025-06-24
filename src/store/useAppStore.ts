@@ -62,6 +62,8 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   error: string | null;
   // Graph State
   isGraphFullscreen: boolean;
+  // View state
+  viewMode: 'graph' | 'chat';
   // Force-expand state
   forceExpandRequest: { nodeId: string } | null;
   // --- Actions ---
@@ -78,6 +80,9 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   addGraphExpansion: (expansionResponse: ExpansionResponse, clickedNodeId: string, supabase: SupabaseClient) => void;
   toggleGraphFullscreen: () => void;
   removeUnpinnedChildren: (nodeId: string) => void;
+
+  // View mode
+  setViewMode: (mode: 'graph' | 'chat') => void;
 
   // Force-expand action
   setForceExpandRequest: (request: { nodeId: string } | null) => void;
@@ -147,6 +152,7 @@ export const useAppStore = create<AppState>()(
       error: null,
       // Graph state
       isGraphFullscreen: false,
+      viewMode: 'graph',
       // Force-expand state
       forceExpandRequest: null,
       // Section refs
@@ -327,6 +333,8 @@ export const useAppStore = create<AppState>()(
       },
 
       toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),
+
+      setViewMode: (mode) => set({ viewMode: mode }),
 
       setError: (error) => set({ error }),
     }),
