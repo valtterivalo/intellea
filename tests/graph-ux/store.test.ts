@@ -10,6 +10,7 @@ describe('Graph UX Zustand Store', () => {
       pinnedNodes: {},
       nodeNotes: {},
       visitedNodeIds: [],
+      visibleNodeIds: new Set(),
     });
     let storage: Record<string, string> = {};
     global.localStorage = {
@@ -128,5 +129,11 @@ describe('Graph UX Zustand Store', () => {
     useAppStore.getState().setExplanationRef(el);
     useAppStore.getState().scrollToExplanation();
     expect(spy).toHaveBeenCalledWith({ behavior: 'smooth' });
+  });
+
+  it('updates visible node ids', () => {
+    const ids = new Set(['a', 'b']);
+    useAppStore.getState().setVisibleNodeIds(ids);
+    expect(Array.from(useAppStore.getState().visibleNodeIds)).toEqual(['a', 'b']);
   });
 });

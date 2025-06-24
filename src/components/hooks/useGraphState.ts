@@ -37,6 +37,7 @@ export function useGraphState(visualizationData?: GraphData) {
   const collapseNode = useAppStore((state) => state.collapseNode);
   const expandNodeInStore = useAppStore((state) => state.expandNode);
   const setFocusedNodeId = useAppStore((state) => state.setFocusedNodeId);
+  const setVisibleNodeIds = useAppStore((state) => state.setVisibleNodeIds);
 
   const visibleData: GraphData | undefined = React.useMemo(() => {
     if (!visualizationData) return undefined;
@@ -51,6 +52,12 @@ export function useGraphState(visualizationData?: GraphData) {
     });
     return { nodes: filteredNodes, links: filteredLinks };
   }, [visualizationData, collapsedNodes]);
+
+  React.useEffect(() => {
+    if (visibleData) {
+      setVisibleNodeIds(new Set(visibleData.nodes.map((n) => n.id)));
+    }
+  }, [visibleData, setVisibleNodeIds]);
 
   return {
     focusedNodeId,
