@@ -39,6 +39,30 @@ export const selectNodeTool = tool({
   },
 });
 
+export const searchAndSelectNodeTool = tool({
+  name: 'search_and_select_node',
+  description: 'Finds the first node whose label starts with the given text and selects it.',
+  parameters: z.object({
+    labelStartsWith: z.string().describe('Beginning of the node label to search for'),
+  }),
+  execute: async ({ labelStartsWith }) => {
+    const { isVoiceSessionActive, output, setSelectedNodeId, setActiveFocusPath } = useAppStore.getState();
+    if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+    const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+    if (!vizData) {
+      return "The knowledge graph is not visible, so I can't search for a node.";
+    }
+    const lower = labelStartsWith.toLowerCase();
+    const found = vizData.nodes.find(n => (n.label || '').toLowerCase().startsWith(lower));
+    if (found) {
+      setSelectedNodeId(found.id);
+      setActiveFocusPath(found.id, vizData);
+      return `Node with label "${found.label}" has been selected.`;
+    }
+    return `I could not find any node starting with "${labelStartsWith}".`;
+  }
+});
+
 export const focusNodeTool = tool({
   name: 'focus_node',
   description: 'Focuses the camera on a node by ID or label without selecting it.',
@@ -353,5 +377,44 @@ export const unpinNodeTool = tool({
         if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
         unpinNode(nodeId);
         return `Node ${nodeId} unpinned.`;
+    }
+});
+
+export const showChatPanelTool = tool({
+    name: 'show_chat_panel',
+    description: 'Switches the view to the chat panel.',
+    parameters: z.object({}),
+    execute: async () => {
+        const { isVoiceSessionActive, setViewMode } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        setViewMode('chat');
+        return 'Chat panel opened.';
+    }
+});
+
+export const showGraphPanelTool = tool({
+    name: 'show_graph_panel',
+    description: 'Switches the view to the graph panel.',
+    parameters: z.object({}),
+    execute: async () => {
+        const { isVoiceSessionActive, setViewMode } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        setViewMode('graph');
+        return 'Graph panel opened.';
+    }
+});
+
+export const exitFullscreenTool = tool({
+    name: 'exit_fullscreen',
+    description: 'Exits fullscreen mode if active.',
+    parameters: z.object({}),
+    execute: async () => {
+        const { isVoiceSessionActive, isGraphFullscreen, toggleGraphFullscreen } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        if (isGraphFullscreen) {
+            toggleGraphFullscreen();
+            return 'Exited fullscreen.';
+        }
+        return 'Fullscreen was not active.';
     }
 });
