@@ -187,7 +187,7 @@ export const getCurrentViewContextTool = tool({
         }
 
         const pinnedCount = Object.keys(pinnedNodes).length;
-        const progress = computeProgress(knowledgeCards.length, completedNodeIds);
+        const progress = computeProgress(knowledgeCards?.length ?? 0, completedNodeIds);
         summary += `There are ${pinnedCount} pinned nodes.\n`;
         summary += `Completion progress is ${progress.toFixed(0)}%.\n`;
 
@@ -244,6 +244,8 @@ export const readKnowledgeCardTool = tool({
 
         const note = nodeNotes[card.nodeId];
         return note ? `${card.description}\nNote: ${note}` : card.description;
+    }
+});
 
 export const addNodeNoteTool = tool({
     name: 'add_node_note',
