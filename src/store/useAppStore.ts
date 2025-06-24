@@ -78,6 +78,7 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   addGraphExpansion: (expansionResponse: ExpansionResponse, clickedNodeId: string, supabase: SupabaseClient) => void;
   toggleGraphFullscreen: () => void;
   removeUnpinnedChildren: (nodeId: string) => void;
+  updateKnowledgeCard: (nodeId: string, text: string) => void;
 
   // Force-expand action
   setForceExpandRequest: (request: { nodeId: string } | null) => void;
@@ -313,6 +314,27 @@ export const useAppStore = create<AppState>()(
 
         return { output: newOutputState };
       });
+      },
+
+      updateKnowledgeCard: (nodeId, text) => {
+        set((state) => {
+          if (!state.output || typeof state.output === 'string' || !state.output.knowledgeCards) {
+            return {};
+          }
+
+          const index = state.output.knowledgeCards.findIndex(card => card.nodeId === nodeId);
+          if (index === -1) return {};
+
+          const updatedCards = [...state.output.knowledgeCards];
+          updatedCards[index] = { ...updatedCards[index], description: text };
+
+          const newOutputState: IntelleaResponse = {
+            ...state.output,
+            knowledgeCards: updatedCards,
+          };
+
+          return { output: newOutputState };
+        });
       },
 
       setKnowledgeCardsRef: (el) => set({ knowledgeCardsRef: el }),
