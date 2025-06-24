@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, fireEvent, screen, act } from '@testing-library/react';
 import VisualizationComponent from '@/components/VisualizationComponent';
 import { useAppStore } from '@/store/useAppStore';
-import { getNodeColor as depthColor } from '@/lib/graphColors';
+import { getNodeColor as depthColor, getClusterColor } from '@/lib/graphColors';
 
 // Mock the 3D graph library to capture callbacks
 let graphProps: any = null;
@@ -173,5 +173,22 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     expect(colorFn(nodes[1])).toBe(depthColor(1));
     expect(colorFn(nodes[2])).toBe(depthColor(2));
     expect(colorFn(nodes[3])).toBe(depthColor(3));
+  });
+
+  it('uses cluster palette when colorByCluster enabled', () => {
+    const nodes = [
+      { id: 'root', depth: 0 },
+      { id: 'a', depth: 1 },
+    ];
+    useAppStore.setState({
+      colorByCluster: true,
+      clusters: { root: '0', a: '1' },
+    });
+    render(
+      <VisualizationComponent visualizationData={{ nodes, links: [] }} />
+    );
+    const colorFn = graphProps.nodeColor;
+    expect(colorFn(nodes[0])).toBe(getClusterColor('0'));
+    expect(colorFn(nodes[1])).toBe(getClusterColor('1'));
   });
 });
