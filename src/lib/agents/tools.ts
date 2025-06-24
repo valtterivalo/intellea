@@ -247,6 +247,21 @@ export const readKnowledgeCardTool = tool({
     }
 });
 
+export const readExpandedConceptTool = tool({
+    name: 'read_expanded_concept',
+    description: 'Reads the explanation of the currently expanded concept including any personal note.',
+    parameters: z.object({}),
+    execute: async () => {
+        const { isVoiceSessionActive, expandedConceptData, nodeNotes, focusedNodeId } = useAppStore.getState();
+        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
+        if (!expandedConceptData) {
+            return 'No concept is currently expanded.';
+        }
+        const note = focusedNodeId ? nodeNotes[focusedNodeId] : undefined;
+        return note ? `${expandedConceptData.content}\nNote: ${note}` : expandedConceptData.content;
+    }
+});
+
 export const addNodeNoteTool = tool({
     name: 'add_node_note',
     description: 'Adds or updates a note for a node in the knowledge graph.',
