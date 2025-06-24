@@ -43,4 +43,29 @@ describe('VoiceAgentWidget', () => {
     expect(await screen.findByText('hi')).toBeInTheDocument();
     expect(await screen.findByText('hello')).toBeInTheDocument();
   });
+
+  it('toggles mute with Ctrl+M', async () => {
+    global.fetch = vi.fn(() => Promise.resolve({ ok: true, json: async () => ({ token: 't' }) })) as any;
+
+    render(<VoiceAgentWidget />);
+    const fab = screen.getAllByRole('button')[0];
+    await act(async () => {
+      fireEvent.click(fab);
+    });
+    await waitFor(() => expect((global.fetch as any)).toHaveBeenCalled());
+
+    act(() => {
+      mockSession.transport.emit('connection_change', 'connected');
+    });
+
+    act(() => {
+      fireEvent.keyDown(window, { ctrlKey: true, key: 'm' });
+    });
+    expect(mockSession.mute).toHaveBeenCalledWith(true);
+
+    act(() => {
+      fireEvent.keyDown(window, { ctrlKey: true, key: 'm' });
+    });
+    expect(mockSession.mute).toHaveBeenCalledWith(false);
+  });
 });
