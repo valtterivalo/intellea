@@ -5,7 +5,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 - `npm run dev` - Start development server with Turbopack
-- `npm run build` - Build the application for production  
 - `npm run lint` - Run ESLint to check code quality
 - `npm test` - Run Vitest test suite
 - `npm run e2e` - Run Cypress end-to-end tests

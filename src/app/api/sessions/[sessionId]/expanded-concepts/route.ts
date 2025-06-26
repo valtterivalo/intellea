@@ -7,8 +7,9 @@ interface Params {
 }
 
 // GET handler to fetch all expanded concepts for a specific session
-export async function GET(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function GET(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
   const redis = createRedisClient();
 
@@ -101,8 +102,9 @@ export async function GET(request: Request, { params }: { params: Params }) {
 }
 
 // POST handler to create a new expanded concept for a specific session
-export async function POST(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function POST(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
 
   if (!sessionId) {
@@ -236,8 +238,9 @@ export async function POST(request: Request, { params }: { params: Params }) {
 }
 
 // DELETE handler to remove an expanded concept by node ID
-export async function DELETE(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function DELETE(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
   const url = new URL(request.url);
   const nodeId = url.searchParams.get('nodeId');

@@ -9,7 +9,6 @@ import { isIntelleaResponse } from '@/store/utils';
 import { useShallow } from 'zustand/react/shallow'; // Import useShallow for multiple state slices
 import type { KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore'; // Import types
 import { cn } from '@/lib/utils';
-import { createClient } from '@/lib/supabase/client'; // Import our client creator
 
 
 interface KnowledgeCardProps {
@@ -22,7 +21,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
   const {
     setFocusedNodeId,
     setActiveFocusPath,
-    expandConcept,
+    expandConceptWithStreaming,
     isExpandingConcept,
     subscriptionStatus,
     visualizationData,
@@ -31,7 +30,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     useShallow((state) => ({ // Use useShallow for multiple selections
       setFocusedNodeId: state.setFocusedNodeId,
       setActiveFocusPath: state.setActiveFocusPath,
-      expandConcept: state.expandConcept,
+      expandConceptWithStreaming: state.expandConceptWithStreaming,
       isExpandingConcept: state.isExpandingConcept,
       subscriptionStatus: state.subscriptionStatus,
       // Safely access visualizationData
@@ -40,8 +39,6 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     }))
   );
 
-  // Create a stable supabase client
-  const supabase = createClient();
   
   const handleFocusClick = () => {
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Focus graph requested for node: ${card.nodeId}, setting active focus PATH.`);
@@ -53,7 +50,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
 
   const handleExpandClick = () => {
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Expand concept requested for node: ${card.nodeId}, ${card.title}`);
-    expandConcept(card.nodeId, card.title, supabase);
+    expandConceptWithStreaming(card.nodeId, card.title);
   };
 
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';

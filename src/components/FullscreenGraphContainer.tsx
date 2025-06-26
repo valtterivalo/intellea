@@ -134,7 +134,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
             
             // Calculate zoom based on camera distance from origin
             const distance = Math.sqrt(cam.position.x ** 2 + cam.position.y ** 2 + cam.position.z ** 2);
-            // const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
+            const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
             
             if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('FullscreenGraphContainer: Camera state updated', {
                 position: cam.position,
@@ -152,9 +152,9 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         
         // Set up event listeners for camera changes
         const controls = graphRef.current.controls() as unknown;
-        if (controls && controls.addEventListener) {
-            controls.addEventListener('change', updateCameraState);
-            return () => controls.removeEventListener('change', updateCameraState);
+        if (controls && typeof controls === 'object' && 'addEventListener' in controls && 'removeEventListener' in controls) {
+            (controls as { addEventListener: (event: string, handler: () => void) => void; removeEventListener: (event: string, handler: () => void) => void }).addEventListener('change', updateCameraState);
+            return () => (controls as { addEventListener: (event: string, handler: () => void) => void; removeEventListener: (event: string, handler: () => void) => void }).removeEventListener('change', updateCameraState);
         }
         
         // Fallback: periodic updates

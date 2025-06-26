@@ -47,7 +47,10 @@ async function handleExpansion(
     currentVisualizationData: unknown, 
     currentKnowledgeCards: unknown
 ): Promise<ExpansionResponse> {
-    const contextGraph = { nodes: currentVisualizationData.nodes, links: currentVisualizationData.links };
+    const contextGraph = { 
+        nodes: (currentVisualizationData as { nodes: unknown }).nodes, 
+        links: (currentVisualizationData as { links: unknown }).links 
+    };
     const agentInput = `Expand the graph from the clicked node:\nNode ID: ${nodeId}\nNode Label: ${nodeLabel}\n\nCurrent Graph Structure (for context only, do not repeat):\n${JSON.stringify(contextGraph, null, 2)}`;
     
     const result = await run(GraphExpansionAgent, agentInput);
@@ -57,9 +60,9 @@ async function handleExpansion(
 
     const llmExpansionResponse = result.finalOutput as { nodes: NodeObject[], links: LinkObject[], knowledgeCards: KnowledgeCard[] };
 
-    const combinedNodesRaw = [...currentVisualizationData.nodes, ...llmExpansionResponse.nodes];
-    const combinedLinks = [...currentVisualizationData.links, ...llmExpansionResponse.links];
-    const combinedKnowledgeCards = [...currentKnowledgeCards, ...llmExpansionResponse.knowledgeCards];
+    const combinedNodesRaw = [...(currentVisualizationData as { nodes: NodeObject[] }).nodes, ...llmExpansionResponse.nodes];
+    const combinedLinks = [...(currentVisualizationData as { links: LinkObject[] }).links, ...llmExpansionResponse.links];
+    const combinedKnowledgeCards = [...(currentKnowledgeCards as KnowledgeCard[]), ...llmExpansionResponse.knowledgeCards];
 
     const textsToEmbed = combinedNodesRaw.map(node => getNodeTextForEmbedding(node, combinedKnowledgeCards));
     const allEmbeddings = await getNodeEmbeddings(textsToEmbed);

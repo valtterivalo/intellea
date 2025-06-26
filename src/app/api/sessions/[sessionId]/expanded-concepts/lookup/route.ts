@@ -6,8 +6,9 @@ interface Params {
 }
 
 // POST handler to lookup an expanded concept by criteria (avoiding URL query param issues)
-export async function POST(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function POST(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
 
   if (!sessionId) {

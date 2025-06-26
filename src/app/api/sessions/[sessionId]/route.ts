@@ -7,8 +7,9 @@ interface Params {
 }
 
 // GET handler for a specific session
-export async function GET(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function GET(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
 
   if (!sessionId) {
@@ -69,8 +70,9 @@ export async function GET(request: Request, { params }: { params: Params }) {
 // We will add PUT and DELETE handlers here later 
 
 // PUT handler to update/save a specific session
-export async function PUT(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function PUT(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
 
   if (!sessionId) {
@@ -156,8 +158,9 @@ export async function PUT(request: Request, { params }: { params: Params }) {
 }
 
 // DELETE handler for a specific session
-export async function DELETE(request: Request, { params }: { params: Params }) {
-  const { sessionId } = params;
+export async function DELETE(request: Request, { params }: { params: Promise<Params> }) {
+  const resolvedParams = await params;
+  const { sessionId } = resolvedParams;
   const supabase = await createClient();
 
   if (!sessionId) {

@@ -8,7 +8,7 @@ export type Database = {
           node_id: string
           title: string
           content: string
-          related_concepts: any
+          related_concepts: unknown
           created_at: string
           graph_hash: string
         }
@@ -18,7 +18,7 @@ export type Database = {
           node_id: string
           title: string
           content: string
-          related_concepts: any
+          related_concepts: unknown
           created_at?: string
           graph_hash: string
         }
@@ -28,7 +28,7 @@ export type Database = {
           node_id?: string
           title?: string
           content?: string
-          related_concepts: any
+          related_concepts: unknown
           created_at?: string
           graph_hash?: string
         }
@@ -75,7 +75,7 @@ export type Database = {
           id: string
           last_prompt: string | null
           last_updated_at: string
-          session_data: any | null
+          session_data: unknown | null
           title: string
           user_id: string
         }
@@ -84,7 +84,7 @@ export type Database = {
           id?: string
           last_prompt?: string | null
           last_updated_at?: string
-          session_data: any | null
+          session_data: unknown | null
           title?: string
           user_id: string
         }
@@ -93,7 +93,7 @@ export type Database = {
           id?: string
           last_prompt?: string | null
           last_updated_at?: string
-          session_data: any | null
+          session_data: unknown | null
           title?: string
           user_id?: string
         }
