@@ -3,13 +3,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useAppStore, ExpandedConceptData } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from 'react-markdown';
-import { cn } from '@/lib/utils';
 
 const ExpandedConceptCard: React.FC = () => {
   const expandedConceptData = useAppStore((state) => state.expandedConceptData);
@@ -116,12 +115,12 @@ const ExpandedConceptCard: React.FC = () => {
                 <div className="prose dark:prose-invert max-w-none">
                   <ReactMarkdown
                     components={{
-                      h1: ({ node, ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
-                      h2: ({ node, ...props }) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,
-                      h3: ({ node, ...props }) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
-                      p: ({ node, ...props }) => <p className="mb-4" {...props} />,
-                      ul: ({ node, ...props }) => <ul className="mb-4 list-disc pl-6" {...props} />,
-                      ol: ({ node, ...props }) => <ol className="mb-4 list-decimal pl-6" {...props} />,
+                      h1: ({ ...props }) => <h1 className="text-2xl font-bold mt-6 mb-4" {...props} />,
+                      h2: ({ ...props }) => <h2 className="text-xl font-bold mt-5 mb-3" {...props} />,
+                      h3: ({ ...props }) => <h3 className="text-lg font-bold mt-4 mb-2" {...props} />,
+                      p: ({ ...props }) => <p className="mb-4" {...props} />,
+                      ul: ({ ...props }) => <ul className="mb-4 list-disc pl-6" {...props} />,
+                      ol: ({ ...props }) => <ol className="mb-4 list-decimal pl-6" {...props} />,
                     }}
                   >
                     {expandedConceptData.content}

@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
-import { Session } from '@supabase/supabase-js';
-import { UseBoundStore, StoreApi } from 'zustand';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { computeClusters } from '@/lib/graphCluster';
 import type { GraphSlice } from './graphSlice';
@@ -43,7 +41,7 @@ export interface SessionSummary {
   title: string | null;
   last_updated_at: string;
   last_prompt: string | null;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 // --- Data Structure Types ---
@@ -64,6 +62,8 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   isGraphFullscreen: boolean;
   // View state
   viewMode: 'graph' | 'chat';
+  // Scroll trigger state
+  scrollToNodeId: string | null;
   // Force-expand state
   forceExpandRequest: { nodeId: string } | null;
   // --- Actions ---
@@ -85,16 +85,19 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   // View mode
   setViewMode: (mode: 'graph' | 'chat') => void;
 
+  // Scroll trigger action
+  setScrollToNodeId: (nodeId: string | null) => void;
+
   // Force-expand action
   setForceExpandRequest: (request: { nodeId: string } | null) => void;
 
   // Section refs for smooth scrolling
   knowledgeCardsRef: HTMLElement | null;
-  explanationRef: HTMLElement | null;
+  graphRef: HTMLElement | null;
   setKnowledgeCardsRef: (el: HTMLElement | null) => void;
-  setExplanationRef: (el: HTMLElement | null) => void;
+  setGraphRef: (el: HTMLElement | null) => void;
   scrollToKnowledgeCards: () => void;
-  scrollToExplanation: () => void;
+  scrollToGraph: () => void;
 
   // Error Handling
   setError: (error: string | null) => void;
@@ -103,7 +106,7 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
 
 // In-memory fallback storage for environments without `window` or when a custom
 // storage is provided. This mimics the `Storage` interface used by Zustand.
-let memoryStore: Record<string, string> = {};
+const memoryStore: Record<string, string> = {};
 const inMemoryStorage: StateStorage = {
   getItem: (name) => (name in memoryStore ? memoryStore[name] : null),
   setItem: (name, value) => {
@@ -154,11 +157,13 @@ export const useAppStore = create<AppState>()(
       // Graph state
       isGraphFullscreen: false,
       viewMode: 'graph',
+      // Scroll trigger state
+      scrollToNodeId: null,
       // Force-expand state
       forceExpandRequest: null,
       // Section refs
       knowledgeCardsRef: null,
-      explanationRef: null,
+      graphRef: null,
 
       // --- Base Action Implementations ---
       setPrompt: (prompt) => set({ prompt }),
@@ -344,19 +349,21 @@ export const useAppStore = create<AppState>()(
       },
 
       setKnowledgeCardsRef: (el) => set({ knowledgeCardsRef: el }),
-      setExplanationRef: (el) => set({ explanationRef: el }),
+      setGraphRef: (el) => set({ graphRef: el }),
       scrollToKnowledgeCards: () => {
         const el = get().knowledgeCardsRef;
         if (el) el.scrollIntoView({ behavior: 'smooth' });
       },
-      scrollToExplanation: () => {
-        const el = get().explanationRef;
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
+      scrollToGraph: () => {
+        const el = get().graphRef;
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       },
 
       toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),
 
       setViewMode: (mode) => set({ viewMode: mode }),
+
+      setScrollToNodeId: (nodeId) => set({ scrollToNodeId: nodeId }),
 
       setError: (error) => set({ error }),
     }),

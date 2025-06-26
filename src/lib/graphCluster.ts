@@ -27,7 +27,7 @@ export function computeClusters(data: ClusterGraphData): ClusterMap {
       }
     });
     return louvain.louvain(graph);
-  } catch (err) {
+  } catch {
     // Fallback simple connected components clustering
     const adj: Record<string, Set<string>> = {};
     data.nodes.forEach(n => {

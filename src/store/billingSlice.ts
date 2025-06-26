@@ -4,10 +4,11 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export interface BillingSlice {
   subscriptionStatus: 'active' | 'inactive' | 'trialing' | null;
   isSubscriptionLoading: boolean;
+  error?: string;
   fetchSubscriptionStatus: (supabase: SupabaseClient, userId: string) => Promise<void>;
 }
 
-export const createBillingSlice: StateCreator<BillingSlice, [], [], BillingSlice> = (set, get) => ({
+export const createBillingSlice: StateCreator<BillingSlice, [], [], BillingSlice> = (set) => ({
   subscriptionStatus: null,
   isSubscriptionLoading: false,
 
@@ -32,14 +33,14 @@ export const createBillingSlice: StateCreator<BillingSlice, [], [], BillingSlice
       } else {
         set({ subscriptionStatus: 'inactive', isSubscriptionLoading: false });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching subscription status:', error);
-      const errorMessage = error?.message ? error.message : 'An unexpected error occurred while checking your subscription.';
+      const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred while checking your subscription.';
       set({
         error: `Failed to fetch subscription status: ${errorMessage}`,
         subscriptionStatus: 'inactive',
         isSubscriptionLoading: false,
-      } as any);
+      });
     }
   },
 });

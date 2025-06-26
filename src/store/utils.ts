@@ -1,6 +1,6 @@
 import type { IntelleaResponse } from './useAppStore';
 
-export function isIntelleaResponse(obj: any): obj is IntelleaResponse {
+export function isIntelleaResponse(obj: unknown): obj is IntelleaResponse {
   return (
     obj !== null &&
     typeof obj === 'object' &&

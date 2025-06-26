@@ -1,7 +1,7 @@
 import { createClient as createRedisClient } from './redis';
 import crypto from 'crypto';
 
-export function getGraphHash(data: any): string {
+export function getGraphHash(data: unknown): string {
   return crypto
     .createHash('sha256')
     .update(JSON.stringify(data))
@@ -28,7 +28,7 @@ export async function getCachedExpandedConcept(sessionId: string, graphHash: str
   }
 }
 
-export async function setCachedExpandedConcept(sessionId: string, graphHash: string, data: any, ttlSeconds = 60 * 60 * 24) {
+export async function setCachedExpandedConcept(sessionId: string, graphHash: string, data: unknown, ttlSeconds = 60 * 60 * 24) {
   const redis = createRedisClient();
   const cacheKey = getCacheKey(sessionId, graphHash);
   await redis.set(cacheKey, JSON.stringify(data), 'EX', ttlSeconds);
@@ -38,7 +38,7 @@ export async function acquireLock(sessionId: string, graphHash: string, ttlSecon
   const redis = createRedisClient();
   const lockKey = getLockKey(sessionId, graphHash);
   try {
-    // @ts-ignore - ioredis typings don't include the positional NX/EX combo but runtime supports it.
+    // @ts-expect-error - ioredis typings don't include the positional NX/EX combo but runtime supports it.
     const result = await redis.set(lockKey, '1', 'NX', 'EX', ttlSeconds);
     return !!result;
   } catch {

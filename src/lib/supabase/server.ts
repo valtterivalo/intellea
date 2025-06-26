@@ -5,17 +5,17 @@ export function createClient() {
   let cookieStore: ReturnType<typeof cookies> | null = null;
   try {
     cookieStore = cookies();
-  } catch (err) {
+  } catch {
     // outside of a request context, cookies() throws. Provide a dummy store so
     // tests and non-request code can still instantiate the client safely.
     cookieStore = {
       getAll() {
-        return [] as any[];
+        return [] as { name: string; value: string }[];
       },
       set() {
         /* noop */
       },
-    } as any;
+    } as ReturnType<typeof cookies>;
   }
 
   return createServerClient(
@@ -24,14 +24,14 @@ export function createClient() {
     {
       cookies: {
         getAll() {
-          return (cookieStore as any)!.getAll();
+          return cookieStore!.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             // only call set if the underlying cookie store supports it
-            if (typeof (cookieStore as any).set === 'function') {
+            if (typeof (cookieStore as { set?: (name: string, value: string, options: CookieOptions) => void }).set === 'function') {
               cookiesToSet.forEach(({ name, value, options }) => {
-                (cookieStore as any).set(name, value, options);
+                (cookieStore as { set: (name: string, value: string, options: CookieOptions) => void }).set(name, value, options);
               });
             }
           } catch {

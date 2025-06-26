@@ -17,7 +17,7 @@ interface ForceGraph2DMethods {
   screen2GraphCoords: (x: number, y: number) => { x: number; y: number };
   zoom: (k?: number, duration?: number) => number | void;
   centerAt: (x?: number, y?: number, duration?: number) => void;
-  d3Force: (forceName: string, force?: any) => any;
+  d3Force: (forceName: string, force?: unknown) => unknown;
   d3ReheatSimulation: () => void;
   pauseAnimation: () => void;
   resumeAnimation: () => void;
@@ -38,7 +38,7 @@ interface MiniMapProps {
 }
 
 const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims, onCenter, visible }) => {
-  const fgRef = useRef<any>(null); // Use any for now to avoid complex type issues
+  const fgRef = useRef<ForceGraph2DMethods | null>(null); // Type-safe reference
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewRect, setViewRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [isReady, setIsReady] = useState(false);

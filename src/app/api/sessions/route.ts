@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 
-export async function GET(request: Request) {
+export async function GET() {
   const supabase = await createClient();
 
   try {
@@ -50,7 +50,7 @@ export async function GET(request: Request) {
 }
 
 // POST handler to create a new session
-export async function POST(request: Request) {
+export async function POST() {
   const supabase = await createClient();
 
   try {

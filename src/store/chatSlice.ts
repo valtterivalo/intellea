@@ -11,7 +11,7 @@ export interface ChatSlice {
   send: (content: string) => Promise<void>;
 }
 
-export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (set, get, api) => ({
+export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (set, get) => ({
   messages: [],
   send: async (content: string) => {
     const newMsg: ChatMessage = { role: 'user', content };
@@ -24,7 +24,7 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (set, 
       });
       const reader = resp.body?.getReader();
       const decoder = new TextDecoder();
-      let assistant: ChatMessage = { role: 'assistant', content: '' };
+      const assistant: ChatMessage = { role: 'assistant', content: '' };
       set((state) => ({ messages: [...state.messages, assistant] }));
       if (reader) {
         while (true) {
@@ -46,8 +46,9 @@ export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (set, 
           return { messages: msgs };
         });
       }
-    } catch (err: any) {
-      set((state) => ({ messages: [...state.messages, { role: 'assistant', content: `Error: ${err.message}` }] }));
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      set((state) => ({ messages: [...state.messages, { role: 'assistant', content: `Error: ${errorMessage}` }] }));
     }
   },
 });

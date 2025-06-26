@@ -121,10 +121,11 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json({ received: true });
-  } catch (error: any) {
-    console.error('Stripe Webhook Error:', error.message);
+  } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('Stripe Webhook Error:', errorMessage);
     return NextResponse.json(
-      { error: `Webhook handler failed: ${error.message}` },
+      { error: `Webhook handler failed: ${errorMessage}` },
       { status: 400 }
     );
   }

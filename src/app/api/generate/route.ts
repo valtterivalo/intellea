@@ -44,8 +44,8 @@ async function handleInitialGeneration(prompt: string): Promise<IntelleaResponse
 async function handleExpansion(
     nodeId: string, 
     nodeLabel: string, 
-    currentVisualizationData: any, 
-    currentKnowledgeCards: any
+    currentVisualizationData: unknown, 
+    currentKnowledgeCards: unknown
 ): Promise<ExpansionResponse> {
     const contextGraph = { nodes: currentVisualizationData.nodes, links: currentVisualizationData.links };
     const agentInput = `Expand the graph from the clicked node:\nNode ID: ${nodeId}\nNode Label: ${nodeLabel}\n\nCurrent Graph Structure (for context only, do not repeat):\n${JSON.stringify(contextGraph, null, 2)}`;
@@ -84,7 +84,7 @@ async function handleExpansion(
 // --- Main Route Handler ---
 
 export async function POST(req: NextRequest) {
-  const { user, error } = await verifyUserAccess();
+  const { error } = await verifyUserAccess();
   if (error) {
     return error;
   }

@@ -4,7 +4,8 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
-import * as THREE from 'three'; // Keep THREE import for now, might be needed by dependencies
+// THREE import available for future use
+// import * as THREE from 'three';
 import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d'; // Import library types
 import { useGraphState, GraphData, AppGraphNode } from './hooks/useGraphState';
 import { useNodeInteractions } from './hooks/useNodeInteractions';
@@ -33,7 +34,7 @@ const themeColors = {
 
 // Load the 3D graph component synchronously when running under tests to simplify mocking.
 // In normal runtime we keep using Next.js dynamic import to avoid SSR issues.
-const ForceGraph3DComponent: any = dynamic(
+const ForceGraph3DComponent: React.ComponentType<unknown> = dynamic(
   () => import('react-force-graph-3d').then((mod) => mod.default),
   {
     ssr: false,
@@ -47,7 +48,7 @@ const ForceGraph3DComponent: any = dynamic(
 const asAppNode = (node: NodeObject): AppGraphNode => node as AppGraphNode;
 
 const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, VisualizationComponentProps>(
-  ({ visualizationData, onNodeExpand, expandingNodeId }, forwardedRef) => {
+  function VisualizationComponent({ visualizationData, onNodeExpand }, forwardedRef) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Use ForceGraphMethods type for the ref for better type safety
   const graphRef = useRef<ForceGraphMethods | undefined>(undefined); // Initialize with undefined
@@ -67,13 +68,13 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     activeFocusPathIds,
     selectedNodeId,
     pinnedNodes,
-    collapseNode,
-    expandNodeInStore,
-    setSelectedNodeId,
-    setActiveFocusPath,
-    pinNode,
-    unpinNode,
-    setFocusedNodeId,
+    // collapseNode, // Available for future use
+    // expandNodeInStore, // Available for future use
+    // setSelectedNodeId, // Available for future use
+    // setActiveFocusPath, // Available for future use
+    // pinNode, // Available for future use
+    // unpinNode, // Available for future use
+    // setFocusedNodeId, // Available for future use
     clusters,
     visibleData,
   } = useGraphState(visualizationData);
@@ -81,7 +82,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   const colorByCluster = useAppStore((state) => state.colorByCluster);
 
   const {
-    hoveredNodeId,
+    // hoveredNodeId, // Available for future use
     contextMenu,
     setContextMenu,
     handleNodeClick,
@@ -97,7 +98,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     const depths: Record<string, number> = {};
     const adj: Record<string, string[]> = {};
     visibleData.nodes.forEach((n) => {
-      depths[n.id] = (n as any).depth ?? undefined as any;
+      depths[n.id] = (n as AppGraphNode).depth ?? undefined;
       adj[n.id] = [];
     });
     visibleData.links.forEach((l) => {
@@ -106,13 +107,13 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       if (adj[s]) adj[s].push(t);
       if (adj[t]) adj[t].push(s);
     });
-    const root = visibleData.nodes.find((n) => (n as any).depth === 0) || visibleData.nodes[0];
+    const root = visibleData.nodes.find((n) => (n as AppGraphNode).depth === 0) || visibleData.nodes[0];
     if (!root) return depths;
     const queue = [root.id];
     if (depths[root.id] === undefined) depths[root.id] = 0;
     while (queue.length) {
       const id = queue.shift()!;
-      const d = depths[id];
+      const d = depths[id] as number;
       for (const nb of adj[id] || []) {
         if (depths[nb] === undefined) {
           depths[nb] = d + 1;
@@ -127,7 +128,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   const getNodeColor = useCallback(
     (node: NodeObject) => {
       const appNode = asAppNode(node);
-      const depth = nodeDepths[appNode.id] ?? (appNode as any).depth ?? 0;
+      const depth = nodeDepths[appNode.id] ?? (appNode as AppGraphNode).depth ?? 0;
       if (selectedNodeId === appNode.id) {
         return '#eab308';
       }
@@ -185,7 +186,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
 
   // --- Adjust forces on mount --- 
   useEffect(() => {
-    if (!graphRef.current || typeof (graphRef.current as any).d3Force !== 'function') {
+    if (!graphRef.current || typeof (graphRef.current as ForceGraphMethods).d3Force !== 'function') {
       return; // skip if underlying library not available (e.g., during tests)
     }
     graphRef.current.d3Force('charge')?.strength(-120);
@@ -220,7 +221,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     const initialTimeout = isTestEnv ? undefined : setTimeout(updateDimensions, 100);
 
     const resizeObserver = new ResizeObserver(entries => {
-      for (let entry of entries) {
+      for (const entry of entries) {
         if (entry.contentRect) {
           const newWidth = entry.contentRect.width;
           const newHeight = entry.contentRect.height;

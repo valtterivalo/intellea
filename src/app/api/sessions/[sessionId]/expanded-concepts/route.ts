@@ -1,6 +1,4 @@
 import { NextResponse } from 'next/server';
-import type { Database } from '@/lib/database.types';
-import type { ExpandedConceptData } from '@/store/useAppStore';
 import { createClient as createRedisClient } from '@/lib/redis';
 import { createClient } from '@/lib/supabase/server';
 
@@ -80,7 +78,7 @@ export async function GET(request: Request, { params }: { params: Params }) {
             relatedConcepts: parsed.relatedConcepts,
             graphHash: concept.graph_hash
           };
-        } catch (e) {
+        } catch {
           // If cache is corrupted, fall back to DB value
         }
       }
@@ -115,7 +113,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
   let payload;
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
   }
 
@@ -174,7 +172,7 @@ export async function POST(request: Request, { params }: { params: Params }) {
     }
 
     // Check if this expanded concept already exists
-    const { data: existingConcept, error: checkError } = await supabase
+    const { data: existingConcept } = await supabase
       .from('expanded_concepts')
       .select('id')
       .eq('session_id', sessionId)

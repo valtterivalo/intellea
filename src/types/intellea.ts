@@ -8,13 +8,13 @@ export interface NodeObject {
   x?: number;
   y?: number;
   z?: number;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface LinkObject {
   source: string | NodeObject;
   target: string | NodeObject;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface GraphData {

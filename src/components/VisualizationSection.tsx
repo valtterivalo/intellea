@@ -7,8 +7,6 @@ import VisualizationComponent from './VisualizationComponent';
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
 
 
 // --- Define Props for VisualizationSection ---

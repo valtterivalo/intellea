@@ -6,22 +6,17 @@ import { ConceptExpanderAgent } from '@/lib/agents/conceptExpand';
 import type { ExpandedConceptData } from '@/types/intellea';
 import { verifyUserAccess } from '@/lib/api-helpers';
 
-// Simplified interface for visualization data
-interface SanitizedNode {
-  id: string;
-  label: string;
-  isRoot?: boolean;
-}
-
-interface SanitizedLink {
-  source: string;
-  target: string;
-}
-
-interface SanitizedVisualizationData {
-  nodes: SanitizedNode[];
-  links: SanitizedLink[];
-}
+// Note: SanitizedNode and SanitizedLink interfaces available if needed for future expansions
+// interface SanitizedNode {
+//   id: string;
+//   label: string;
+//   isRoot?: boolean;
+// }
+// 
+// interface SanitizedLink {
+//   source: string;
+//   target: string;
+// }
 
 // Response structure
 type ExpandedConceptResponse = ExpandedConceptData;
@@ -32,7 +27,7 @@ if (!process.env.OPENAI_API_KEY) {
 }
 
 export async function POST(req: NextRequest) {
-  const supabase = await createClient();
+  await createClient(); // Initialize supabase client for potential use
 
   // When running in Vitest or any NODE_ENV === 'test' context we bypass
   // authentication & subscription checks so handler can work with mocks.

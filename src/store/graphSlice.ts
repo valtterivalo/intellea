@@ -38,7 +38,7 @@ export interface GraphSlice {
   setColorByCluster: (value: boolean) => void;
 }
 
-export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (set, get) => ({
+export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (set) => ({
   selectedNodeId: null,
   pinnedNodes: {},
   completedNodeIds: new Set(),

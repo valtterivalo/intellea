@@ -15,7 +15,7 @@ export function useNodeInteractions(
     setActiveFocusPath,
     pinNode,
     unpinNode,
-    collapseNode,
+    // collapseNode, // Available for future use
     expandNodeInStore,
     setFocusedNodeId,
   } = useGraphState();

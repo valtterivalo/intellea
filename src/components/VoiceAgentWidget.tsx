@@ -15,19 +15,17 @@ import {
   unpinNodeTool,
   toggleGraphFullscreenTool,
   getCurrentViewContextTool,
-  scrollToKnowledgeCardsTool,
-  scrollToExplanationTool,
+  showKnowledgeCardTool,
   readKnowledgeCardTool,
   readExpandedConceptTool,
   zoomToFitGraphTool,
-  markNodeLearnedTool,
   showChatPanelTool,
   showGraphPanelTool,
   exitFullscreenTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
 import VoiceHelpOverlay from '@/components/VoiceHelpOverlay';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/store/useAppStore';
 
@@ -56,7 +54,18 @@ export default function VoiceAgentWidget() {
 
       const agent = new RealtimeAgent({
         name: 'Intellea Voice Assistant',
-        instructions: 'You are a helpful AI assistant for the Intellea application. You can help users explore knowledge graphs by voice. You can select, focus on, and expand nodes in the graph, and toggle fullscreen mode for the graph. You can read out a knowledge card using the `read_knowledge_card` tool. You can also read the currently expanded concept using `read_expanded_concept`. You can focus the camera on a node using the `focus_node` tool. You can add notes to nodes with `add_node_note` and read them with `get_node_note`. To understand what is currently on the screen, use the `get_current_view_context` tool. You can switch views with `show_chat_panel` and `show_graph_panel`, and exit fullscreen with `exit_fullscreen`.'
+        instructions: `you are a helpful ai assistant for the intellea application.
+you help users explore knowledge graphs by voice.
+you can select, focus on, and expand nodes in the graph.
+if the user asks you to "show" them a knowledge card, use the \`show_knowledge_card\` tool to select the node and scroll to its card.
+you can toggle fullscreen mode for the graph.
+you can read out a knowledge card using the \`read_knowledge_card\` tool.
+you can read the currently expanded concept using \`read_expanded_concept\`.
+you can focus the camera on a node using the \`focus_node\` tool.
+you can add notes to nodes with \`add_node_note\` and read them with \`get_node_note\`.
+to understand what is currently on the screen, use the \`get_current_view_context\` tool.
+you can switch views with \`show_chat_panel\` and \`show_graph_panel\`.
+you can exit fullscreen with \`exit_fullscreen\`.`,
         tools: [
           selectNodeTool,
           searchAndSelectNodeTool,
@@ -68,12 +77,10 @@ export default function VoiceAgentWidget() {
           unpinNodeTool,
           toggleGraphFullscreenTool,
           getCurrentViewContextTool,
-          scrollToKnowledgeCardsTool,
-          scrollToExplanationTool,
+          showKnowledgeCardTool,
           zoomToFitGraphTool,
           readKnowledgeCardTool,
           readExpandedConceptTool,
-          markNodeLearnedTool,
           showChatPanelTool,
           showGraphPanelTool,
           exitFullscreenTool,
@@ -82,10 +89,10 @@ export default function VoiceAgentWidget() {
 
       const newSession = new RealtimeSession(agent);
 
-      newSession.on('history_added', (item: any) => {
+      newSession.on('history_added', (item: unknown) => {
         try {
           if (item.type === 'message' && (item.role === 'user' || item.role === 'assistant')) {
-            const part = item.content?.find((c: any) => 'text' in c || 'transcript' in c);
+            const part = item.content?.find((c: unknown) => typeof c === 'object' && c !== null && ('text' in c || 'transcript' in c));
             const text = part?.text ?? part?.transcript ?? '';
             setHistory((h) => [...h, { speaker: item.role, text }]);
           }
@@ -120,7 +127,7 @@ export default function VoiceAgentWidget() {
         }
       });
       
-      newSession.on('error', (error: any) => {
+      newSession.on('error', (error: unknown) => {
         console.error("RealtimeSession error:", error);
         if (error?.error) {
             console.error("Underlying error:", error.error);
@@ -135,22 +142,22 @@ export default function VoiceAgentWidget() {
       setIsConnecting(false);
       setVoiceSessionActive(false);
     }
-  }, [session, isConnecting, setVoiceSessionActive]);
+  }, [session, isConnecting, setVoiceSessionActive, isPTT]);
 
-  const handleDisconnect = () => {
+  const handleDisconnect = useCallback(() => {
     setVoiceSessionActive(false);
     setHistory([]);
     setTranscript('');
     session?.close();
-  };
+  }, [session, setVoiceSessionActive]);
   
-  const handleToggleMute = () => {
+  const handleToggleMute = useCallback(() => {
     if(session){
       const newMutedState = !isMuted;
       session.mute(newMutedState);
       setIsMuted(newMutedState);
     }
-  };
+  }, [session, isMuted]);
 
   const handleTogglePTT = () => {
     const newPTT = !isPTT;
@@ -224,7 +231,7 @@ export default function VoiceAgentWidget() {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [isConnected, isConnecting, handleConnect, handleToggleMute, isPTT, isPressing, session]);
+  }, [isConnected, isConnecting, handleConnect, handleDisconnect, handleToggleMute, isPTT, isPressing, session]);
 
   return (
     <>

@@ -5,27 +5,20 @@ import { motion } from 'framer-motion';
 import { useAppStore } from '@/store/useAppStore';
 import { isIntelleaResponse } from '@/store/utils';
 import VisualizationComponent from './VisualizationComponent';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
 import { Button } from '@/components/ui/button';
 import { Maximize } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { useShallow } from 'zustand/react/shallow';
-import { Loader2, Expand } from 'lucide-react';
 
 // Import the new section components
 import ExplanationSection from './ExplanationSection';
 import KnowledgeCardsSection from './KnowledgeCardsSection';
-import VisualizationSection from './VisualizationSection';
 import QuizSection from './QuizSection';
-import { markdownComponents } from './MarkdownComponents';
 
 // Define props for OutputRenderer
 interface OutputRendererProps {
   onNodeExpand: (nodeId: string, nodeLabel: string) => void;
   expandingNodeId: string | null;
-  explanationRef?: React.Ref<HTMLDivElement>;
-  knowledgeCardsRef?: React.Ref<HTMLDivElement>;
+  knowledgeCardsRef?: (instance: HTMLDivElement | null) => void;
+  graphRef?: (instance: HTMLDivElement | null) => void;
 }
 
 
@@ -34,8 +27,8 @@ interface OutputRendererProps {
 const OutputRenderer: React.FC<OutputRendererProps> = ({
   onNodeExpand,
   expandingNodeId,
-  explanationRef,
   knowledgeCardsRef,
+  graphRef,
 }) => {
   // Select the output state to determine rendering mode
   const output = useAppStore((state) => state.output);
@@ -71,10 +64,8 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
 
     return (
       <div className="space-y-6">
-        <div ref={explanationRef as React.RefObject<HTMLDivElement> | undefined}>
-          <ExplanationSection />
-        </div>
-        <div ref={knowledgeCardsRef as React.RefObject<HTMLDivElement> | undefined}>
+        <ExplanationSection />
+        <div ref={knowledgeCardsRef}>
           <KnowledgeCardsSection />
         </div>
 
@@ -83,6 +74,7 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
           variants={graphContainerVariants}
           animate={isGraphFullscreen ? 'hidden' : 'visible'}
           initial={false} // Avoid initial animation unless isGraphFullscreen starts true
+          ref={graphRef}
         >
           {output.visualizationData && (
             <section aria-labelledby="visualization-heading">

@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { X, Map } from 'lucide-react';
-import { useAppStore, NodeObject, LinkObject, GraphData } from '@/store/useAppStore';
+import { useAppStore, GraphData } from '@/store/useAppStore';
 import VisualizationComponent from './VisualizationComponent';
 import { Button } from '@/components/ui/button';
 import { ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
@@ -130,16 +130,15 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         const updateCameraState = () => {
             if (!graphRef.current) return;
             const cam = graphRef.current.camera();
-            const controls = graphRef.current.controls() as any;
+            // const controls = graphRef.current.controls();
             
             // Calculate zoom based on camera distance from origin
             const distance = Math.sqrt(cam.position.x ** 2 + cam.position.y ** 2 + cam.position.z ** 2);
-            const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
+            // const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
             
             if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('FullscreenGraphContainer: Camera state updated', {
                 position: cam.position,
-                distance,
-                zoom
+                distance
             });
             
             setCameraState({ 
@@ -152,7 +151,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         updateCameraState();
         
         // Set up event listeners for camera changes
-        const controls = graphRef.current.controls() as any;
+        const controls = graphRef.current.controls() as unknown;
         if (controls && controls.addEventListener) {
             controls.addEventListener('change', updateCameraState);
             return () => controls.removeEventListener('change', updateCameraState);
@@ -161,7 +160,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         // Fallback: periodic updates
         const interval = setInterval(updateCameraState, 100);
         return () => clearInterval(interval);
-    }, [graphRef.current, vizData]);
+    }, [vizData]);
 
     const variants = {
         hidden: { opacity: 0, scale: 0.95, pointerEvents: 'none' as const },

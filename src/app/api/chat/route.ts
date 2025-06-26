@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       type: 'message',
       role: m.role,
       content: m.content,
-    } as any;
+    } as AgentInputItem;
   });
 
   try {

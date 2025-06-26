@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { useAppStore, NodeObject, GraphData } from '@/store/useAppStore';
+import { useAppStore, NodeObject } from '@/store/useAppStore';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 

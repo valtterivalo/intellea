@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useCallback, useMemo } from 'react';
+import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';
-import { isIntelleaResponse } from '@/store/utils';
-import { useShallow } from 'zustand/react/shallow';
 import { motion } from 'framer-motion';
 import { Separator } from "@/components/ui/separator";
 import KnowledgeCard from './KnowledgeCard';
 import { CollapsedKnowledgeCard } from './CollapsedKnowledgeCard';
-import type { GraphData, NodeObject, LinkObject } from '@/store/useAppStore';
+import type { NodeObject, LinkObject } from '@/store/useAppStore';
 
 
 const KnowledgeCardsSection: React.FC = () => {
+    const cardRefs = useRef<Map<string, HTMLDivElement | null>>(new Map());
+
     // Get raw output first to debug
     const rawOutput = useAppStore(state => state.output);
     
@@ -41,6 +41,8 @@ const KnowledgeCardsSection: React.FC = () => {
     
     const activeClickedNodeId = useAppStore(state => state.activeClickedNodeId);
     const setActiveFocusPath = useAppStore(state => state.setActiveFocusPath);
+    const scrollToNodeId = useAppStore(state => state.scrollToNodeId);
+    const setScrollToNodeId = useAppStore(state => state.setScrollToNodeId);
 
     // Debug the actual values we're getting from selectors
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("DEBUG KnowledgeCardsSection - After selectors:", {
@@ -52,6 +54,17 @@ const KnowledgeCardsSection: React.FC = () => {
     const handleFocus = useCallback((nodeId: string) => {
         setActiveFocusPath(nodeId, visualizationData);
     }, [setActiveFocusPath, visualizationData]);
+
+    useEffect(() => {
+        if (scrollToNodeId) {
+            const element = cardRefs.current.get(scrollToNodeId);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+            // Reset the trigger after scrolling
+            setScrollToNodeId(null);
+        }
+    }, [scrollToNodeId, setScrollToNodeId]);
 
     // --- Refactored Memoization Logic ---
     const {
@@ -73,11 +86,11 @@ const KnowledgeCardsSection: React.FC = () => {
 
         const currentFocusActive = activeClickedNodeId !== null && visualizationData !== null && cardsMap.has(activeClickedNodeId);
         
-        let levels: KnowledgeCardType[][] = [];
+        const levels: KnowledgeCardType[][] = [];
         let focused: KnowledgeCardType | undefined;
-        let children: KnowledgeCardType[] = [];
-        let others: KnowledgeCardType[] = [];
-        let allFocusPathIds = new Set<string>(); // IDs in focus path (ancestors, focused, children)
+        const children: KnowledgeCardType[] = [];
+        const others: KnowledgeCardType[] = [];
+        const allFocusPathIds = new Set<string>(); // IDs in focus path (ancestors, focused, children)
 
         if (currentFocusActive) {
             focused = cardsMap.get(activeClickedNodeId)!; // We know it exists from currentFocusActive check
@@ -229,6 +242,10 @@ const KnowledgeCardsSection: React.FC = () => {
                 />
             );
 
+            const setRef = (el: HTMLDivElement | null) => {
+                cardRefs.current.set(card.nodeId, el);
+            };
+
             if (useMotionDiv) {
                  return (
                     <motion.div
@@ -237,6 +254,7 @@ const KnowledgeCardsSection: React.FC = () => {
                         initial={{ opacity: 0, y: layoutDirection === 'vertical' ? 10 : 0, x: layoutDirection === 'horizontal' ? 10 : 0 }}
                         animate={{ opacity: 1, y: 0, x: 0, transition: { delay: index * 0.03, duration: 0.2 } }}
                         className={baseClass}
+                        ref={setRef}
                     >
                          {cardElement}
                     </motion.div>
@@ -246,6 +264,7 @@ const KnowledgeCardsSection: React.FC = () => {
                     <div
                         key={card.nodeId}
                         className={baseClass}
+                        ref={setRef}
                     >
                         {cardElement}
                     </div>

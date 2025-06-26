@@ -1,7 +1,7 @@
 import { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeClusters } from '@/lib/graphCluster';
-import type { AppState, IntelleaResponse, NodeObject, SessionSummary, ExpansionResponse } from './useAppStore';
+import type { AppState, IntelleaResponse, NodeObject, SessionSummary } from './useAppStore';
 
 export interface SessionSlice {
   sessionsList: SessionSummary[] | null;
@@ -20,7 +20,7 @@ export interface SessionSlice {
   resetActiveSessionState: () => void;
 }
 
-export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = (set, get, api) => ({
+export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = (set, get) => ({
   sessionsList: null,
   isSessionListLoading: false,
   currentSessionId: null,
@@ -29,7 +29,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
   isSavingSession: false,
 
   fetchSessions: async (supabase, userId) => {
-    set({ isSessionListLoading: true, error: null } as any);
+    set({ isSessionListLoading: true, error: null });
     try {
       const { data, error } = await supabase
         .from('sessions')
@@ -39,9 +39,10 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
 
       if (error) throw error;
       set({ sessionsList: data as SessionSummary[], isSessionListLoading: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching sessions:', error);
-      set({ error: `Failed to fetch sessions: ${error.message}`, isSessionListLoading: false } as any);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: `Failed to fetch sessions: ${errorMessage}`, isSessionListLoading: false });
     }
   },
 
@@ -52,7 +53,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       activeFocusPathIds: null,
       focusedNodeId: null,
       activeClickedNodeId: null,
-    } as any);
+    });
     try {
       const { data: loadedData, error } = await supabase
         .from('sessions')
@@ -63,7 +64,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       if (error) throw error;
       if (!loadedData) throw new Error('Session not found.');
 
-      const sessionData = loadedData.session_data as any;
+      const sessionData = loadedData.session_data as unknown;
       if (
         !sessionData ||
         typeof sessionData !== 'object' ||
@@ -92,27 +93,28 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         focusedNodeId: null,
         activeClickedNodeId: null,
         clusters,
-      } as any);
+      });
 
       await get().loadExpandedConcepts(sessionId, supabase);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error loading session:', error);
       get().resetActiveSessionState();
-      set({ error: `Failed to load session: ${error.message}`, currentSessionId: null, currentSessionTitle: null, isSessionLoading: false } as any);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: `Failed to load session: ${errorMessage}`, currentSessionId: null, currentSessionTitle: null, isSessionLoading: false });
     }
   },
 
   createSession: async (supabase, userId, initialPrompt) => {
     if (!initialPrompt?.trim()) {
-      set({ error: 'Cannot create session: Initial topic/prompt is required.' } as any);
+      set({ error: 'Cannot create session: Initial topic/prompt is required.' });
       return null;
     }
     const currentStatus = get().subscriptionStatus;
     if (currentStatus !== 'active') {
-      set({ error: 'An active subscription is required to create new sessions.' } as any);
+      set({ error: 'An active subscription is required to create new sessions.' });
       return null;
     }
-    set({ isSessionLoading: true, isLoading: true, error: null } as any);
+    set({ isSessionLoading: true, isLoading: true, error: null });
     let newSessionId: string | null = null;
     let sessionTitle: string = 'Untitled Session';
     try {
@@ -155,16 +157,17 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         activeClickedNodeId: null,
         clusters,
         error: null,
-      } as any);
+      });
       await get().fetchSessions(supabase, userId);
       return newSessionId;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error during session creation process:', error);
       if (newSessionId) {
         await supabase.from('sessions').delete().eq('id', newSessionId);
       }
       get().resetActiveSessionState();
-      set({ error: `Failed to create session: ${error.message}`, isSessionLoading: false, isLoading: false } as any);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: `Failed to create session: ${errorMessage}`, isSessionLoading: false, isLoading: false });
       return null;
     }
   },
@@ -179,7 +182,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       console.warn('Attempted to save session without an active subscription.');
     }
 
-    set({ isSavingSession: true, error: null } as any);
+    set({ isSavingSession: true, error: null });
     try {
       const { error } = await supabase
         .from('sessions')
@@ -192,27 +195,29 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         .eq('id', currentSessionId);
       if (error) throw error;
       set({ isSavingSession: false });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error saving session:', error);
-      set({ error: `Failed to save session: ${error.message}`, isSavingSession: false } as any);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: `Failed to save session: ${errorMessage}`, isSavingSession: false });
     }
   },
 
   deleteSession: async (sessionId, supabase) => {
-    set({ isSessionListLoading: true } as any);
+    set({ isSessionListLoading: true });
     try {
       const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
       if (error) throw error;
       if (get().currentSessionId === sessionId) {
         get().resetActiveSessionState();
       }
-      set((state: any) => ({
-        sessionsList: state.sessionsList?.filter((s: any) => s.id !== sessionId) ?? null,
+      set((state) => ({
+        sessionsList: state.sessionsList?.filter((s) => s.id !== sessionId) ?? null,
         isSessionListLoading: false,
       }));
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting session:', error);
-      set({ error: `Failed to delete session: ${error.message}`, isSessionListLoading: false } as any);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: `Failed to delete session: ${errorMessage}`, isSessionListLoading: false });
     }
   },
 
@@ -235,6 +240,6 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       expandedConceptCache: new Map(),
       clusters: {},
       visitedNodeIds: [],
-    } as any),
+    }),
 });
 

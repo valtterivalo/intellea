@@ -112,4 +112,5 @@ export type Database = {
   }
 }
 
-type PublicSchema = Database[Extract<keyof Database, "public">]
+// PublicSchema available for future use
+// type PublicSchema = Database[Extract<keyof Database, "public">]

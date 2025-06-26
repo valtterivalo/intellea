@@ -96,10 +96,10 @@ export async function POST(request: Request, { params }: { params: Params }) {
       }
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(`Unexpected error in expanded concepts lookup:`, error);
     return NextResponse.json({ 
-      error: `An unexpected error occurred: ${error.message || 'Unknown error'}` 
+      error: `An unexpected error occurred: ${error instanceof Error ? error.message : 'Unknown error'}` 
     }, { status: 500 });
   }
 } 

@@ -63,6 +63,41 @@ export const searchAndSelectNodeTool = tool({
   }
 });
 
+export const showKnowledgeCardTool = tool({
+  name: 'show_knowledge_card',
+  description: 'Selects a node by its ID or label and scrolls the view to its corresponding knowledge card.',
+  parameters: z.object({
+    nodeId: z.string().optional().nullable().describe("The ID of the node to show."),
+    nodeLabel: z.string().optional().nullable().describe("The label of the node to show. Use this if you don't know the ID."),
+  }),
+  execute: async ({ nodeId, nodeLabel }) => {
+    const { isVoiceSessionActive, setSelectedNodeId, setActiveFocusPath, setScrollToNodeId, output } = useAppStore.getState();
+    if (!isVoiceSessionActive) return "Cannot execute tool: voice session is not active.";
+    const vizData = isIntelleaResponse(output) ? output.visualizationData : null;
+
+    if (!vizData) {
+      return "The knowledge graph is not visible, so I can't show a card.";
+    }
+
+    let targetNodeId = nodeId;
+    if (!targetNodeId && nodeLabel) {
+      const foundNode = vizData.nodes.find(n => n.label?.toLowerCase() === nodeLabel.toLowerCase());
+      if (foundNode) {
+        targetNodeId = foundNode.id;
+      }
+    }
+
+    if (targetNodeId) {
+      setSelectedNodeId(targetNodeId);
+      setActiveFocusPath(targetNodeId, vizData);
+      setScrollToNodeId(targetNodeId);
+      return `Showing the knowledge card for node ${targetNodeId}.`;
+    }
+
+    return `I could not find a node with ID "${nodeId}" or label "${nodeLabel}".`;
+  },
+});
+
 export const focusNodeTool = tool({
   name: 'focus_node',
   description: 'Focuses the camera on a node by ID or label without selecting it.',
@@ -377,6 +412,7 @@ export const getNodeNoteTool = tool({
     }
 });
 
+/*
 export const markNodeLearnedTool = tool({
     name: 'mark_node_learned',
     description: 'Marks a node in the knowledge graph as learned.',
@@ -390,6 +426,7 @@ export const markNodeLearnedTool = tool({
         return `Node ${nodeId} marked as learned.`;
     }
 });
+*/
 
 export const pinNodeTool = tool({
     name: 'pin_node',

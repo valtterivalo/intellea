@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import type { IntelleaResponse } from '@/store/useAppStore';
+// import type { IntelleaResponse } from '@/store/useAppStore'; // Available for future use
 
 interface Params {
   sessionId: string;
@@ -81,7 +81,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
   let payload;
   try {
     payload = await request.json();
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Invalid JSON payload' }, { status: 400 });
   }
 
@@ -110,7 +110,7 @@ export async function PUT(request: Request, { params }: { params: Params }) {
     const { data, error: updateError } = await supabase
       .from('sessions')
       .update({
-        session_data: session_data as any, // Cast to any to bypass strict type check
+        session_data: session_data as unknown, // Use unknown for better type safety
         title: title,
         last_prompt: last_prompt,
         // last_updated_at is handled by trigger

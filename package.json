@@ -58,6 +58,8 @@
     "@types/react-dom": "^19",
     "@types/three": "^0.175.0",
     "cypress": "^13.6.4",
+    "eslint": "^9.29.0",
+    "eslint-config-next": "15.3.4",
     "ioredis-mock": "^8.9.0",
     "jsdom": "^24.0.0",
     "knip": "^5.61.2",

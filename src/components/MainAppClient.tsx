@@ -1,12 +1,12 @@
 'use client'; // Mark as a Client Component
 
 import React, { useEffect, useState } from 'react';
-import { useAppStore, IntelleaResponse, NodeObject, LinkObject, SessionSummary, GraphData, KnowledgeCard } from '@/store/useAppStore';
+import { useAppStore, IntelleaResponse, SessionSummary } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, RefreshCcw, LogOut, PanelLeft, Plus, Trash2, Save, AlertCircle, Sparkles, CreditCard, Info } from "lucide-react";
+import { Loader2, LogOut, PanelLeft, Plus, Trash2, AlertCircle, Sparkles, CreditCard, Info } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -16,7 +16,6 @@ import {
   SheetTitle,
   SheetTrigger,
   SheetFooter,
-  SheetClose,
 } from "@/components/ui/sheet";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,7 +28,7 @@ import ExpandedConceptCard from '@/components/ExpandedConceptCard';
 import OnboardingModal from '@/components/OnboardingModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
-import { computeProgress, suggestNextNode } from '@/lib/progress';
+// import { computeProgress, suggestNextNode } from '@/lib/progress'; // Available for future use
 import SearchNodes from '@/components/SearchNodes';
 import {
   AlertDialog,
@@ -68,7 +67,7 @@ export default function MainAppClient() {
     error,
     subscriptionStatus,
     isSubscriptionLoading,
-    completedNodeIds,
+    // completedNodeIds, // Available for future use
     forceExpandRequest,
   } = useAppStore(useShallow((state) => ({
     prompt: state.prompt,
@@ -84,21 +83,21 @@ export default function MainAppClient() {
     error: state.error,
     subscriptionStatus: state.subscriptionStatus,
     isSubscriptionLoading: state.isSubscriptionLoading,
-    completedNodeIds: state.completedNodeIds,
+    // completedNodeIds: state.completedNodeIds, // Available for future use
     forceExpandRequest: state.forceExpandRequest,
   })));
 
-  const knowledgeCards =
-    output && typeof output === 'object' && 'knowledgeCards' in output && Array.isArray((output as any).knowledgeCards)
-      ? (output as IntelleaResponse).knowledgeCards || []
-      : [];
-  const visualizationData =
-    output && typeof output === 'object' && 'visualizationData' in output
-      ? (output as IntelleaResponse).visualizationData
-      : null;
+  // const knowledgeCards =
+  //   output && typeof output === 'object' && 'knowledgeCards' in output && Array.isArray((output as IntelleaResponse).knowledgeCards)
+  //     ? (output as IntelleaResponse).knowledgeCards || []
+  //     : [];
+  // const visualizationData =
+  //   output && typeof output === 'object' && 'visualizationData' in output
+  //     ? (output as IntelleaResponse).visualizationData
+  //     : null;
 
-  const progressPercent = computeProgress(knowledgeCards.length, completedNodeIds);
-  const suggestedNode = suggestNextNode(visualizationData, completedNodeIds);
+  // const progressPercent = computeProgress(knowledgeCards.length, completedNodeIds);
+  // const suggestedNode = suggestNextNode(visualizationData, completedNodeIds);
 
   const {
     setPrompt,
@@ -117,6 +116,10 @@ export default function MainAppClient() {
     fetchSubscriptionStatus,
     setForceExpandRequest,
     removeUnpinnedChildren,
+    setKnowledgeCardsRef,
+    // scrollToKnowledgeCards,
+    setGraphRef,
+    // scrollToGraph,
   } = useAppStore.getState();
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -124,13 +127,6 @@ export default function MainAppClient() {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const explanationRef = React.useRef<HTMLDivElement | null>(null);
-  const knowledgeCardsRef = React.useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    useAppStore.getState().setExplanationRef(explanationRef.current);
-    useAppStore.getState().setKnowledgeCardsRef(knowledgeCardsRef.current);
-  }, []);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -145,7 +141,7 @@ export default function MainAppClient() {
       return;
     }
     const currentPrompt = prompt;
-    let activeSessionId = useAppStore.getState().currentSessionId;
+    const activeSessionId = useAppStore.getState().currentSessionId;
 
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Submit triggered. Prompt: "${currentPrompt}", Current Session ID: ${activeSessionId}`);
     setLoading(true);
@@ -562,6 +558,7 @@ export default function MainAppClient() {
         </Alert>
       )}
 
+      {/*
       {knowledgeCards.length > 0 && (
         <div className="px-4 w-full">
           <div className="h-2 rounded bg-muted overflow-hidden">
@@ -573,6 +570,7 @@ export default function MainAppClient() {
           </p>
         </div>
       )}
+      */}
 
       <main className="flex-1 overflow-hidden flex flex-col">
         <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full">
@@ -586,8 +584,8 @@ export default function MainAppClient() {
                 <OutputRenderer
                   onNodeExpand={handleNodeExpand}
                   expandingNodeId={localExpandingNodeId}
-                  explanationRef={explanationRef}
-                  knowledgeCardsRef={knowledgeCardsRef}
+                  knowledgeCardsRef={setKnowledgeCardsRef}
+                  graphRef={setGraphRef}
                 />
               </CardContent>
             </Card>
@@ -653,7 +651,7 @@ export default function MainAppClient() {
             <AlertDialogHeader>
               <AlertDialogTitle>Are you sure you want to re-expand this node?</AlertDialogTitle>
               <AlertDialogDescription>
-                This will remove all direct child nodes that you haven't pinned and generate new ones.
+                This will remove all direct child nodes that you haven&apos;t pinned and generate new ones.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

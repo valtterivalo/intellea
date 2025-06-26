@@ -47,8 +47,9 @@ export async function POST(req: NextRequest) {
         Connection: 'keep-alive'
       }
     })
-  } catch (err: any) {
+  } catch (err: unknown) {
     // Return an error response if needed
-    return new Response(JSON.stringify({ error: err.message }), { status: 500 })
+    const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+    return new Response(JSON.stringify({ error: errorMessage }), { status: 500 })
   }
 }

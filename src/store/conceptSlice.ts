@@ -9,7 +9,6 @@ interface ExpandedConceptData {
 }
 
 import type { StateCreator } from 'zustand';
-import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppState } from './useAppStore';
 
 export interface ConceptSlice {
@@ -17,20 +16,20 @@ export interface ConceptSlice {
   isExpandingConcept: boolean;
   expandedConceptCache: Map<string, { data: ExpandedConceptData; graphHash: string }>;
 
-  expandConcept: (nodeId: string, nodeLabel: string, supabase: SupabaseClient) => Promise<void>;
+  expandConcept: (nodeId: string, nodeLabel: string) => Promise<void>;
   clearExpandedConcept: () => void;
-  loadExpandedConcepts: (sessionId: string, supabase: SupabaseClient) => Promise<void>;
+  loadExpandedConcepts: (sessionId: string) => Promise<void>;
 }
 
-export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = (set, get, api) => ({
+export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = (set, get) => ({
   expandedConceptData: null,
   isExpandingConcept: false,
   expandedConceptCache: new Map(),
 
-  expandConcept: async (nodeId: string, nodeLabel: string, supabase: SupabaseClient) => {
+  expandConcept: async (nodeId: string, nodeLabel: string) => {
     const state = get();
 
-    set({ isExpandingConcept: true, error: null } as any);
+    set({ isExpandingConcept: true, error: null });
 
     try {
       if (state.subscriptionStatus !== 'active' && state.subscriptionStatus !== 'trialing') {
@@ -38,13 +37,13 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
       }
 
       const output = state.output;
-      let sanitizedVizData = null as any;
+      let sanitizedVizData: unknown = null;
       let graphHash = '';
 
       if (typeof output === 'object' && output && 'visualizationData' in output) {
-        const nodeIds = output.visualizationData.nodes.map((n: any) => n.id).sort().join(',');
+        const nodeIds = output.visualizationData.nodes.map((n: {id: string}) => n.id).sort().join(',');
         const linkPairs = output.visualizationData.links
-          .map((l: any) => {
+          .map((l: {source: unknown; target: unknown}) => {
             const source = typeof l.source === 'object' && l.source ? l.source.id : l.source;
             const target = typeof l.target === 'object' && l.target ? l.target.id : l.target;
             return `${source}->${target}`;
@@ -58,7 +57,7 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           const hashBuffer = await crypto.subtle.digest('SHA-256', data);
           const hashArray = Array.from(new Uint8Array(hashBuffer));
           graphHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
-        } catch (error) {
+        } catch {
           graphHash = String(fullGraphString.length) + '_' +
             fullGraphString.split('').reduce((h, c) => ((h << 5) - h) + c.charCodeAt(0), 0).toString(36);
         }
@@ -73,12 +72,12 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           return;
         }
 
-        const sanitizedNodes = output.visualizationData.nodes.map((node: any) => ({
+        const sanitizedNodes = output.visualizationData.nodes.map((node: {id: string; label: string; isRoot?: boolean}) => ({
           id: node.id,
           label: node.label,
           isRoot: node.isRoot || false,
         }));
-        const sanitizedLinks = output.visualizationData.links.map((link: any) => {
+        const sanitizedLinks = output.visualizationData.links.map((link: {source: unknown; target: unknown}) => {
           const source = typeof link.source === 'object' && link.source ? link.source.id : link.source;
           const target = typeof link.target === 'object' && link.target ? link.target.id : link.target;
           return { source, target };
@@ -164,15 +163,16 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
       } else {
         set({ expandedConceptData: expandedData, isExpandingConcept: false });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error expanding concept:', error);
-      set({ error: `Failed to expand concept: ${error.message}`, isExpandingConcept: false } as any);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      set({ error: `Failed to expand concept: ${errorMessage}`, isExpandingConcept: false });
     }
   },
 
   clearExpandedConcept: () => set({ expandedConceptData: null }),
 
-  loadExpandedConcepts: async (sessionId: string, supabase: SupabaseClient) => {
+  loadExpandedConcepts: async (sessionId: string) => {
     try {
       const response = await fetch(`/api/sessions/${sessionId}/expanded-concepts`, {
         method: 'GET',
@@ -192,7 +192,7 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
       }
 
       const newCache = new Map<string, { data: ExpandedConceptData; graphHash: string }>();
-      responseData.expandedConcepts.forEach((concept: any) => {
+      responseData.expandedConcepts.forEach((concept: {nodeId: string; title: string; content: string; relatedConcepts: unknown; graphHash: string}) => {
         if (!concept.nodeId || !concept.title || !concept.content || !concept.relatedConcepts || !concept.graphHash) {
           return;
         }
