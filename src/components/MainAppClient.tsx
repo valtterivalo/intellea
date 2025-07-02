@@ -41,6 +41,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import VoiceAgentWidget from '@/components/VoiceAgentWidget';
+import type { NodeObject } from 'react-force-graph-2d';
 
 // Ensure Stripe publishable key is set
 if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
