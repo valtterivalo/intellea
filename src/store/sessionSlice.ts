@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 import { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeClusters } from '@/lib/graphCluster';
@@ -68,21 +70,21 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       if (
         !sessionData ||
         typeof sessionData !== 'object' ||
-        !sessionData.explanationMarkdown ||
-        !sessionData.knowledgeCards ||
-        !Array.isArray(sessionData.knowledgeCards) ||
-        !sessionData.visualizationData ||
-        typeof sessionData.visualizationData !== 'object' ||
-        !sessionData.visualizationData.nodes ||
-        !Array.isArray(sessionData.visualizationData.nodes) ||
-        !sessionData.visualizationData.links ||
-        !Array.isArray(sessionData.visualizationData.links)
+        !(sessionData as any).explanationMarkdown ||
+        !(sessionData as any).knowledgeCards ||
+        !Array.isArray((sessionData as any).knowledgeCards) ||
+        !(sessionData as any).visualizationData ||
+        typeof (sessionData as any).visualizationData !== 'object' ||
+        !(sessionData as any).visualizationData.nodes ||
+        !Array.isArray((sessionData as any).visualizationData.nodes) ||
+        !(sessionData as any).visualizationData.links ||
+        !Array.isArray((sessionData as any).visualizationData.links)
       ) {
         console.error('Loaded session data has invalid structure:', sessionData);
         throw new Error('Loaded session data has an invalid or outdated structure.');
       }
 
-      const clusters = computeClusters(sessionData.visualizationData);
+      const clusters = computeClusters((sessionData as any).visualizationData);
       set({
         output: sessionData as IntelleaResponse,
         activePrompt: loadedData.last_prompt,
@@ -95,7 +97,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         clusters,
       });
 
-      await get().loadExpandedConcepts(sessionId, supabase);
+      await get().loadExpandedConcepts(sessionId);
     } catch (error: unknown) {
       console.error('Error loading session:', error);
       get().resetActiveSessionState();

@@ -4,13 +4,14 @@ import { SupabaseClient } from '@supabase/supabase-js';
 export interface BillingSlice {
   subscriptionStatus: 'active' | 'inactive' | 'trialing' | null;
   isSubscriptionLoading: boolean;
-  error?: string;
+  error: string | null;
   fetchSubscriptionStatus: (supabase: SupabaseClient, userId: string) => Promise<void>;
 }
 
 export const createBillingSlice: StateCreator<BillingSlice, [], [], BillingSlice> = (set) => ({
   subscriptionStatus: null,
   isSubscriptionLoading: false,
+  error: null,
 
   fetchSubscriptionStatus: async (supabase, userId) => {
     set({ isSubscriptionLoading: true });
