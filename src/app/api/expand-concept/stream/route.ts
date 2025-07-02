@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';
-import { run } from '@openai/agents';
+import { Runner } from '@openai/agents';
 import { ConceptExpanderAgent } from '@/lib/agents/conceptExpand';
 import type { ExpandedConceptData } from '@/types/intellea';
 import { verifyUserAccess } from '@/lib/api-helpers';
@@ -107,14 +107,33 @@ export async function POST(req: NextRequest) {
             knowledgeCards
           });
 
-          const result = await run(ConceptExpanderAgent, agentInput, { stream: true });
+          const runner = new Runner({
+            model: 'gpt-4.1-mini'
+          });
 
-          // Stream the text output
-          const textStream = result.toTextStream();
+          const result = await runner.run(ConceptExpanderAgent, agentInput, { stream: true });
+
+          // Stream the text output with Node.js compatibility
+          const textStream = result.toTextStream({ compatibleWithNodeStreams: true });
 
           for await (const chunk of textStream) {
+            // Debug: Log what we're actually getting
+            console.log('Streaming chunk:', typeof chunk, chunk);
+            
+            // Convert Buffer to string if needed
+            let chunkText: string;
+            if (Buffer.isBuffer(chunk)) {
+              chunkText = chunk.toString('utf8');
+            } else if (typeof chunk === 'string') {
+              chunkText = chunk;
+            } else {
+              chunkText = String(chunk);
+            }
+            
+            console.log('Decoded chunk text:', chunkText);
+            
             controller.enqueue(
-              new TextEncoder().encode(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`)
+              new TextEncoder().encode(`data: ${JSON.stringify({ type: 'chunk', content: chunkText })}\n\n`)
             );
           }
 

@@ -305,9 +305,27 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
                 const eventData = JSON.parse(line.slice(6));
                 
                 if (eventData.type === 'chunk') {
+                  // Debug: Log what we're receiving
+                  console.log('Client received chunk:', typeof eventData.content, eventData.content);
+                  
+                  // Try to extract meaningful content from JSON streaming
+                  const rawChunk = eventData.content;
+                  let meaningfulContent = rawChunk;
+                  
+                  // If this looks like JSON content, try to extract the text parts
+                  if (rawChunk.includes('"content"') || rawChunk.includes('##') || rawChunk.includes('\\n')) {
+                    // Remove JSON syntax and extract readable content
+                    meaningfulContent = rawChunk
+                      .replace(/^\s*{\s*"title":\s*"[^"]*",?\s*"content":\s*"/, '') // Remove JSON prefix
+                      .replace(/",?\s*"relatedConcepts".*$/, '') // Remove JSON suffix
+                      .replace(/\\n/g, '\n') // Convert escaped newlines
+                      .replace(/\\"/g, '"') // Convert escaped quotes
+                      .replace(/^"|"$/g, ''); // Remove surrounding quotes
+                  }
+                  
                   // Update streaming content
                   set(state => ({ 
-                    streamingContent: state.streamingContent + eventData.content 
+                    streamingContent: state.streamingContent + meaningfulContent 
                   }));
                 } else if (eventData.type === 'complete') {
                   // Final structured data received
