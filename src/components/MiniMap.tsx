@@ -38,7 +38,7 @@ interface MiniMapProps {
 }
 
 const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims, onCenter, visible }) => {
-  const fgRef = useRef<ForceGraph2DMethods | null>(null); // Type-safe reference
+  const fgRef = useRef<any>(null); // Use any for compatibility with react-force-graph-2d
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewRect, setViewRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [isReady, setIsReady] = useState(false);
