@@ -10,19 +10,7 @@ const ForceGraph2D = dynamic(() => import('react-force-graph-2d'), {
   loading: () => <div className="w-full h-full flex items-center justify-center text-xs">Loading...</div>
 });
 
-// Define the methods interface for the 2D graph based on documentation
-interface ForceGraph2DMethods {
-  zoomToFit: (duration?: number, padding?: number) => void;
-  graph2ScreenCoords: (x: number, y: number) => { x: number; y: number };
-  screen2GraphCoords: (x: number, y: number) => { x: number; y: number };
-  zoom: (k?: number, duration?: number) => number | void;
-  centerAt: (x?: number, y?: number, duration?: number) => void;
-  d3Force: (forceName: string, force?: unknown) => unknown;
-  d3ReheatSimulation: () => void;
-  pauseAnimation: () => void;
-  resumeAnimation: () => void;
-  getGraphBbox: () => { x: [number, number]; y: [number, number] };
-}
+
 
 interface CameraState {
   position: { x: number; y: number; z: number };
@@ -38,7 +26,8 @@ interface MiniMapProps {
 }
 
 const MiniMap: React.FC<MiniMapProps> = ({ graphData, cameraState, mainGraphDims, onCenter, visible }) => {
-  const fgRef = useRef<any>(null); // Use any for compatibility with react-force-graph-2d
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fgRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [viewRect, setViewRect] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
   const [isReady, setIsReady] = useState(false);

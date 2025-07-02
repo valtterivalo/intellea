@@ -20,7 +20,7 @@ export async function getCachedExpandedConcept(sessionId: string, graphHash: str
   const redis = createRedisClient();
   const cacheKey = getCacheKey(sessionId, graphHash);
   const cached = await redis.get(cacheKey);
-  if (!cached) return null;
+  if (!cached || typeof cached !== 'string') return null;
   try {
     return JSON.parse(cached);
   } catch {
@@ -31,24 +31,24 @@ export async function getCachedExpandedConcept(sessionId: string, graphHash: str
 export async function setCachedExpandedConcept(sessionId: string, graphHash: string, data: unknown, ttlSeconds = 60 * 60 * 24) {
   const redis = createRedisClient();
   const cacheKey = getCacheKey(sessionId, graphHash);
-  await redis.set(cacheKey, JSON.stringify(data), 'EX', ttlSeconds);
+  await redis.set(cacheKey, JSON.stringify(data), { ex: ttlSeconds });
 }
 
 export async function acquireLock(sessionId: string, graphHash: string, ttlSeconds = 300): Promise<boolean> {
   const redis = createRedisClient();
   const lockKey = getLockKey(sessionId, graphHash);
   try {
-    // @ts-expect-error - ioredis typings don't include the positional NX/EX combo but runtime supports it.
-    const result = await redis.set(lockKey, '1', 'NX', 'EX', ttlSeconds);
+    // Upstash Redis API
+    const result = await redis.set(lockKey, '1', { nx: true, ex: ttlSeconds });
     return !!result;
   } catch {
     // Fallback for mocks lacking full option support
+    const exists = await redis.exists(lockKey);
+    if (exists) return false;
+    await redis.set(lockKey, '1');
+    await redis.expire(lockKey, ttlSeconds);
+    return true;
   }
-  const exists = await redis.exists(lockKey);
-  if (exists) return false;
-  await redis.set(lockKey, '1');
-  await redis.expire(lockKey, ttlSeconds);
-  return true;
 }
 
 export async function getLockTTL(sessionId: string, graphHash: string): Promise<number> {

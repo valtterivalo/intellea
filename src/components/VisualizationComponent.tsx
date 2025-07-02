@@ -34,7 +34,7 @@ const themeColors = {
 
 // Load the 3D graph component synchronously when running under tests to simplify mocking.
 // In normal runtime we keep using Next.js dynamic import to avoid SSR issues.
-const ForceGraph3DComponent: React.ComponentType<unknown> = dynamic(
+const ForceGraph3DComponent = dynamic(
   () => import('react-force-graph-3d').then((mod) => mod.default),
   {
     ssr: false,
@@ -42,7 +42,8 @@ const ForceGraph3DComponent: React.ComponentType<unknown> = dynamic(
       <p className="text-muted-foreground italic text-sm p-4">Loading 3D Graph...</p>
     ),
   }
-);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) as any;
 
 // Type assertion helper (not memoized)
 const asAppNode = (node: NodeObject): AppGraphNode => node as AppGraphNode;
@@ -68,12 +69,12 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     activeFocusPathIds,
     selectedNodeId,
     pinnedNodes,
-    // collapseNode, // Available for future use
+    collapseNode,
     // expandNodeInStore, // Available for future use
     // setSelectedNodeId, // Available for future use
     // setActiveFocusPath, // Available for future use
-    // pinNode, // Available for future use
-    // unpinNode, // Available for future use
+    pinNode,
+    unpinNode,
     // setFocusedNodeId, // Available for future use
     clusters,
     visibleData,

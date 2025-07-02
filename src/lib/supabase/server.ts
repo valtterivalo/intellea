@@ -2,7 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export function createClient() {
-  let cookieStore: ReturnType<typeof cookies> | null = null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let cookieStore: any = null;
   try {
     cookieStore = cookies();
   } catch {
@@ -15,7 +16,7 @@ export function createClient() {
       set() {
         /* noop */
       },
-    } as ReturnType<typeof cookies>;
+    };
   }
 
   return createServerClient(
@@ -24,14 +25,14 @@ export function createClient() {
     {
       cookies: {
         getAll() {
-          return cookieStore!.getAll();
+          return cookieStore.getAll();
         },
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             // only call set if the underlying cookie store supports it
-            if (typeof (cookieStore as { set?: (name: string, value: string, options: CookieOptions) => void }).set === 'function') {
+            if (typeof cookieStore.set === 'function') {
               cookiesToSet.forEach(({ name, value, options }) => {
-                (cookieStore as { set: (name: string, value: string, options: CookieOptions) => void }).set(name, value, options);
+                cookieStore.set(name, value, options);
               });
             }
           } catch {

@@ -91,10 +91,22 @@ you can exit fullscreen with \`exit_fullscreen\`.`,
 
       newSession.on('history_added', (item: unknown) => {
         try {
-          if (item.type === 'message' && (item.role === 'user' || item.role === 'assistant')) {
-            const part = item.content?.find((c: unknown) => typeof c === 'object' && c !== null && ('text' in c || 'transcript' in c));
+          // Type guard to check if item has the expected structure
+          if (
+            typeof item === 'object' && 
+            item !== null && 
+            'type' in item && 
+            'role' in item &&
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (item as any).type === 'message' && 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ((item as any).role === 'user' || (item as any).role === 'assistant')
+          ) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            const typedItem = item as any;
+            const part = typedItem.content?.find((c: unknown) => typeof c === 'object' && c !== null && ('text' in c || 'transcript' in c));
             const text = part?.text ?? part?.transcript ?? '';
-            setHistory((h) => [...h, { speaker: item.role, text }]);
+            setHistory((h) => [...h, { speaker: typedItem.role, text }]);
           }
         } catch (err) {
           console.error('Failed to parse history item', err);
@@ -129,8 +141,9 @@ you can exit fullscreen with \`exit_fullscreen\`.`,
       
       newSession.on('error', (error: unknown) => {
         console.error("RealtimeSession error:", error);
-        if (error?.error) {
-            console.error("Underlying error:", error.error);
+        if (typeof error === 'object' && error !== null && 'error' in error) {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            console.error("Underlying error:", (error as any).error);
         }
       });
 

@@ -2,7 +2,6 @@ import { tool } from '@openai/agents/realtime';
 import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';
 import { isIntelleaResponse } from '@/store/utils';
-import { createClient } from '@/lib/supabase/client';
 import { computeProgress } from '@/lib/progress';
 
 export const selectNodeTool = tool({
@@ -169,8 +168,7 @@ export const expandNodeTool = tool({
     }
 
     try {
-      const supabase = createClient();
-      await expandConcept(targetNodeId, targetNodeLabel, supabase);
+      await expandConcept(targetNodeId, targetNodeLabel);
       return `Expanding concept: ${targetNodeLabel}`;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -266,17 +264,7 @@ export const scrollToKnowledgeCardsTool = tool({
     }
 });
 
-export const scrollToExplanationTool = tool({
-    name: 'scroll_to_explanation',
-    description: 'Smoothly scrolls the application view to the explanation section.',
-    parameters: z.object({}),
-    execute: async () => {
-        const { isVoiceSessionActive, scrollToExplanation } = useAppStore.getState();
-        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
-        scrollToExplanation();
-        return 'Scrolled to the explanation section.';
-    }
-});
+
 
 export const readKnowledgeCardTool = tool({
     name: 'read_knowledge_card',
