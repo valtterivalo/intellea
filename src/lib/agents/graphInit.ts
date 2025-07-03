@@ -39,7 +39,7 @@ const GraphInitOutSchema = z.object({
     explanationMarkdown: z.string().nullable(),
     knowledgeCards: z.array(KnowledgeCardSchema).nullable(),
     visualizationData: GraphDataSchema,
-    quiz: QuizSchema.optional(),
+    quiz: QuizSchema.optional().nullable(),
 }).strict();
 
 const INITIAL_SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generating structured learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object.
