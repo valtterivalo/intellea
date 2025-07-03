@@ -1,6 +1,6 @@
 'use client'; // Mark as a Client Component
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useAppStore, IntelleaResponse, SessionSummary } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
 import Breadcrumbs from '@/components/Breadcrumbs';
@@ -25,6 +25,7 @@ import { useRouter } from 'next/navigation';
 import { formatDistanceToNow } from 'date-fns';
 import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
 import ExpandedConceptCard from '@/components/ExpandedConceptCard';
+import StickyKnowledgeCard from '@/components/StickyKnowledgeCard';
 import OnboardingModal from '@/components/OnboardingModal';
 import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
@@ -70,6 +71,7 @@ export default function MainAppClient() {
     isSubscriptionLoading,
     // completedNodeIds, // Available for future use
     forceExpandRequest,
+    viewMode,
   } = useAppStore(useShallow((state) => ({
     prompt: state.prompt,
     output: state.output,
@@ -86,6 +88,7 @@ export default function MainAppClient() {
     isSubscriptionLoading: state.isSubscriptionLoading,
     // completedNodeIds: state.completedNodeIds, // Available for future use
     forceExpandRequest: state.forceExpandRequest,
+    viewMode: state.viewMode,
   })));
 
   // const knowledgeCards =
@@ -121,6 +124,7 @@ export default function MainAppClient() {
     // scrollToKnowledgeCards,
     setGraphRef,
     // scrollToGraph,
+    setViewMode,
   } = useAppStore.getState();
 
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -128,6 +132,16 @@ export default function MainAppClient() {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [isPortalLoading, setIsPortalLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  
+  // Refs for sticky knowledge card functionality
+  const knowledgeCardsRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Memoized ref callback to prevent infinite re-renders
+  const setKnowledgeCardsRefCallback = useCallback((el: HTMLDivElement | null) => {
+    setKnowledgeCardsRef(el);
+    knowledgeCardsRef.current = el;
+  }, [setKnowledgeCardsRef]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -427,7 +441,7 @@ export default function MainAppClient() {
 
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <header className="flex items-center justify-between p-4 border-b">
+      <header className="flex items-center justify-between p-4 border-b flex-shrink-0">
         <div className="flex items-center gap-4">
           <Sheet open={isSheetOpen} onOpenChange={setIsSheetOpen}>
             <SheetTrigger asChild>
@@ -552,7 +566,7 @@ export default function MainAppClient() {
       </header>
 
       {error && (
-        <Alert variant="destructive" className="m-4 max-w-6xl mx-auto w-full">
+        <Alert variant="destructive" className="m-4 max-w-6xl mx-auto w-full flex-shrink-0">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
@@ -573,34 +587,42 @@ export default function MainAppClient() {
       )}
       */}
 
-      <main className="flex-1 overflow-hidden flex flex-col">
-        <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full">
+      <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full min-h-0">
           {output && typeof output === 'object' ? (
-            <Card className="m-4 flex-1 flex flex-col overflow-hidden">
-              <CardHeader>
+            <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-4">
-                <Breadcrumbs />
-                <OutputRenderer
-                  onNodeExpand={handleNodeExpand}
-                  expandingNodeId={localExpandingNodeId}
-                  knowledgeCardsRef={setKnowledgeCardsRef}
-                  graphRef={setGraphRef}
-                />
+              <CardContent className="flex-1 p-0 min-h-0">
+                <ScrollArea className="h-full w-full" ref={scrollContainerRef}>
+                  <div className="p-4 max-w-full overflow-hidden">
+                    <Breadcrumbs />
+                    <OutputRenderer
+                      onNodeExpand={handleNodeExpand}
+                      expandingNodeId={localExpandingNodeId}
+                      knowledgeCardsRef={setKnowledgeCardsRefCallback}
+                      graphRef={setGraphRef}
+                    />
+                  </div>
+                </ScrollArea>
               </CardContent>
             </Card>
           ) : output && typeof output === 'string' ? (
-            <Card className="m-4 flex-1 flex flex-col overflow-hidden">
-              <CardHeader>
+            <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
               </CardHeader>
-              <CardContent className="flex-1 overflow-y-auto p-4">
-                  <Alert variant="destructive">
-                     <AlertCircle className="h-4 w-4" />
-                     <AlertTitle>Generation Error</AlertTitle>
-                     <AlertDescription>{output}</AlertDescription>
-                   </Alert>
+              <CardContent className="flex-1 p-0 min-h-0">
+                <ScrollArea className="h-full w-full" ref={scrollContainerRef}>
+                  <div className="p-4 max-w-full overflow-hidden">
+                    <Alert variant="destructive">
+                       <AlertCircle className="h-4 w-4" />
+                       <AlertTitle>Generation Error</AlertTitle>
+                       <AlertDescription>{output}</AlertDescription>
+                     </Alert>
+                  </div>
+                </ScrollArea>
               </CardContent>
             </Card>
           ) : (
@@ -661,31 +683,59 @@ export default function MainAppClient() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        
+        <StickyKnowledgeCard 
+          knowledgeCardsRef={knowledgeCardsRef}
+          scrollContainerRef={scrollContainerRef}
+        />
       </main>
 
-      <footer className="p-4 border-t bg-background">
+      <footer className="p-4 border-t bg-background flex-shrink-0">
         <div className="max-w-6xl mx-auto w-full px-4">
-          <div className="flex gap-2">
-            <Textarea
-              placeholder={promptDisabled ? "Activate a subscription or load a session to explore." : "Ask about a topic, concept, or process..."}
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              disabled={promptDisabled || isLoading}
-              className="flex-1 resize-none"
-              rows={1}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (!sendDisabled) handleSubmit();
-                }
-              }}
-            />
-            <Button 
-              onClick={handleSubmit} 
-              disabled={sendDisabled}
-            >
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
-            </Button>
+          <div className="flex items-center gap-4">
+            {/* View Mode Toggle */}
+            <div className="flex gap-1 p-1 bg-muted rounded-lg flex-shrink-0">
+              <Button
+                variant={viewMode === 'graph' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('graph')}
+                className="text-sm"
+              >
+                Knowledge Graph
+              </Button>
+              <Button
+                variant={viewMode === 'chat' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('chat')}
+                className="text-sm"
+              >
+                Chat View
+              </Button>
+            </div>
+            
+            {/* Chat Input */}
+            <div className="flex gap-2 flex-1">
+              <Textarea
+                placeholder={promptDisabled ? "Activate a subscription or load a session to explore." : "Ask about a topic, concept, or process..."}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                disabled={promptDisabled || isLoading}
+                className="flex-1 resize-none"
+                rows={1}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!sendDisabled) handleSubmit();
+                  }
+                }}
+              />
+              <Button 
+                onClick={handleSubmit} 
+                disabled={sendDisabled}
+              >
+                {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send"}
+              </Button>
+            </div>
           </div>
         </div>
       </footer>
