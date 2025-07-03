@@ -104,19 +104,34 @@ const eventHandlers: Record<string, (event: Stripe.Event) => Promise<void>> = {
 // --- Main Webhook Route ---
 
 export async function POST(req: Request) {
-  const body = await req.text();
-  const signature = req.headers.get('stripe-signature');
+  let body: string;
+  let signature: string | null;
+
+  try {
+    // Get the raw body as buffer first, then convert to string
+    const buffer = await req.arrayBuffer();
+    body = Buffer.from(buffer).toString('utf8');
+    signature = req.headers.get('stripe-signature');
+  } catch (err) {
+    console.error('Error reading request body:', err);
+    return NextResponse.json({ error: 'Error reading request body' }, { status: 400 });
+  }
 
   if (!signature) {
     console.error('Webhook Error: Missing stripe signature');
     return NextResponse.json({ error: 'Missing stripe signature' }, { status: 400 });
   }
 
+  if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    console.error('Webhook Error: STRIPE_WEBHOOK_SECRET not configured');
+    return NextResponse.json({ error: 'Webhook secret not configured' }, { status: 500 });
+  }
+
   try {
     const event = stripe.webhooks.constructEvent(
       body,
       signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
+      process.env.STRIPE_WEBHOOK_SECRET
     );
 
     console.log(`Webhook received: ${event.type}, event ID: ${event.id}`);
@@ -124,6 +139,7 @@ export async function POST(req: Request) {
     const handler = eventHandlers[event.type];
 
     if (handler) {
+      console.log(`Processing handler for: ${event.type}`);
       await handler(event);
       console.log(`Successfully processed webhook: ${event.type}`);
     } else {
