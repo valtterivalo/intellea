@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';
+import Stripe from 'stripe';
 
 // Create admin client with service role
 const supabaseAdmin = createClient(
@@ -75,16 +76,13 @@ export async function GET(req: NextRequest) {
       profile,
       stripeCustomer: stripeCustomer && !stripeCustomer.deleted ? {
         id: stripeCustomer.id,
-        email: (stripeCustomer as any).email,
-        created: (stripeCustomer as any).created,
-        metadata: (stripeCustomer as any).metadata,
+        email: (stripeCustomer as Stripe.Customer).email,
+        created: (stripeCustomer as Stripe.Customer).created,
+        metadata: (stripeCustomer as Stripe.Customer).metadata,
       } : null,
       stripeSubscription: stripeSubscription ? {
         id: stripeSubscription.id,
         status: stripeSubscription.status,
-        current_period_start: (stripeSubscription as any).current_period_start,
-        current_period_end: (stripeSubscription as any).current_period_end,
-        cancel_at_period_end: (stripeSubscription as any).cancel_at_period_end,
       } : null,
     });
 

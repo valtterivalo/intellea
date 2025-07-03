@@ -11,7 +11,7 @@ interface Message {
 
 export async function POST(req: NextRequest) {
   // Add subscription verification
-  const { user, error } = await verifyUserAccess();
+  const { error } = await verifyUserAccess();
   if (error) {
     return error;
   }
