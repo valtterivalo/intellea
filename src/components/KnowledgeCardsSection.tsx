@@ -331,7 +331,7 @@ const KnowledgeCardsSection: React.FC = () => {
                             <div key="others" className="w-full flex flex-col items-center gap-2 mt-6 pt-4 border-t">
                                 <p className="text-sm text-muted-foreground mb-2">Other Concepts</p>
                                 <div className="w-full overflow-x-auto pb-4">
-                                    <div className="min-w-fit mx-auto w-max flex flex-row flex-nowrap gap-3 px-2">
+                                    <div className="flex flex-row flex-nowrap gap-3 px-2 w-fit">
                                         {renderCardList(otherCards, false, 'horizontal')}
                                     </div>
                                 </div>

@@ -298,7 +298,27 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
             console.warn(`VisComp: Could not focus on node ${focusedNodeId} - not found.`);
         }
     }
-  }, [focusedNodeId]); 
+  }, [focusedNodeId]);
+
+  // Effect to handle graph resizing when dimensions change
+  useEffect(() => {
+    if (graphRef.current && dimensions.width > 0 && dimensions.height > 0) {
+      // Use the library's built-in resize methods
+      const graph = graphRef.current as any; // Type assertion for method access
+      
+      // Set width and height using the library's methods
+      if (typeof graph.width === 'function') {
+        graph.width(dimensions.width);
+      }
+      if (typeof graph.height === 'function') {
+        graph.height(dimensions.height);
+      }
+      
+      if (process.env.NEXT_PUBLIC_DEBUG === "true") {
+        console.log('Graph resized using library methods to:', dimensions);
+      }
+    }
+  }, [dimensions.width, dimensions.height]);
 
 
   // --- Render --- 
@@ -311,7 +331,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
           <div 
               ref={containerRef} 
               className="w-full aspect-video bg-card rounded-md border border-border shadow-sm min-h-[300px] flex items-center justify-center"
-              style={{ minWidth: '100%', minHeight: '300px' }}
+              style={{ minHeight: '300px', position: 'relative' }}
           >
               <p className="text-muted-foreground italic text-sm p-4">Measuring container...</p>
           </div>
@@ -326,43 +346,55 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       <div
         ref={containerRef}
         className="w-full aspect-video bg-card rounded-md border border-border shadow-sm overflow-hidden relative min-h-[300px]"
-        style={{ minWidth: '100%', minHeight: '300px' }}
+        style={{ minHeight: '300px', position: 'relative' }}
         onClick={handleCloseContextMenu}
         onContextMenu={handleContainerRightClick}
       >
-        <ForceGraph3DComponent
-          ref={graphRef}
-          graphData={visibleData}
-          width={dimensions.width}
-          height={dimensions.height}
-          backgroundColor={themeColors.background}
-          cooldownTime={1000}
-          // --- Node Styling ---
-          nodeRelSize={6}
-          nodeVal={getNodeVal}
-          nodeLabel="label" // Tooltip label
-          nodeColor={getNodeColor}
-          nodeOpacity={1}
-          nodeThreeObjectExtend={true}
-          nodeThreeObject={getNodeThreeObject}
-          // --- Link Styling ---
-          linkColor={() => themeColors.link}
-          linkWidth={0.5}
-          linkDirectionalParticles={1}
-          linkDirectionalParticleWidth={1.5}
-          linkDirectionalParticleSpeed={0.006}
-          // --- Interaction ---
-          onNodeClick={handleNodeClick}
-          onNodeHover={handleNodeHover}
-          onNodeRightClick={handleNodeRightClick}
-          enableNodeDrag={false}
-          // --- Forces & Camera ---
-          controlType="orbit"
-          // Node Configuration
-          nodeResolution={16}
-          // Performance / Simulation
-          d3AlphaDecay={0.02}
-        />
+        <div style={{ 
+          width: '100%', 
+          height: '100%', 
+          position: 'absolute', 
+          top: 0, 
+          left: 0,
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <ForceGraph3DComponent
+            ref={graphRef}
+            graphData={visibleData}
+            width={dimensions.width}
+            height={dimensions.height}
+            backgroundColor={themeColors.background}
+            cooldownTime={1000}
+            // --- Node Styling ---
+            nodeRelSize={6}
+            nodeVal={getNodeVal}
+            nodeLabel="label" // Tooltip label
+            nodeColor={getNodeColor}
+            nodeOpacity={1}
+            nodeThreeObjectExtend={true}
+            nodeThreeObject={getNodeThreeObject}
+            // --- Link Styling ---
+            linkColor={() => themeColors.link}
+            linkWidth={0.5}
+            linkDirectionalParticles={1}
+            linkDirectionalParticleWidth={1.5}
+            linkDirectionalParticleSpeed={0.006}
+            // --- Interaction ---
+            onNodeClick={handleNodeClick}
+            onNodeHover={handleNodeHover}
+            onNodeRightClick={handleNodeRightClick}
+            enableNodeDrag={false}
+            // --- Forces & Camera ---
+            controlType="orbit"
+            // Node Configuration
+            nodeResolution={16}
+            // Performance / Simulation
+            d3AlphaDecay={0.02}
+          />
+        </div>
       </div>
       
       {/* Custom Context Menu */}
