@@ -125,9 +125,16 @@ Required for development:
 
 **UI Styling & Theme:**
 - Uses custom Matsu theme with warm beige color palette
-- Custom scrollbar styling integrated with theme colors
-- shadcn ScrollArea components used for consistent scroll behavior
+- Custom scrollbar styling integrated with theme colors using CSS custom properties
+- shadcn ScrollArea components used for consistent scroll behavior throughout app
 - CSS variables defined in globals.css for theme consistency
+- Fixed layout expansion issues when focusing graph nodes (ScrollArea viewport overflow)
+
+**Known Issues & Debugging Notes:**
+- ScrollArea viewport can be sensitive to child element width calculations
+- Use `w-fit` instead of `w-max` for horizontal scroll containers to prevent expansion
+- ResizeObserver and getBoundingClientRect() calls can trigger layout recalculations
+- Sticky knowledge card scroll detection requires targeting the actual ScrollArea viewport element (`[data-radix-scroll-area-viewport]`) rather than the wrapper
 
 ### API Routes Structure
 

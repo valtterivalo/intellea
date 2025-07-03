@@ -53,7 +53,7 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
     const cardsOutOfView = cardsRect.bottom < containerRect.top + 100; // 100px buffer
     
     setIsSticky(cardsOutOfView);
-  }, [knowledgeCardsRef, scrollContainerRef]);
+  }, [knowledgeCardsRef, scrollContainerRef, activeClickedNodeId, isSticky]);
 
   // Set up portal container
   useEffect(() => {
@@ -69,13 +69,17 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
     const scrollContainer = scrollContainerRef.current;
     if (!scrollContainer) return;
 
-    scrollContainer.addEventListener('scroll', handleScroll);
+    // Find the actual scrollable viewport inside ScrollArea
+    const viewport = scrollContainer.querySelector('[data-radix-scroll-area-viewport]');
+    const actualScrollElement = viewport || scrollContainer;
+
+    actualScrollElement.addEventListener('scroll', handleScroll);
     
     // Initial check
     handleScroll();
 
     return () => {
-      scrollContainer.removeEventListener('scroll', handleScroll);
+      actualScrollElement.removeEventListener('scroll', handleScroll);
     };
   }, [handleScroll, activeClickedNodeId, knowledgeCardsRef, scrollContainerRef]);
 
