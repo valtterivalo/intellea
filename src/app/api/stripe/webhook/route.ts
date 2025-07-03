@@ -28,6 +28,8 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
   const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
 
+  console.log(`Processing checkout completion for customer: ${customerId}, subscription: ${subscriptionId}`);
+
   const customer = await stripe.customers.retrieve(customerId);
   if (!customer || customer.deleted) {
       console.error(`Webhook Error: Customer ${customerId} not found or deleted.`);
@@ -39,6 +41,8 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
     console.error(`Webhook Error: supabaseUserId missing from metadata for customer ${customerId}`);
     return; 
   }
+
+  console.log(`Updating subscription for user: ${supabaseUserId} to active`);
 
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
@@ -52,13 +56,15 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
   if (updateError) {
     console.error(`Webhook DB Error (checkout.session.completed) for user ${supabaseUserId}:`, updateError);
   } else {
-     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated profile for user ${supabaseUserId} to active.`);
+    console.log(`Webhook Success: Updated profile for user ${supabaseUserId} to active.`);
   }
 }
 
 async function handleSubscriptionChange(event: Stripe.Event) {
   const subscription = event.data.object as Stripe.Subscription;
   const customerId = subscription.customer as string;
+
+  console.log(`Processing subscription ${event.type} for customer: ${customerId}, status: ${subscription.status}`);
 
   const customer = await stripe.customers.retrieve(customerId);
   if (!customer || customer.deleted) {
@@ -72,6 +78,8 @@ async function handleSubscriptionChange(event: Stripe.Event) {
     return;
   }
 
+  console.log(`Updating subscription status for user: ${supabaseUserId} to ${subscription.status}`);
+
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
     .update({
@@ -83,7 +91,7 @@ async function handleSubscriptionChange(event: Stripe.Event) {
   if (updateError) {
       console.error(`Webhook DB Error (${event.type}) for user ${supabaseUserId}:`, updateError);
   } else {
-      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
+      console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
   }
 }
 
@@ -100,6 +108,7 @@ export async function POST(req: Request) {
   const signature = req.headers.get('stripe-signature');
 
   if (!signature) {
+    console.error('Webhook Error: Missing stripe signature');
     return NextResponse.json({ error: 'Missing stripe signature' }, { status: 400 });
   }
 
@@ -110,20 +119,22 @@ export async function POST(req: Request) {
       process.env.STRIPE_WEBHOOK_SECRET!
     );
 
-    if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received: ${event.type}`);
+    console.log(`Webhook received: ${event.type}, event ID: ${event.id}`);
 
     const handler = eventHandlers[event.type];
 
     if (handler) {
       await handler(event);
+      console.log(`Successfully processed webhook: ${event.type}`);
     } else {
-      if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Webhook received unhandled event type: ${event.type}`);
+      console.log(`Webhook received unhandled event type: ${event.type}`);
     }
 
     return NextResponse.json({ received: true });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error('Stripe Webhook Error:', errorMessage);
+    console.error('Request headers:', Object.fromEntries(req.headers.entries()));
     return NextResponse.json(
       { error: `Webhook handler failed: ${errorMessage}` },
       { status: 400 }

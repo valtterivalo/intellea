@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { run } from '@openai/agents';
 import { RouterAgent } from '@/lib/agents/router';
 import type { AgentInputItem } from '@openai/agents-core';
+import { verifyUserAccess } from '@/lib/api-helpers';
 
 interface Message {
   role: 'user' | 'assistant' | 'system';
@@ -9,6 +10,12 @@ interface Message {
 }
 
 export async function POST(req: NextRequest) {
+  // Add subscription verification
+  const { user, error } = await verifyUserAccess();
+  if (error) {
+    return error;
+  }
+
   const { messages } = (await req.json()) as { messages: Message[] };
 
   if (!process.env.OPENAI_API_KEY) {
