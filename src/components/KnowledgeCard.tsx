@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 
 interface KnowledgeCardProps {
   card: KnowledgeCardType;
-  variant?: 'default' | 'focused';
+  variant?: 'default' | 'focused' | 'sticky';
 }
 
 const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default' }) => {
@@ -25,7 +25,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     isExpandingConcept,
     subscriptionStatus,
     visualizationData,
-    nodeNotes
+    nodeNotes,
+    activeClickedNodeId
   } = useAppStore(
     useShallow((state) => ({ // Use useShallow for multiple selections
       setFocusedNodeId: state.setFocusedNodeId,
@@ -36,6 +37,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
       // Safely access visualizationData
       visualizationData: isIntelleaResponse(state.output) ? state.output.visualizationData : null,
       nodeNotes: state.nodeNotes,
+      activeClickedNodeId: state.activeClickedNodeId,
     }))
   );
 
@@ -55,6 +57,7 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
 
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
   const hasNote = !!nodeNotes[card.nodeId];
+  const isCurrentlyFocused = activeClickedNodeId === card.nodeId;
 
   return (
     <Card
@@ -62,6 +65,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
         "flex flex-col shadow-sm hover:shadow-md transition-shadow duration-200",
         variant === 'focused'
           ? "min-w-[320px] max-w-[480px] w-full"
+          : variant === 'sticky'
+          ? "w-full max-w-none"
           : "min-w-[280px] max-w-[340px] flex-1"
       )}
     >
@@ -75,20 +80,22 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
         <p>{card.description}</p>
       </CardContent>
       <div className="p-2 px-4 border-t flex gap-2"> {/* Button container with padding and border */}
-         <Button 
-            variant="outline" 
-            size="sm" 
-            className="flex-1 text-xs"
-            onClick={handleFocusClick}
-            // Disable button if vizData isn't available (should generally be available if cards are)
-            disabled={!visualizationData} 
-          >
-            <Camera className="mr-1.5 h-3.5 w-3.5" /> Focus
-          </Button>
+         {!isCurrentlyFocused && (
+           <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1 text-xs"
+              onClick={handleFocusClick}
+              // Disable button if vizData isn't available (should generally be available if cards are)
+              disabled={!visualizationData} 
+            >
+              <Camera className="mr-1.5 h-3.5 w-3.5" /> Focus
+            </Button>
+         )}
           <Button
             variant="outline"
             size="sm"
-            className="flex-1 text-xs"
+            className={cn("text-xs", isCurrentlyFocused ? "flex-1" : "flex-1")}
             onClick={handleExpandClick}
             disabled={isExpandingConcept || !isSubscriptionActive}
           >

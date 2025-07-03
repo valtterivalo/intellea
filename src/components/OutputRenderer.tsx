@@ -77,8 +77,8 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
         >
           {output.visualizationData && (
             <section aria-labelledby="visualization-heading">
-              <h2 id="visualization-heading" className="text-xl font-semibold mb-3">Knowledge Graph</h2>
-              <div className="relative">
+              <h2 id="visualization-heading" className="text-xl font-semibold mb-3 text-center">Knowledge Graph</h2>
+              <div className="relative w-4/5 mx-auto">
                 <VisualizationComponent
                   visualizationData={output.visualizationData}
                   onNodeExpand={onNodeExpand}

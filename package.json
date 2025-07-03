@@ -14,7 +14,8 @@
     "type-check": "tsc --noEmit",
     "dev:setup": "node scripts/setup-dev.js",
     "dev:reset": "rm -rf .next && pnpm dev",
-    "dev:logs": "next dev --turbopack | grep -E '(Error|Warn|Info)'"
+    "dev:logs": "next dev --turbopack | grep -E '(Error|Warn|Info)'",
+    "debug:subscription": "node debug-subscription.js"
   },
   "dependencies": {
     "@openai/agents": "^0.0.9",

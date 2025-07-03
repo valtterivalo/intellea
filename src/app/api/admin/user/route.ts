@@ -98,7 +98,8 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { action, userId, subscriptionStatus } = await req.json();
+    const body = await req.json();
+    const { action, userId, subscriptionStatus, customerId, subscriptionId, status } = body;
 
     switch (action) {
       case 'update_subscription':
@@ -138,6 +139,88 @@ export async function POST(req: NextRequest) {
         }
 
         return NextResponse.json({ success: true, message: 'Granted free subscription' });
+
+      case 'sync_stripe_subscription':
+        if (!userId) {
+          return NextResponse.json({ error: 'userId required' }, { status: 400 });
+        }
+
+        // Get user profile to find Stripe customer ID
+        const { data: userProfile } = await supabaseAdmin
+          .from('profiles')
+          .select('stripe_customer_id, stripe_subscription_id')
+          .eq('id', userId)
+          .single();
+
+        if (!userProfile?.stripe_customer_id) {
+          return NextResponse.json({ error: 'No Stripe customer ID found for this user' }, { status: 400 });
+        }
+
+        try {
+          // Get latest subscription status from Stripe
+          let latestStatus = 'inactive';
+          
+          if (userProfile.stripe_subscription_id) {
+            const subscription = await stripe.subscriptions.retrieve(userProfile.stripe_subscription_id);
+            
+            // Map Stripe status to internal status
+            switch (subscription.status) {
+              case 'active':
+              case 'trialing':
+                latestStatus = subscription.status;
+                break;
+              default:
+                latestStatus = 'inactive';
+            }
+          }
+
+          // Update profile with latest status
+          const { error: syncError } = await supabaseAdmin
+            .from('profiles')
+            .update({ subscription_status: latestStatus })
+            .eq('id', userId);
+
+          if (syncError) {
+            return NextResponse.json({ error: syncError.message }, { status: 500 });
+          }
+
+          return NextResponse.json({ 
+            success: true, 
+            message: `Synced subscription status to: ${latestStatus}`,
+            newStatus: latestStatus
+          });
+
+        } catch (stripeError) {
+          console.error('Error syncing with Stripe:', stripeError);
+          return NextResponse.json({ error: 'Failed to sync with Stripe' }, { status: 500 });
+        }
+
+      case 'manual_subscription_update':
+        if (!userId) {
+          return NextResponse.json({ error: 'userId required' }, { status: 400 });
+        }
+
+        if (!customerId || !status) {
+          return NextResponse.json({ error: 'customerId and status required' }, { status: 400 });
+        }
+
+        const { error: manualUpdateError } = await supabaseAdmin
+          .from('profiles')
+          .upsert({
+            id: userId,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: subscriptionId || null,
+            subscription_status: status,
+          });
+
+        if (manualUpdateError) {
+          return NextResponse.json({ error: manualUpdateError.message }, { status: 500 });
+        }
+
+        return NextResponse.json({ 
+          success: true, 
+          message: `Manually updated subscription status to: ${status}` 
+        });
 
       default:
         return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

@@ -52,7 +52,7 @@ APP_DEBUG=true
 
 ```bash
 # Install Supabase CLI
-npm install -g supabase
+pnpm add -g supabase
 
 # Initialize local Supabase
 supabase init
@@ -108,6 +108,15 @@ redis-cli ping
 # Requires authentication
 4000 0025 0000 3155
 ```
+
+### Webhook Events to Configure:
+When setting up your webhook endpoint (either local via ngrok or test environment), make sure to listen for these events:
+- `checkout.session.completed`
+- `customer.subscription.updated` 
+- `customer.subscription.deleted`
+- `customer.subscription.trial_will_end`
+- `invoice.payment_failed`
+- `invoice.payment_succeeded`
 
 ## 5. Development Commands
 
@@ -210,7 +219,7 @@ curl -X POST "http://localhost:3000/api/admin/user" \
 
 ```bash
 # Install ngrok
-npm install -g ngrok
+pnpm add -g ngrok
 
 # Start your local dev server
 pnpm dev

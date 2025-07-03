@@ -36,9 +36,12 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
       return;
   }
   
+  console.log(`Customer metadata:`, (customer as Stripe.Customer).metadata);
+  
   const supabaseUserId = (customer as Stripe.Customer).metadata.supabaseUserId;
   if (!supabaseUserId) {
     console.error(`Webhook Error: supabaseUserId missing from metadata for customer ${customerId}`);
+    console.error(`Available metadata keys:`, Object.keys((customer as Stripe.Customer).metadata));
     return; 
   }
 
@@ -46,12 +49,12 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
 
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
-    .update({
+    .upsert({
+      id: supabaseUserId,
       stripe_customer_id: customerId,
       stripe_subscription_id: subscriptionId,
       subscription_status: 'active',
-    })
-    .eq('id', supabaseUserId);
+    });
 
   if (updateError) {
     console.error(`Webhook DB Error (checkout.session.completed) for user ${supabaseUserId}:`, updateError);
@@ -61,10 +64,40 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
 }
 
 async function handleSubscriptionChange(event: Stripe.Event) {
-  const subscription = event.data.object as Stripe.Subscription;
-  const customerId = subscription.customer as string;
+  let customerId: string;
+  let subscriptionStatus: string;
+  let subscriptionId: string;
 
-  console.log(`Processing subscription ${event.type} for customer: ${customerId}, status: ${subscription.status}`);
+  // Handle different event types
+  if (event.type.startsWith('customer.subscription.')) {
+    const subscription = event.data.object as Stripe.Subscription;
+    customerId = subscription.customer as string;
+    subscriptionStatus = subscription.status;
+    subscriptionId = subscription.id;
+  } else if (event.type.startsWith('invoice.')) {
+    const invoice = event.data.object as Stripe.Invoice;
+    customerId = invoice.customer as string;
+    subscriptionId = (invoice as any).subscription || '';
+    
+    // For invoice events, get the actual subscription to check status
+    if (subscriptionId) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+        subscriptionStatus = subscription.status;
+      } catch (error) {
+        console.error(`Error retrieving subscription ${subscriptionId}:`, error);
+        return;
+      }
+    } else {
+      // If no subscription, this might be a one-time payment - skip
+      return;
+    }
+  } else {
+    console.error(`Unhandled event type in handleSubscriptionChange: ${event.type}`);
+    return;
+  }
+
+  console.log(`Processing subscription ${event.type} for customer: ${customerId}, status: ${subscriptionStatus}`);
 
   const customer = await stripe.customers.retrieve(customerId);
   if (!customer || customer.deleted) {
@@ -78,20 +111,39 @@ async function handleSubscriptionChange(event: Stripe.Event) {
     return;
   }
 
-  console.log(`Updating subscription status for user: ${supabaseUserId} to ${subscription.status}`);
+  console.log(`Updating subscription status for user: ${supabaseUserId} to ${subscriptionStatus}`);
+
+  // Map Stripe statuses to our internal statuses
+  let internalStatus: string;
+  switch (subscriptionStatus) {
+    case 'active':
+    case 'trialing':
+      internalStatus = subscriptionStatus;
+      break;
+    case 'past_due':
+    case 'unpaid':
+    case 'canceled':
+    case 'incomplete':
+    case 'incomplete_expired':
+      internalStatus = 'inactive';
+      break;
+    default:
+      internalStatus = 'inactive';
+  }
 
   const { error: updateError } = await supabaseAdmin
     .from('profiles')
-    .update({
-      subscription_status: subscription.status, 
-      stripe_subscription_id: subscription.id, 
-    })
-    .eq('id', supabaseUserId);
+    .upsert({
+      id: supabaseUserId,
+      subscription_status: internalStatus, 
+      stripe_subscription_id: subscriptionId,
+      stripe_customer_id: customerId,
+    });
 
   if (updateError) {
       console.error(`Webhook DB Error (${event.type}) for user ${supabaseUserId}:`, updateError);
   } else {
-      console.log(`Webhook Success: Updated subscription status to '${subscription.status}' for user ${supabaseUserId}.`);
+      console.log(`Webhook Success: Updated subscription status to '${internalStatus}' for user ${supabaseUserId}.`);
   }
 }
 
@@ -99,6 +151,9 @@ const eventHandlers: Record<string, (event: Stripe.Event) => Promise<void>> = {
   'checkout.session.completed': handleCheckoutSessionCompleted,
   'customer.subscription.updated': handleSubscriptionChange,
   'customer.subscription.deleted': handleSubscriptionChange,
+  'invoice.payment_failed': handleSubscriptionChange,
+  'invoice.payment_succeeded': handleSubscriptionChange,
+  'customer.subscription.trial_will_end': handleSubscriptionChange,
 };
 
 // --- Main Webhook Route ---

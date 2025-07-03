@@ -1,98 +1,228 @@
-# Intellea - Interactive LLM-Based Learning Interface
+# 🧠 Intellea - Interactive LLM-Based Learning Interface
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Intellea is an interactive learning platform that uses Large Language Models to create dynamic, explorable knowledge graphs. Transform any topic into an interconnected web of concepts with AI-powered explanations, visual relationships, and expandable content.
 
-## Getting Started
+## ✨ Key Features
 
-First, run the development server:
+- **🌐 Dynamic Knowledge Graphs**: Auto-generated visual networks of interconnected concepts
+- **🤖 AI-Powered Explanations**: LLM-generated content with context-aware detail levels  
+- **🔍 Interactive Exploration**: Click, expand, and navigate through related concepts seamlessly
+- **🎙️ Voice Assistant**: Voice-controlled navigation and content reading (Ctrl+Shift+V)
+- **💾 Session Management**: Save and restore your learning sessions
+- **🎨 Visual Clustering**: Color-coded concept groupings and depth visualization
+- **🔐 Subscription System**: Secure payment processing with Stripe integration
 
+## 🚀 Quick Start
+
+### Prerequisites
+- Node.js 18+ and pnpm
+- Supabase project (database + auth)
+- OpenAI API key
+- Redis instance  
+- Stripe account (for payments)
+
+### Development Setup
+
+1. **Clone and install dependencies:**
 ```bash
-npm run dev
-# or
-bun dev
+git clone <repo-url>
+cd llm-visualization-tool
+pnpm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. **Environment configuration:**
+```bash
+cp .env.example .env.local
+# Fill in your environment variables (see table below)
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. **Start development server:**
+```bash
+pnpm dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. **Visit** `http://localhost:3000`
 
-## Running Tests
+For detailed local development setup including database configuration, see [LOCAL_DEVELOPMENT.md](LOCAL_DEVELOPMENT.md).
 
-Run `npm test` to execute the Vitest suite.
+## 🌍 Production Deployment
 
-## Learn More
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete production setup instructions including:
+- Vercel deployment configuration
+- Stripe webhook setup (⚠️ Critical: must include `/api/stripe/webhook` path)
+- Supabase authentication configuration
+- Environment variable requirements
 
-To learn more about Next.js, take a look at the following resources:
+## ⚙️ Environment Variables
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Core Services
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key for content generation | `sk-test-123...` |
+| `REDIS_URL` | Redis connection for caching | `redis://localhost:6379` |
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Database & Auth (Supabase)
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL | `https://xyz.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase public key | `eyJhbGciOiJIUzI1...` |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase admin key (bypasses RLS) | `eyJhbGciOiJIUzI1...` |
 
-## Deploy on Vercel
+### Payments (Stripe)
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `STRIPE_SECRET_KEY` | Stripe secret key | `sk_test_123...` |
+| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe public key | `pk_test_123...` |
+| `STRIPE_PRICE_ID` | Subscription product price ID | `price_123...` |
+| `STRIPE_WEBHOOK_SECRET` | Webhook signature verification | `whsec_123...` |
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Application Configuration
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `NEXT_PUBLIC_SITE_URL` | Your site URL (for redirects) | `https://intellea.app` |
+| `ADMIN_SECRET_KEY` | Admin API access key | `your-secret-key` |
+| `NEXT_PUBLIC_DEBUG` | Enable client-side debug logs | `false` |
+| `APP_DEBUG` | Enable backend debug logs | `true` |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🛠️ Development Commands
 
-## Features
+```bash
+# Development
+pnpm dev                    # Start dev server with Turbopack
+pnpm dev:logs              # Dev server with filtered logs
+pnpm dev:reset             # Clear .next cache and restart
 
-### Expandable Knowledge Cards
+# Testing
+pnpm test                  # Run unit tests
+pnpm test:watch           # Watch mode testing
+pnpm e2e                  # Run Cypress end-to-end tests
 
-The knowledge cards in Intellea can now be expanded to show detailed information about each concept:
+# Code Quality
+pnpm lint                 # ESLint
+pnpm type-check          # TypeScript checking
+pnpm knip                # Find unused dependencies
 
-1. Each knowledge card has an "Expand" button alongside the "Focus" button
-2. Clicking the "Expand" button opens a fullscreen modal with:
-   - Comprehensive markdown-formatted explanation of the concept
-   - List of related concepts with their relationships to the main concept
-   - Ability to focus on related concepts directly from the expanded view
-3. Content is generated dynamically using the LLM, taking into account the current state of the knowledge graph and other concepts
-4. Requires an active subscription to use
+# Subscription Debugging
+pnpm debug:subscription user@example.com  # Check user subscription status
+```
 
-### Voice Assistant
+## 🔧 Subscription Management Tools
 
-Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> to connect or disconnect the voice assistant.
+### Debug User Issues
+```bash
+# Check user's subscription status and sync if needed
+node debug-subscription.js user@example.com
 
-When push-to-talk is enabled, hold <kbd>Space</kbd> to speak.
+# This shows:
+# - User data from Supabase
+# - Stripe customer/subscription info  
+# - Status mismatches
+# - Options to sync or manually fix
+```
 
-Use `search_and_select_node` to select a node by a partial label. Example:
-`search_and_select_node{"labelStartsWith":"Gam"}` will focus the first matching node.
+### Admin API
+Programmatic user management via `/api/admin/user`:
 
-- Say **"read expanded concept"** to have the assistant read the currently expanded concept and any saved notes.
+```bash
+# Check user status
+curl -X GET "https://your-site.com/api/admin/user?email=user@example.com" \
+  -H "Authorization: Bearer $ADMIN_SECRET_KEY"
 
-### Graph Visualization
+# Grant free subscription
+curl -X POST "https://your-site.com/api/admin/user" \
+  -H "Authorization: Bearer $ADMIN_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "grant_free_subscription", "userId": "user-id"}'
 
-Nodes are coloured by depth by default. Use the **Cluster Colors** toggle below the graph to switch to colouring nodes by their community clusters.
+# Sync from Stripe
+curl -X POST "https://your-site.com/api/admin/user" \
+  -H "Authorization: Bearer $ADMIN_SECRET_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"action": "sync_stripe_subscription", "userId": "user-id"}'
+```
 
-"# intellea"
+## 🎮 Usage Guide
 
-## Environment Variables
+### Basic Navigation
+1. **Enter a topic** in the input field and click "Generate"
+2. **Explore the graph**: Click nodes to focus, drag to pan, scroll to zoom
+3. **Expand concepts**: Click the "Expand" button for detailed explanations
+4. **Voice control**: Press `Ctrl+Shift+V` to enable voice assistant
 
-| Variable                             | Description                                                | Example                         |
-|--------------------------------------|------------------------------------------------------------|---------------------------------|
-| REDIS_URL                            | Redis connection string.                                   | redis://localhost:6379          |
-| OPENAI_API_KEY                       | API key for OpenAI.                                        | sk-test-123                     |
-| NEXT_PUBLIC_SUPABASE_URL             | URL of your Supabase project.                              | https://xyz.supabase.co         |
-| NEXT_PUBLIC_SUPABASE_ANON_KEY        | Supabase anonymous public key.                             | public-anon-key                 |
-| STRIPE_SECRET_KEY                    | Stripe secret key for server-side API calls.               | sk_test_123                     |
-| NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY   | Stripe publishable key for client-side operations.         | pk_test_123                     |
-| STRIPE_PRICE_ID                      | Stripe price ID for your subscription product.             | price_123                       |
-| NEXT_PUBLIC_SITE_URL                 | Base URL of the deployed site used for redirect callbacks. | http://localhost:3000           |
-| STRIPE_WEBHOOK_SECRET                | Signing secret to verify Stripe webhooks.                  | whsec_test_123                  |
-| SUPABASE_SERVICE_ROLE_KEY            | Supabase service role key used for secure server actions.  | service-role-key                |
-| NEXT_PUBLIC_DEBUG                    | Enable client-side debug logging when set to "true".       | false                           |
-| APP_DEBUG                            | Enable backend debug logging when set.                     | true                            |
+### Voice Commands
+- **"search and select node [term]"** - Focus on a node by name
+- **"read expanded concept"** - Have current concept read aloud
+- **Hold Space** - Push-to-talk when voice is enabled
 
-## Dev Backend
+### Graph Features
+- **Node colors**: By depth (default) or community clusters (toggle available)
+- **Session management**: Save/load your exploration sessions
+- **Knowledge cards**: Persistent cards showing visited concepts
 
-Session state is persisted via Supabase.  Helper functions in
-`backend/tools/supabase_io.py` expose CRUD utilities as agent tools:
+## 🔍 Troubleshooting
 
-- `get_session_data(ctx, session_id)` – fetch a single session row
-- `save_session(ctx, session)` – insert a new session and return its ID
-- `save_concept(ctx, concept)` – insert a concept record
+### Common Issues
 
-These raise `SupabasePermissionError` when the service role credentials are
-invalid or lack permissions.
+**Subscription not working after payment:**
+```bash
+# 1. Check webhook delivery in Stripe Dashboard
+# 2. Verify webhook URL includes full path: /api/stripe/webhook  
+# 3. Debug user status:
+node debug-subscription.js user@example.com
+```
+
+**User can't access features:**
+```bash
+# Check their subscription status
+curl -X GET "https://your-site.com/api/admin/user?email=user@example.com" \
+  -H "Authorization: Bearer $ADMIN_SECRET_KEY"
+```
+
+**Development issues:**
+- Check environment variables are properly set
+- Ensure Redis is running locally
+- Verify Supabase service role key has proper permissions
+
+### Debug Logging
+Set `NEXT_PUBLIC_DEBUG=true` and `APP_DEBUG=true` for verbose logging during development.
+
+## 🏗️ Architecture
+
+- **Frontend**: Next.js 15 with React 19, TypeScript, Tailwind CSS
+- **Backend**: Next.js API routes, OpenAI Agents framework
+- **Database**: Supabase (PostgreSQL + Auth + Storage)
+- **Caching**: Redis for API response caching
+- **Payments**: Stripe with webhook-based subscription management
+- **Visualization**: Force-directed graphs with react-force-graph
+- **State**: Zustand for client-side state management
+
+## 📈 Recent Updates (January 2025)
+
+✅ **Subscription System Overhaul:**
+- Fixed RLS policy violations in profile updates
+- Resolved webhook delivery path issues  
+- Added comprehensive subscription lifecycle handling
+- Enhanced error handling and debug logging
+
+✅ **New Management Tools:**
+- Interactive debug script for troubleshooting users
+- Admin API for manual subscription management  
+- Webhook handling for payment failures and trials
+- Automatic subscription expiration processing
+
+✅ **Production Hardening:**
+- Robust error handling and recovery
+- Comprehensive monitoring and logging
+- Manual sync capabilities for edge cases
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit changes: `git commit -m 'Add amazing feature'`
+4. Push to branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.

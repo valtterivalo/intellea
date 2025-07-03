@@ -42,132 +42,63 @@ Ensure your RLS policies allow service role access for admin functions.
 ### Create/Update Webhook Endpoint
 1. Click "Add endpoint" or "Create endpoint"
 2. Set **Endpoint URL**: `https://www.intellea.app/api/stripe/webhook`
+   - ⚠️ **CRITICAL**: Must include the full path `/api/stripe/webhook`, not just the domain
 3. **Select events to listen for** (click "Select events"):
    - `checkout.session.completed`
    - `customer.subscription.updated`
    - `customer.subscription.deleted`
+   - `customer.subscription.trial_will_end`
+   - `invoice.payment_failed`
+   - `invoice.payment_succeeded`
 4. Click "Add endpoint"
 5. **Copy the webhook signing secret** (starts with `whsec_...`)
 6. Add this to your Vercel environment variables as `STRIPE_WEBHOOK_SECRET`
 
-### Alternative: Search for Webhooks
-If you still can't find it, try:
-- Use the search bar in Stripe Dashboard and type "webhooks"
-- Look for a gear/settings icon and check if webhooks are there
-- Check if you're in "Test mode" vs "Live mode" (toggle in top left)
+### ✅ Test Webhook Delivery
+After setup, you can test webhook delivery in the Stripe dashboard:
+1. Go to your webhook endpoint
+2. Click "Send test webhook"
+3. Choose `checkout.session.completed` 
+4. Check the "Recent deliveries" section for successful 200 responses
 
-## 4. 🔍 Production Debugging
+## 4. Subscription Management Tools
 
-### View Logs
+### Debug Script Usage
+Use the included debug script to troubleshoot subscription issues:
+
 ```bash
-# View function logs in real-time
-vercel logs --follow
+# Check a user's subscription status
+node debug-subscription.js user@example.com
 
-# View logs for specific function
-vercel logs --follow --output json | grep "webhook"
+# This will show:
+# - User data from Supabase
+# - Profile subscription status  
+# - Stripe customer and subscription data
+# - Option to sync or manually fix issues
 ```
 
-### Check Webhook Status
-Monitor webhook delivery in Stripe Dashboard → Developers → Webhooks → [Your Webhook] → Recent Events
+### Admin API Endpoints
+Available admin actions via `/api/admin/user`:
 
-## 5. 👥 Admin Management
+1. **Check user status**: `GET /api/admin/user?email=user@example.com`
+2. **Sync from Stripe**: `POST /api/admin/user` with `action: 'sync_stripe_subscription'`
+3. **Manual update**: `POST /api/admin/user` with `action: 'manual_subscription_update'`
+4. **Grant free access**: `POST /api/admin/user` with `action: 'grant_free_subscription'`
 
-### Give Free Subscription to Friend
-
-1. **Find User ID:**
-```bash
-curl -X GET "https://www.intellea.app/api/admin/user?email=friend@example.com" \
-  -H "Authorization: Bearer your-super-secret-admin-key-here"
-```
-
-2. **Grant Free Subscription:**
-```bash
-curl -X POST "https://www.intellea.app/api/admin/user" \
-  -H "Authorization: Bearer your-super-secret-admin-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "grant_free_subscription",
-    "userId": "user-id-from-step-1"
-  }'
-```
-
-### Debug User Subscription Issues
-
-**Check user's current status:**
-```bash
-curl -X GET "https://www.intellea.app/api/admin/user?email=user@example.com" \
-  -H "Authorization: Bearer your-super-secret-admin-key-here"
-```
-
-**Manually update subscription status:**
-```bash
-curl -X POST "https://www.intellea.app/api/admin/user" \
-  -H "Authorization: Bearer your-super-secret-admin-key-here" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "action": "update_subscription",
-    "userId": "user-id-here",
-    "subscriptionStatus": "active"
-  }'
-```
-
-## 6. 🐛 Common Issues & Solutions
-
-### Magic Link Redirects to Localhost
-- **Cause**: Supabase Site URL not updated
-- **Fix**: Update Site URL in Supabase Dashboard
-
-### Subscription Not Syncing After Payment
-- **Cause**: Webhook not reaching your app
-- **Fix**: 
-  1. Check webhook URL in Stripe Dashboard
-  2. Check webhook logs in Vercel
-  3. Manually sync using admin API
-
-### Users Can Access Chat Without Subscription
-- **Cause**: Missing subscription check in chat API
-- **Fix**: Already implemented in the updated chat route
-
-## 7. 📊 Monitoring Commands
-
-### Check Recent Webhook Events
-```bash
-# View recent webhook logs
-vercel logs --follow | grep "Webhook"
-
-# Check for specific user updates
-vercel logs --follow | grep "user-id-here"
-```
-
-### Test Webhook Manually
-```bash
-# Test webhook endpoint
-curl -X POST "https://www.intellea.app/api/stripe/webhook" \
-  -H "Content-Type: application/json" \
-  -d '{"test": "webhook"}' \
-  -v
-```
-
-## 8. 🔒 Security Notes
-
-- Keep `ADMIN_SECRET_KEY` secure and don't share it
-- Consider IP whitelisting for admin endpoints
-- Monitor admin endpoint usage in logs
-- Rotate admin keys regularly
-
-## 9. 📱 Quick Admin Commands
-
+### Quick Admin Commands
 Save these as shell functions in your `.bashrc` or `.zshrc`:
 
 ```bash
 # Grant free subscription
 grant_free_sub() {
-  curl -X GET "https://www.intellea.app/api/admin/user?email=$1" \
-    -H "Authorization: Bearer $ADMIN_SECRET_KEY" | jq '.user.id' | xargs -I {} \
+  local email=$1
+  local user_id=$(curl -s -X GET "https://www.intellea.app/api/admin/user?email=$email" \
+    -H "Authorization: Bearer $ADMIN_SECRET_KEY" | jq -r '.user.id')
+  
   curl -X POST "https://www.intellea.app/api/admin/user" \
     -H "Authorization: Bearer $ADMIN_SECRET_KEY" \
     -H "Content-Type: application/json" \
-    -d "{\"action\": \"grant_free_subscription\", \"userId\": \"{}\"}"
+    -d "{\"action\": \"grant_free_subscription\", \"userId\": \"$user_id\"}"
 }
 
 # Check user status
@@ -182,4 +113,68 @@ Usage:
 export ADMIN_SECRET_KEY="your-super-secret-admin-key-here"
 grant_free_sub "friend@example.com"
 check_user "friend@example.com"
-``` 
+```
+
+## 5. Common Issues & Solutions
+
+### Issue: User paid but no access
+**Cause**: Webhook not delivering properly  
+**Solution**: 
+1. Check Stripe webhook "Recent deliveries" 
+2. Ensure webhook URL includes `/api/stripe/webhook` path
+3. Use debug script to manually sync: `node debug-subscription.js user@example.com`
+
+### Issue: Magic Link Redirects to Localhost
+**Cause**: Supabase Site URL not updated  
+**Solution**: Update Site URL in Supabase Dashboard
+
+### Issue: RLS policy violations  
+**Cause**: Using regular Supabase client instead of service role  
+**Solution**: The codebase now uses `supabaseAdmin` client for profile updates
+
+### Issue: Subscription status not updating
+**Cause**: Missing webhook events  
+**Solution**: Ensure all required webhook events are configured (see list above)
+
+### Issue: Users can access chat without subscription
+**Cause**: Missing subscription check in chat API  
+**Solution**: Already implemented in the updated chat route
+
+## 6. Production Monitoring
+
+### View Logs
+```bash
+# View function logs in real-time
+vercel logs --follow
+
+# View logs for specific function
+vercel logs --follow --output json | grep "webhook"
+
+# Check recent webhook events
+vercel logs --follow | grep "Webhook"
+```
+
+### Check Webhook Status
+Monitor webhook delivery in Stripe Dashboard → Developers → Webhooks → [Your Webhook] → Recent Events
+
+### Test Webhook Manually
+```bash
+# Test webhook endpoint (should return "Missing stripe signature")
+curl -X POST "https://www.intellea.app/api/stripe/webhook" \
+  -H "Content-Type: application/json" \
+  -d '{"test": "webhook"}' \
+  -v
+```
+
+## 7. Security Notes
+
+- Keep `ADMIN_SECRET_KEY` secure and don't share it
+- Consider IP whitelisting for admin endpoints
+- Monitor admin endpoint usage in logs
+- Rotate admin keys regularly
+
+## 8. Alternative: Search for Webhooks
+If you still can't find webhooks in Stripe Dashboard, try:
+- Use the search bar in Stripe Dashboard and type "webhooks"
+- Look for a gear/settings icon and check if webhooks are there
+- Ensure you're in the correct mode (Test vs Live) using the toggle in top left 

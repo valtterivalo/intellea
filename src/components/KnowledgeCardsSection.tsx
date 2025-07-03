@@ -4,6 +4,7 @@ import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';
 import { motion } from 'framer-motion';
 import { Separator } from "@/components/ui/separator";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import KnowledgeCard from './KnowledgeCard';
 import { CollapsedKnowledgeCard } from './CollapsedKnowledgeCard';
 import type { NodeObject, LinkObject } from '@/store/useAppStore';
@@ -312,7 +313,7 @@ const KnowledgeCardsSection: React.FC = () => {
                                         {renderCardList([focusedCard], true, 'vertical', 'max-w-none', 'focused')}
                                     </div>
                                 </div>
-                                {(childCards.length > 0 || (ancestorLevels.length > 0 && focusedCard)) && <Separator className="w-1/2 my-4"/>}
+                                {childCards.length > 0 && <Separator className="w-1/2 my-4"/>}
                             </div>
                         )}
 
@@ -328,13 +329,22 @@ const KnowledgeCardsSection: React.FC = () => {
 
                         {/* --- Render Other Collapsed Cards (Horizontal Scroll) --- */}
                         {otherCards.length > 0 && (
-                            <div key="others" className="w-full flex flex-col items-center gap-2 mt-6 pt-4 border-t">
+                            <div key="others" className="w-full flex flex-col items-center gap-4 mt-8">
                                 <p className="text-sm text-muted-foreground mb-2">Other Concepts</p>
-                                <div className="w-full overflow-x-auto pb-4">
-                                    <div className="flex flex-row flex-nowrap gap-3 px-2 w-fit">
-                                        {renderCardList(otherCards, false, 'horizontal')}
+                                <ScrollArea className="w-full max-w-5xl rounded-md border whitespace-nowrap">
+                                    <div className="flex w-max space-x-3 p-3">
+                                        {otherCards.map((card) => (
+                                            <div key={card.nodeId} className="shrink-0 w-52">
+                                                <CollapsedKnowledgeCard
+                                                    nodeId={card.nodeId}
+                                                    title={card.title}
+                                                    onFocus={handleFocus}
+                                                />
+                                            </div>
+                                        ))}
                                     </div>
-                                </div>
+                                    <ScrollBar orientation="horizontal" />
+                                </ScrollArea>
                             </div>
                         )}
                     </div>
