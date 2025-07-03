@@ -32,7 +32,6 @@ export interface IntelleaResponse {
   explanationMarkdown: string | null;
   knowledgeCards: KnowledgeCard[] | null;
   visualizationData: GraphData;
-  quiz?: { question: string; options: string[]; correctAnswerLetter: string };
 }
 
 export interface ExpansionResponse {

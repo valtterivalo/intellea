@@ -11,7 +11,6 @@ import { Maximize } from 'lucide-react';
 // Import the new section components
 import ExplanationSection from './ExplanationSection';
 import KnowledgeCardsSection from './KnowledgeCardsSection';
-import QuizSection from './QuizSection';
 
 // Define props for OutputRenderer
 interface OutputRendererProps {
@@ -99,8 +98,6 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
             </section>
           )}
         </motion.div>
-
-        <QuizSection />
       </div>
     );
   }

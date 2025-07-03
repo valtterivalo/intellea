@@ -8,8 +8,13 @@
     "start": "next start",
     "lint": "next lint",
     "test": "vitest run",
+    "test:watch": "vitest",
     "e2e": "cypress run",
-    "knip": "knip"
+    "knip": "knip",
+    "type-check": "tsc --noEmit",
+    "dev:setup": "node scripts/setup-dev.js",
+    "dev:reset": "rm -rf .next && pnpm dev",
+    "dev:logs": "next dev --turbopack | grep -E '(Error|Warn|Info)'"
   },
   "dependencies": {
     "@openai/agents": "^0.0.9",

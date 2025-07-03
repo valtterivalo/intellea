@@ -25,12 +25,6 @@ const KnowledgeCardSchema = z.object({
     description: z.string(),
 }).strict();
 
-const QuizSchema = z.object({
-    question: z.string(),
-    options: z.array(z.string()),
-    correctAnswerLetter: z.string(),
-}).strict();
-
 /**
  * Zod schema for the output of the GraphInitAgent.
  * This corresponds to the `IntelleaResponse` type.
@@ -39,7 +33,6 @@ const GraphInitOutSchema = z.object({
     explanationMarkdown: z.string().nullable(),
     knowledgeCards: z.array(KnowledgeCardSchema).nullable(),
     visualizationData: GraphDataSchema,
-    quiz: QuizSchema.optional().nullable(),
 }).strict();
 
 const INITIAL_SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generating structured learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object.
@@ -60,8 +53,7 @@ const INITIAL_SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generati
   "visualizationData": { // MANDATORY: Data for the graph.
     "nodes": [ { "id": "string", "label": "string", "isRoot": boolean } ], // List of nodes. Exactly ONE node MUST have "isRoot": true. Others MUST have "isRoot": false.
     "links": [ { "source": "string", "target": "string" } ] // Links list. ALL links MUST originate from the root node (\`source\` = root node ID).
-   },
-  "quiz": { /* ... (optional quiz structure) ... */ } // Optional.
+   }
 }
 
 **Constraint Checklist & Summary:**
