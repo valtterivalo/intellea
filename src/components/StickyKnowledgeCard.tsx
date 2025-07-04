@@ -8,8 +8,8 @@ import { useShallow } from 'zustand/react/shallow';
 import KnowledgeCard from './KnowledgeCard';
 
 interface StickyKnowledgeCardProps {
-  knowledgeCardsRef: React.RefObject<HTMLDivElement>;
-  scrollContainerRef: React.RefObject<HTMLDivElement>;
+  knowledgeCardsRef: React.RefObject<HTMLDivElement | null>;
+  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
@@ -53,7 +53,7 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
     const cardsOutOfView = cardsRect.bottom < containerRect.top + 100; // 100px buffer
     
     setIsSticky(cardsOutOfView);
-  }, [knowledgeCardsRef, scrollContainerRef, activeClickedNodeId, isSticky]);
+  }, [knowledgeCardsRef, scrollContainerRef]);
 
   // Set up portal container
   useEffect(() => {

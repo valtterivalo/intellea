@@ -304,7 +304,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   useEffect(() => {
     if (graphRef.current && dimensions.width > 0 && dimensions.height > 0) {
       // Use the library's built-in resize methods
-      const graph = graphRef.current as any; // Type assertion for method access
+      const graph = graphRef.current as ForceGraphMethods & { width: (w: number) => void; height: (h: number) => void };
       
       // Set width and height using the library's methods
       if (typeof graph.width === 'function') {
@@ -318,7 +318,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         console.log('Graph resized using library methods to:', dimensions);
       }
     }
-  }, [dimensions.width, dimensions.height]);
+  }, [dimensions]);
 
 
   // --- Render --- 

@@ -77,7 +77,7 @@ async function handleSubscriptionChange(event: Stripe.Event) {
   } else if (event.type.startsWith('invoice.')) {
     const invoice = event.data.object as Stripe.Invoice;
     customerId = invoice.customer as string;
-    subscriptionId = (invoice as any).subscription || '';
+    subscriptionId = typeof invoice.subscription === 'string' ? invoice.subscription : (invoice.subscription?.id || '');
     
     // For invoice events, get the actual subscription to check status
     if (subscriptionId) {
