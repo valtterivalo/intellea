@@ -115,10 +115,10 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     while (queue.length) {
       const id = queue.shift()!;
       const d = depths[id] as number;
-      for (const nb of adj[id] || []) {
-        if (depths[nb] === undefined) {
-          depths[nb] = d + 1;
-          queue.push(nb);
+      for (const neighborId of adj[id] || []) {
+        if (depths[neighborId] === undefined) {
+          depths[neighborId] = d + 1;
+          queue.push(neighborId);
         }
       }
     }
@@ -137,9 +137,9 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
         return '#22c55e';
       }
       if (colorByCluster) {
-        const cid = clusters[appNode.id];
-        if (cid !== undefined) {
-          return getClusterColor(cid);
+        const clusterIndex = clusters[appNode.id];
+        if (clusterIndex !== undefined) {
+          return getClusterColor(clusterIndex);
         }
       }
       return depthColor(depth);
