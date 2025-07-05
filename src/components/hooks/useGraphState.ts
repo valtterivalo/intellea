@@ -23,6 +23,11 @@ export interface GraphData {
   links: Array<AppGraphLink>;
 }
 
+/**
+ * @description Provide graph-related state and actions from the store.
+ * @param visualizationData - Optional filtered graph data.
+ * @returns State selectors and mutators for graph components.
+ */
 export function useGraphState(visualizationData?: GraphData) {
   const focusedNodeId = useAppStore((state) => state.focusedNodeId);
   const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds);

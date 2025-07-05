@@ -12,8 +12,10 @@ const openai = new OpenAI({
 });
 
 /**
- * Get text content for embedding (prioritizes knowledge card description,
- * falling back to node label or ID).
+ * @description Get text from a graph node to create embeddings.
+ * @param node - Node to extract text from.
+ * @param cards - Knowledge cards providing descriptions.
+ * @returns Text to embed.
  */
 export function getNodeTextForEmbedding(
   node: GraphNode,
@@ -24,7 +26,9 @@ export function getNodeTextForEmbedding(
 }
 
 /**
- * Retrieve embeddings for an array of texts from OpenAI.
+ * @description Retrieve embeddings for multiple texts using OpenAI.
+ * @param texts - Array of strings to embed.
+ * @returns Array of embedding vectors.
  */
 export async function getNodeEmbeddings(
   texts: string[]
@@ -45,7 +49,10 @@ export async function getNodeEmbeddings(
 }
 
 /**
- * Calculate 3D node positions using UMAP and center the root node.
+ * @description Calculate 3D node positions using UMAP and center the root node.
+ * @param embeddings - Embedding vectors for each node.
+ * @param nodesForPositioning - Nodes whose positions will be calculated.
+ * @returns Array of fixed node positions.
  */
 export async function calculateNodePositions(
   embeddings: number[][],

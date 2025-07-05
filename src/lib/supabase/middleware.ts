@@ -1,6 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 
+/**
+ * @description Synchronize Supabase auth session in middleware.
+ * @param request - Incoming Next.js request.
+ * @returns Modified response with session cookies.
+ */
 export async function updateSession(request: NextRequest) {
   const supabaseResponse = NextResponse.next({
     request,

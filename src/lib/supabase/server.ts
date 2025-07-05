@@ -1,6 +1,11 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
+/**
+ * @description Create a Supabase client for server environments.
+ * Handles cookie management gracefully outside of request contexts.
+ * @returns Supabase server client instance.
+ */
 export function createClient() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let cookieStore: any = null;

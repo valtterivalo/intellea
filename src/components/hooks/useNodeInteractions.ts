@@ -3,6 +3,12 @@ import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d';
 import { useGraphState, GraphData, AppGraphNode } from './useGraphState';
 import { useAppStore } from '@/store/useAppStore';
 
+/**
+ * @description Provide event handlers and state for graph node interactions.
+ * @param graphRef - Ref to the force-graph instance.
+ * @param visualizationData - Graph data currently displayed.
+ * @param onNodeExpand - Optional callback when a node should expand.
+ */
 export function useNodeInteractions(
   graphRef: React.RefObject<ForceGraphMethods | undefined>,
   visualizationData: GraphData | undefined,

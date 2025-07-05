@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { useAppStore, IntelleaResponse, NodeObject } from '@/store/useAppStore';
 import { createClient } from '@/lib/supabase/client';
 
+/**
+ * @description Hook for triggering graph node expansions via the API.
+ * Manages loading state and errors locally.
+ */
 export function useNodeExpansion() {
   const supabase = createClient();
   const [localExpandingNodeId, setLocalExpandingNodeId] = useState<string | null>(null);

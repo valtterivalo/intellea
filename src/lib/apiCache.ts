@@ -1,6 +1,11 @@
 import { createClient as createRedisClient } from './redis';
 import crypto from 'crypto';
 
+/**
+ * @description Generate a SHA-256 hash of the provided data.
+ * @param data - Graph data to hash.
+ * @returns Hexadecimal hash string.
+ */
 export function getGraphHash(data: unknown): string {
   return crypto
     .createHash('sha256')
@@ -16,6 +21,10 @@ function getLockKey(sessionId: string, graphHash: string): string {
   return `lock:${sessionId}:${graphHash}`;
 }
 
+/**
+ * @description Retrieve expanded concept data from Redis cache.
+ * @returns Parsed cached data or null.
+ */
 export async function getCachedExpandedConcept(sessionId: string, graphHash: string) {
   const redis = createRedisClient();
   const cacheKey = getCacheKey(sessionId, graphHash);
@@ -28,12 +37,21 @@ export async function getCachedExpandedConcept(sessionId: string, graphHash: str
   }
 }
 
+/**
+ * @description Store expanded concept data in Redis.
+ * @param ttlSeconds - Cache lifetime in seconds.
+ */
 export async function setCachedExpandedConcept(sessionId: string, graphHash: string, data: unknown, ttlSeconds = 60 * 60 * 24) {
   const redis = createRedisClient();
   const cacheKey = getCacheKey(sessionId, graphHash);
   await redis.set(cacheKey, JSON.stringify(data), { ex: ttlSeconds });
 }
 
+/**
+ * @description Acquire a Redis lock for a graph expansion.
+ * @param ttlSeconds - Lock lifetime in seconds.
+ * @returns `true` if the lock was acquired.
+ */
 export async function acquireLock(sessionId: string, graphHash: string, ttlSeconds = 300): Promise<boolean> {
   const redis = createRedisClient();
   const lockKey = getLockKey(sessionId, graphHash);
@@ -51,12 +69,19 @@ export async function acquireLock(sessionId: string, graphHash: string, ttlSecon
   }
 }
 
+/**
+ * @description Retrieve the remaining TTL for a lock key.
+ * @returns TTL value in seconds.
+ */
 export async function getLockTTL(sessionId: string, graphHash: string): Promise<number> {
   const redis = createRedisClient();
   const lockKey = getLockKey(sessionId, graphHash);
   return await redis.ttl(lockKey);
 }
 
+/**
+ * @description Remove a lock key from Redis.
+ */
 export async function releaseLock(sessionId: string, graphHash: string) {
   const redis = createRedisClient();
   const lockKey = getLockKey(sessionId, graphHash);

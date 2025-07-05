@@ -38,6 +38,9 @@ export interface GraphSlice {
   setColorByCluster: (value: boolean) => void;
 }
 
+/**
+ * @description Create the graph interaction slice of the store.
+ */
 export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (set) => ({
   selectedNodeId: null,
   pinnedNodes: {},
