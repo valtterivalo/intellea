@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Supabase helper.
+ * Exports: createClient
+ */
 import { createBrowserClient } from '@supabase/ssr'
 
 // Define a function to create the client component client

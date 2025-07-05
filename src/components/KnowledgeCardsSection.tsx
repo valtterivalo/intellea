@@ -1,7 +1,8 @@
 'use client';
-// File Overview: Displays knowledge cards with focus-based layout.
-// Utilizes useCardLayout to organize cards into ancestors, focused,
-// children and others, and handles scrolling and interactions.
+/**
+ * @fileoverview React component.
+ * Exports: React
+ */
 
 import React, { useCallback, useRef, useEffect } from 'react';
 import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';

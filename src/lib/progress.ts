@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Library utilities.
+ * Exports: computeProgress, suggestNextNode
+ */
 export function computeProgress(total: number, completedIds: Set<string>): number {
   if (total === 0) return 0;
   return (completedIds.size / total) * 100;

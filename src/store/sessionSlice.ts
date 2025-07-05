@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store slice.
+ * Exports: createSessionSlice, interface
+ */
 
 import { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';

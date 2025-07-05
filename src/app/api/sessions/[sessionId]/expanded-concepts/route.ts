@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: DELETE, GET, POST
+ */
 import { NextResponse } from 'next/server';
 import { createClient as createRedisClient } from '@/lib/redis';
 import { createClient } from '@/lib/supabase/server';

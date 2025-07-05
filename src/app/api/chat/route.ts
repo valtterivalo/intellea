@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: POST
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { run } from '@openai/agents';
 import { RouterAgent } from '@/lib/agents/router';

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Library utilities.
+ * Exports: calculateNodePositions, getNodeEmbeddings, getNodeTextForEmbedding
+ */
 import OpenAI from 'openai';
 import { UMAP } from 'umap-js';
 import type { NodeObject as GraphNode, KnowledgeCard } from '@/types/intellea';

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: POST
+ */
 import { NextRequest } from 'next/server'
 import OpenAI from 'openai'
 

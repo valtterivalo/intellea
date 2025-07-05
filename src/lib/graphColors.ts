@@ -1,4 +1,8 @@
 /**
+ * @fileoverview Library utilities.
+ * Exports: getClusterColor, getNodeColor
+ */
+/**
  * Maps a node's depth in the graph to a stable hex color.
  * The palette mirrors the visual legend used in the UI.
  */

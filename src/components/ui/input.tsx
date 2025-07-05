@@ -1,3 +1,7 @@
+/**
+ * @fileoverview UI component utilities.
+ * Exports: (none)
+ */
 import * as React from "react"
 
 import { cn } from "@/lib/utils"
