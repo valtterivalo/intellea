@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Compact card showing a knowledge concept.
+ * Exports CollapsedKnowledgeCard.
+ */
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Cluster detection utilities for graphs.
+ * Exports computeClusters.
+ */
 interface ClusterGraphData {
   nodes: Array<{ id: string }>;
   links: Array<{ source: string | { id: string }; target: string | { id: string } }>;

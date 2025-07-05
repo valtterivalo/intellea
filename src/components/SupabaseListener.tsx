@@ -1,4 +1,8 @@
 'use client'
+/**
+ * @fileoverview Listens for auth state changes client-side.
+ * Exports SupabaseListener.
+ */
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route for a specific session.
+ * Exports GET.
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 // import type { IntelleaResponse } from '@/store/useAppStore'; // Available for future use

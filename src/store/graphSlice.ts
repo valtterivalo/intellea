@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand slice for graph selection and pinned nodes.
+ * Exports createGraphSlice.
+ */
 import { StateCreator } from 'zustand';
 
 export interface GraphSlice {

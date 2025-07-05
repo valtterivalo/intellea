@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route to generate or expand graphs.
+ * Exports POST.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { run } from '@openai/agents';
 import { GraphInitAgent } from '@/lib/agents/graphInit';

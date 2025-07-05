@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Shared TypeScript interfaces used across the app.
+ * Exports NodeObject, LinkObject, KnowledgeCard.
+ */
 export interface NodeObject {
   id: string;
   label: string;

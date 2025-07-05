@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Scrollable list of knowledge cards.
+ * Exports KnowledgeCardsSection.
+ */
 
 import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';

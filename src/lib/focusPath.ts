@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Utility to compute focused path through graph.
+ * Exports calculateFocusPath.
+ */
 import type { GraphData } from '@/store/useAppStore';
 
 export const calculateFocusPath = (

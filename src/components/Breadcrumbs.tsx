@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Session breadcrumb navigation component.
+ * Exports Breadcrumbs.
+ */
 
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';

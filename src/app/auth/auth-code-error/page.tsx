@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Displays error when OAuth code exchange fails.
+ * Exports AuthCodeErrorPage.
+ */
 
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';

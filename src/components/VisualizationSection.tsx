@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Section displaying explanation and graph.
+ * Exports VisualizationSection.
+ */
 
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';

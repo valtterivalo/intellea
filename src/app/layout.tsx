@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Root application layout with fonts and providers.
+ * Exports RootLayout.
+ */
 import type { Metadata } from "next";
 // Remove Geist fonts
 // import { Geist, Geist_Mono } from "next/font/google";

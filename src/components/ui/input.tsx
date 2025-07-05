@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Input field component.
+ * Exports Input.
+ */
 import * as React from "react"
 
 import { cn } from "@/lib/utils"

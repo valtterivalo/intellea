@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Type guards and helpers for store data.
+ * Exports isIntelleaResponse.
+ */
 import type { IntelleaResponse } from './useAppStore';
 
 export function isIntelleaResponse(obj: unknown): obj is IntelleaResponse {

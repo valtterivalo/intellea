@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Full screen container for graph visualization.
+ * Exports FullscreenGraphContainer.
+ */
 
 import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';

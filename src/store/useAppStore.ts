@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Root Zustand store combining slices.
+ * Exports useAppStore, AppState.
+ */
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { SupabaseClient } from '@supabase/supabase-js';

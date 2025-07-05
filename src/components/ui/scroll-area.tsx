@@ -1,4 +1,8 @@
 "use client"
+/**
+ * @fileoverview Styled scrollable container.
+ * Exports ScrollArea, ScrollBar.
+ */
 
 import * as React from "react"
 import * as ScrollAreaPrimitive from "@radix-ui/react-scroll-area"

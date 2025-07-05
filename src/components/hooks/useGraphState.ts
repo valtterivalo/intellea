@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Hook managing graph data and state.
+ * Exports useGraphState, AppGraphNode, GraphData.
+ */
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { NodeObject, LinkObject } from 'react-force-graph-3d';

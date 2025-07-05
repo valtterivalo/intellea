@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Routes incoming chat to appropriate agents.
+ * Exports RouterAgent.
+ */
 import { Agent } from '@openai/agents';
 import { ConceptExpanderAgent } from './conceptExpand';
 import { GraphInitAgent } from './graphInit';

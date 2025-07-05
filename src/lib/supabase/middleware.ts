@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Supabase middleware for Next.js edge functions.
+ * Exports updateSession.
+ */
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
 

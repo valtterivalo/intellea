@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route to fetch current user session list.
+ * Exports GET.
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 

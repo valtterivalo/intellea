@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand slice tracking billing status.
+ * Exports createBillingSlice.
+ */
 import { StateCreator } from 'zustand';
 import { SupabaseClient } from '@supabase/supabase-js';
 

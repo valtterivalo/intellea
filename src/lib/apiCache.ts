@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Redis-based cache for API data.
+ * Exports getGraphHash.
+ */
 import { createClient as createRedisClient } from './redis';
 import crypto from 'crypto';
 

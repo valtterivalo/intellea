@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Search bar for nodes in the graph.
+ * Exports SearchNodes.
+ */
 
 import React, { useState, useMemo } from 'react';
 import { useAppStore, NodeObject } from '@/store/useAppStore';

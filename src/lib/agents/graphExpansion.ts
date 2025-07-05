@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Agent that expands an existing graph with neighbors.
+ * Exports GraphExpansionAgent.
+ */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
 

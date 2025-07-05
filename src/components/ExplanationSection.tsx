@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Renders the explanation markdown for a concept.
+ * Exports ExplanationSection.
+ */
 
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';

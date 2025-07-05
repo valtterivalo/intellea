@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Supabase generated types.
+ * Exports Database.
+ */
 export type Database = {
   public: {
     Tables: {

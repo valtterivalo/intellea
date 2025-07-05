@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Home page deciding between login and app.
+ * Exports Home.
+ */
 import React from 'react';
 // No longer needed: import { cookies } from 'next/headers';
 // No longer needed: import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';

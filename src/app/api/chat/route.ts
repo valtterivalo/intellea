@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route for chat messages via agents.
+ * Exports POST.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { run } from '@openai/agents';
 import { RouterAgent } from '@/lib/agents/router';

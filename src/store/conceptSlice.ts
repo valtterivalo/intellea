@@ -1,3 +1,7 @@
+/**
+ * @fileoverview State slice for expanded concepts.
+ * Exports createConceptSlice.
+ */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-ignore

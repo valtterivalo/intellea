@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Detailed knowledge card with focus actions.
+ * Exports KnowledgeCard.
+ */
 
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

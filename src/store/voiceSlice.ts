@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand slice tracking voice session state.
+ * Exports createVoiceSlice.
+ */
 import { StateCreator } from 'zustand';
 import { AppState } from './useAppStore';
 
