@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: OutputRenderer
+ */
 
 import React from 'react';
 import { motion } from 'framer-motion';

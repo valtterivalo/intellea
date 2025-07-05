@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Library utilities.
+ * Exports: cn
+ */
 import { clsx, type ClassValue } from "clsx"
 import { twMerge } from "tailwind-merge"
 

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store slice.
+ * Exports: isIntelleaResponse, isLoadedSessionData
+ */
 import type { IntelleaResponse, LoadedSessionData } from './useAppStore';
 
 export function isIntelleaResponse(obj: unknown): obj is IntelleaResponse {

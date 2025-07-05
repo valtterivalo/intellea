@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Authentication route or page.
+ * Exports: GET
+ */
 import { NextResponse } from 'next/server'
 import { type CookieOptions, createServerClient } from '@supabase/ssr'
 

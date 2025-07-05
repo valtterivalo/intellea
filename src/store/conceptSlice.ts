@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store slice.
+ * Exports: createConceptSlice, interface
+ */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-ignore
 

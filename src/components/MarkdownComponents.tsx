@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: markdownComponents
+ */
 
 import React from 'react';
 import { Components } from 'react-markdown';

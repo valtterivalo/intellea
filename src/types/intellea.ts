@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Application file.
+ * Exports: interface
+ */
 export interface NodeObject {
   id: string;
   label: string;

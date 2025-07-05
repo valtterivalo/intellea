@@ -1,3 +1,7 @@
+/**
+ * @fileoverview UI component utilities.
+ * Exports: (none)
+ */
 "use client"
 
 import * as React from "react"

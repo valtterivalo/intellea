@@ -1,3 +1,7 @@
+/**
+ * @fileoverview OpenAI agent definition.
+ * Exports: ConceptExpanderAgent
+ */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
 

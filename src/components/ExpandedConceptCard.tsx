@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: ExpandedConceptCard
+ */
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
