@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Authentication route or page.
+ * Exports: AuthCodeErrorPage
+ */
 
 import React, { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';

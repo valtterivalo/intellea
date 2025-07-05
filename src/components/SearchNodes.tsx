@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: SearchNodes
+ */
 
 import React, { useState, useMemo } from 'react';
 import { useAppStore, NodeObject } from '@/store/useAppStore';

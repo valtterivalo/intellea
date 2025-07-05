@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: HomeClient
+ */
 
 import React from 'react';
 import ChatPanel from '@/components/ChatPanel';

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview React component.
+ * Exports: interface, useGraphState
+ */
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { NodeObject, LinkObject } from 'react-force-graph-3d';

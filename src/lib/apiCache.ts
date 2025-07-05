@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Library utilities.
+ * Exports: acquireLock, getCachedExpandedConcept, getGraphHash, getLockTTL, releaseLock, setCachedExpandedConcept
+ */
 import { createClient as createRedisClient } from './redis';
 import crypto from 'crypto';
 

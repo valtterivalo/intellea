@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: StickyKnowledgeCard
+ */
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';

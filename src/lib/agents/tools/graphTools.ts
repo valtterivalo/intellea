@@ -1,3 +1,7 @@
+/**
+ * @fileoverview OpenAI agent definition.
+ * Exports: addNodeNoteTool, expandNodeTool, focusNodeTool, getNodeNoteTool, pinNodeTool, searchAndSelectNodeTool, selectNodeTool, toggleGraphFullscreenTool, unpinNodeTool, zoomToFitGraphTool
+ */
 import { tool } from '@openai/agents/realtime';
 import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';

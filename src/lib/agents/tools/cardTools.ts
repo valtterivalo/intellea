@@ -1,3 +1,7 @@
+/**
+ * @fileoverview OpenAI agent definition.
+ * Exports: readExpandedConceptTool, readKnowledgeCardTool, scrollToKnowledgeCardsTool, showKnowledgeCardTool, updateKnowledgeCardTool
+ */
 import { tool } from '@openai/agents/realtime';
 import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';

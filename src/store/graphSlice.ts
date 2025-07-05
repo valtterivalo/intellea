@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store slice.
+ * Exports: createGraphSlice, interface
+ */
 import { StateCreator } from 'zustand';
 
 export interface GraphSlice {

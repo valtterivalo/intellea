@@ -1,4 +1,8 @@
-'use client';
+'use client'; // Mark as a Client Component
+/**
+ * @fileoverview React component.
+ * Exports: MainAppClient
+ */
 
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';

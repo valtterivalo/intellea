@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: Breadcrumbs
+ */
 
 import React from 'react';
 import { useAppStore } from '@/store/useAppStore';

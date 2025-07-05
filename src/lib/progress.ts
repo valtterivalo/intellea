@@ -1,4 +1,9 @@
 /**
+ * @fileoverview Library utilities.
+ * Exports: computeProgress, suggestNextNode
+ */
+
+/**
  * @description Compute completion percentage for a set of nodes.
  * @param total - Total number of nodes.
  * @param completedIds - IDs of completed nodes.

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store slice.
+ * Exports: interface, setAppStoreStorage, type, useAppStore
+ */
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { SupabaseClient } from '@supabase/supabase-js';

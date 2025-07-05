@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Next.js page component.
+ * Exports: RootLayout, metadata
+ */
 import type { Metadata } from "next";
 // Remove Geist fonts
 // import { Geist, Geist_Mono } from "next/font/google";

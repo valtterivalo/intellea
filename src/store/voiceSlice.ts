@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand store slice.
+ * Exports: createVoiceSlice, interface
+ */
 import { StateCreator } from 'zustand';
 import { AppState } from './useAppStore';
 

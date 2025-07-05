@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Library utilities.
+ * Exports: calculateFocusPath
+ */
 import type { GraphData } from '@/store/useAppStore';
 
 /**

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Library utilities.
+ * Exports: type
+ */
 export type Database = {
   public: {
     Tables: {
