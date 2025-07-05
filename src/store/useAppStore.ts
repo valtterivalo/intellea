@@ -19,7 +19,8 @@ import type {
   GraphData,
   IntelleaResponse,
   ExpansionResponse,
-  ExpandedConceptData
+  ExpandedConceptData,
+  LoadedSessionData
 } from '@/types/intellea';
 export type {
   NodeObject,
@@ -29,6 +30,7 @@ export type {
   IntelleaResponse,
   ExpansionResponse,
   ExpandedConceptData,
+  LoadedSessionData,
   ChatMessage
 };
 import type { ConceptSlice } from './conceptSlice';
