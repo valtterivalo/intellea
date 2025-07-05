@@ -1,13 +1,16 @@
 'use client';
+// File Overview: Displays knowledge cards with focus-based layout.
+// Utilizes useCardLayout to organize cards into ancestors, focused,
+// children and others, and handles scrolling and interactions.
 
-import React, { useCallback, useMemo, useRef, useEffect } from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';
 import { motion } from 'framer-motion';
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import KnowledgeCard from './KnowledgeCard';
 import { CollapsedKnowledgeCard } from './CollapsedKnowledgeCard';
-import type { NodeObject, LinkObject } from '@/store/useAppStore';
+import useCardLayout from './hooks/useCardLayout';
 
 
 const KnowledgeCardsSection: React.FC = () => {
@@ -67,137 +70,15 @@ const KnowledgeCardsSection: React.FC = () => {
         }
     }, [scrollToNodeId, setScrollToNodeId]);
 
-    // --- Refactored Memoization Logic ---
+    // Determine which cards to display based on focus state
     const {
         rootCard,
-        ancestorLevels, // Array of levels, each level is an array of cards
+        ancestorLevels,
         focusedCard,
         childCards,
         otherCards,
-        isFocusActive
-    } = useMemo(() => {
-        const validCards = knowledgeCards?.filter(
-            (card): card is KnowledgeCardType =>
-                card && typeof card.nodeId === 'string' && card.nodeId.trim() !== '' && typeof card.title === 'string'
-        ) || [];
-        
-        const cardsMap = new Map(validCards.map(card => [card.nodeId, card]));
-        const rootNode = visualizationData?.nodes.find((node: NodeObject) => node.isRoot);
-        const rootCardData = rootNode?.id ? cardsMap.get(rootNode.id) : undefined;
-
-        const currentFocusActive = activeClickedNodeId !== null && visualizationData !== null && cardsMap.has(activeClickedNodeId);
-        
-        const levels: KnowledgeCardType[][] = [];
-        let focused: KnowledgeCardType | undefined;
-        const children: KnowledgeCardType[] = [];
-        const others: KnowledgeCardType[] = [];
-        const allFocusPathIds = new Set<string>(); // IDs in focus path (ancestors, focused, children)
-
-        if (currentFocusActive) {
-            focused = cardsMap.get(activeClickedNodeId)!; // We know it exists from currentFocusActive check
-            allFocusPathIds.add(activeClickedNodeId);
-
-            // --- FIXED: Build parent/child relationships from links ---
-            // We need two separate maps: one for parents and one for children
-            const parentMap = new Map<string, Set<string>>(); // Map: childId -> Set(parentId1, parentId2, ...)
-            const childMap = new Map<string, Set<string>>(); // Map: parentId -> Set(childId1, childId2, ...)
-            
-            // Process links to populate both maps correctly
-            visualizationData.links.forEach((link: LinkObject) => {
-                const sourceId = typeof link.source === 'object' && link.source !== null ? (link.source as NodeObject).id : link.source as string;
-                const targetId = typeof link.target === 'object' && link.target !== null ? (link.target as NodeObject).id : link.target as string;
-                
-                if (sourceId && targetId) {
-                    // Add to parent map (target's parent is source)
-                    if (!parentMap.has(targetId)) parentMap.set(targetId, new Set());
-                    parentMap.get(targetId)!.add(sourceId);
-                    
-                    // Add to child map (source's child is target)
-                    if (!childMap.has(sourceId)) childMap.set(sourceId, new Set());
-                    childMap.get(sourceId)!.add(targetId);
-                }
-            });
-
-            // --- Find direct children using childMap ---
-            const directChildIds = childMap.get(activeClickedNodeId) || new Set();
-            directChildIds.forEach(childId => {
-                const card = cardsMap.get(childId);
-                if (card) {
-                    children.push(card);
-                    allFocusPathIds.add(childId);
-                }
-            });
-
-            // --- BFS Upwards for Ancestors using parentMap, ensuring only the actual root is at the top level ---
-            // Identify the true root node once and ensure it's the only one recognized as root
-            const rootNodeId = rootNode?.id || '';
-            const isRootNode = (id: string) => id === rootNodeId;
-            
-            let currentLevelIds = new Set<string>([activeClickedNodeId]);
-            const visited = new Set<string>([activeClickedNodeId]);
-
-            while (currentLevelIds.size > 0) {
-                const parentLevelIds = new Set<string>();
-                const parentLevelCards: KnowledgeCardType[] = [];
-
-                // For each node in current level, find its parents
-                currentLevelIds.forEach(childId => {
-                    const parents = parentMap.get(childId) || new Set();
-                    parents.forEach(parentId => {
-                        // Skip if we've already visited this node or if it's the root
-                        // Root will be handled separately to ensure it's always at the top level
-                        if (!visited.has(parentId) && !isRootNode(parentId)) {
-                            visited.add(parentId);
-                            parentLevelIds.add(parentId);
-                            allFocusPathIds.add(parentId);
-                            const card = cardsMap.get(parentId);
-                            if (card) parentLevelCards.push(card);
-                        }
-                    });
-                });
-
-                if (parentLevelCards.length > 0) {
-                    levels.push(parentLevelCards);
-                }
-                currentLevelIds = parentLevelIds; // Move to the next level up
-            }
-            
-            // Add the root node as the final (but will become first after reverse) level
-            // But only if it's not already the focused node and it exists
-            if (rootNodeId && rootNodeId !== activeClickedNodeId && !visited.has(rootNodeId)) {
-                const rootCard = cardsMap.get(rootNodeId);
-                if (rootCard) {
-                    levels.push([rootCard]);
-                    allFocusPathIds.add(rootNodeId);
-                }
-            }
-
-            // --- Find Others (cards not in focus path) ---
-            validCards.forEach(card => {
-                if (!allFocusPathIds.has(card.nodeId)) {
-                    others.push(card);
-                }
-            });
-
-        } else {
-            // Inactive state: treat all non-root as 'children' for initial grid
-            validCards.forEach(card => {
-                if (card.nodeId !== rootNode?.id) {
-                    children.push(card);
-                }
-            });
-        }
-
-        return {
-            rootCard: rootCardData,
-            ancestorLevels: levels.reverse(), // Reverse so root is first element
-            focusedCard: focused,
-            childCards: children,
-            otherCards: others,
-            isFocusActive: currentFocusActive
-        };
-    }, [knowledgeCards, visualizationData, activeClickedNodeId]);
-    // --- End Refactored Memoization ---
+        isFocusActive,
+    } = useCardLayout(knowledgeCards, visualizationData, activeClickedNodeId);
 
     // Add console log to inspect calculated data
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("Knowledge Section Render - Focus Active:", isFocusActive, "Focused:", focusedCard?.nodeId, "Ancestors:", ancestorLevels, "Children:", childCards);
