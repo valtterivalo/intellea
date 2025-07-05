@@ -1,14 +1,12 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { X, Map } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAppStore, GraphData } from '@/store/useAppStore';
 import VisualizationComponent from './VisualizationComponent';
 import { Button } from '@/components/ui/button';
-import { ZoomIn, ZoomOut, Maximize2, RefreshCw } from 'lucide-react';
 import { ForceGraphMethods } from 'react-force-graph-3d';
-import MiniMap from './MiniMap';
 
 // Define props for the container
 interface FullscreenGraphContainerProps {
@@ -27,46 +25,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
     const graphContainerRef = useRef<HTMLDivElement>(null);
-    const [graphDims, setGraphDims] = useState({ width: 0, height: 0 });
-    const [cameraState, setCameraState] = useState({ position: { x: 0, y: 0, z: 0 }, zoom: 1 });
-    const [showMiniMap, setShowMiniMap] = useState(true);
-    const toggleMiniMap = () => setShowMiniMap((v) => !v);
 
-    // Toolbar handlers
-    const handleZoomIn = () => {
-        if (graphRef.current && graphRef.current.cameraPosition) {
-            // Use cameraPosition to zoom in by moving camera closer
-            const cam = graphRef.current.camera();
-            const currentPos = cam.position;
-            const newZ = currentPos.z * 0.8; // Move closer
-            graphRef.current.cameraPosition({ x: currentPos.x, y: currentPos.y, z: newZ });
-        }
-    };
-    const handleZoomOut = () => {
-        if (graphRef.current && graphRef.current.cameraPosition) {
-            // Use cameraPosition to zoom out by moving camera further
-            const cam = graphRef.current.camera();
-            const currentPos = cam.position;
-            const newZ = currentPos.z * 1.2; // Move further
-            graphRef.current.cameraPosition({ x: currentPos.x, y: currentPos.y, z: newZ });
-        }
-    };
-    const handleFit = () => {
-        if (graphRef.current && graphRef.current.zoomToFit) {
-            graphRef.current.zoomToFit(400, 50);
-        }
-    };
-    const handleReset = () => {
-        if (graphRef.current && graphRef.current.cameraPosition) {
-            graphRef.current.cameraPosition({ x: 0, y: 0, z: 800 }, { x: 0, y: 0, z: 0 }, 1000);
-        }
-    };
-
-    const handleMiniMapCenter = (x: number, y: number) => {
-        if (!graphRef.current || !graphRef.current.cameraPosition) return;
-        const cam = graphRef.current.camera();
-        graphRef.current.cameraPosition({ x, y, z: cam.position.z }, { x, y, z: 0 }, 1000);
-    };
 
     // Respond to zoom-to-fit requests from the store
     useEffect(() => {
@@ -96,18 +55,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         };
     }, [isGraphFullscreen, toggleGraphFullscreen]);
 
-    // Track graph container dimensions
-    useEffect(() => {
-        const el = graphContainerRef.current;
-        if (!el) return;
-        const update = () => {
-            setGraphDims({ width: el.offsetWidth, height: el.offsetHeight });
-        };
-        update();
-        const ro = new ResizeObserver(update);
-        ro.observe(el);
-        return () => ro.disconnect();
-    }, []);
+
 
     // Extract visualization data, ensuring it conforms to GraphData
     let vizData: GraphData | null = null;
@@ -123,44 +71,7 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         }
     }
 
-    // Sync camera movements to mini map
-    useEffect(() => {
-        if (!graphRef.current) return;
-        
-        const updateCameraState = () => {
-            if (!graphRef.current) return;
-            const cam = graphRef.current.camera();
-            // const controls = graphRef.current.controls();
-            
-            // Calculate zoom based on camera distance from origin
-            const distance = Math.sqrt(cam.position.x ** 2 + cam.position.y ** 2 + cam.position.z ** 2);
-            const zoom = Math.max(0.1, Math.min(10, 800 / distance)); // Normalize zoom
-            
-            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('FullscreenGraphContainer: Camera state updated', {
-                position: cam.position,
-                distance
-            });
-            
-            setCameraState({ 
-                position: { x: cam.position.x, y: cam.position.y, z: cam.position.z }, 
-                zoom
-            });
-        };
-        
-        // Initial update
-        updateCameraState();
-        
-        // Set up event listeners for camera changes
-        const controls = graphRef.current.controls() as unknown;
-        if (controls && typeof controls === 'object' && 'addEventListener' in controls && 'removeEventListener' in controls) {
-            (controls as { addEventListener: (event: string, handler: () => void) => void; removeEventListener: (event: string, handler: () => void) => void }).addEventListener('change', updateCameraState);
-            return () => (controls as { addEventListener: (event: string, handler: () => void) => void; removeEventListener: (event: string, handler: () => void) => void }).removeEventListener('change', updateCameraState);
-        }
-        
-        // Fallback: periodic updates
-        const interval = setInterval(updateCameraState, 100);
-        return () => clearInterval(interval);
-    }, [vizData]);
+
 
     const variants = {
         hidden: { opacity: 0, scale: 0.95, pointerEvents: 'none' as const },
@@ -181,37 +92,14 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
         >
             {vizData && (
                 <div ref={graphContainerRef} className="relative h-[95vh] w-[95vw] rounded-lg border bg-card shadow-xl overflow-hidden">
-                    {/* Floating Toolbar */}
-                    <div className="absolute top-2 left-2 z-20 flex flex-col gap-2 bg-card/80 rounded-md shadow p-2">
-                        <Button variant="ghost" size="icon" onClick={handleZoomIn} aria-label="Zoom in">
-                            <ZoomIn className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleZoomOut} aria-label="Zoom out">
-                            <ZoomOut className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleFit} aria-label="Fit graph">
-                            <Maximize2 className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={handleReset} aria-label="Reset camera">
-                            <RefreshCw className="h-5 w-5" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={toggleMiniMap} aria-label="Toggle mini map">
-                            <Map className="h-5 w-5" />
-                        </Button>
-                    </div>
+                    
                     <VisualizationComponent
                         ref={graphRef}
                         visualizationData={vizData}
                         onNodeExpand={onNodeExpand}
                         expandingNodeId={expandingNodeId}
                     />
-                    <MiniMap
-                        graphData={vizData}
-                        cameraState={cameraState}
-                        mainGraphDims={graphDims}
-                        onCenter={handleMiniMapCenter}
-                        visible={showMiniMap}
-                    />
+
                     <Button
                         variant="ghost"
                         size="icon"
