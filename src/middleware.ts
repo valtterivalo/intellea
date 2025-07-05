@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Next.js middleware hooking into Supabase auth.
+ * Exports middleware.
+ */
 import { type NextRequest } from 'next/server'
 import { updateSession } from '@/lib/supabase/middleware'
 

@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Client auth interface using Supabase UI.
+ * Exports AuthComponent.
+ */
 
 import React from 'react';
 import { Auth } from '@supabase/auth-ui-react';

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Alert component with variants.
+ * Exports Alert, AlertTitle, AlertDescription.
+ */
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
 

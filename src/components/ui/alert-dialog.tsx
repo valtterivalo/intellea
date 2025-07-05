@@ -1,4 +1,8 @@
 "use client"
+/**
+ * @fileoverview Styled primitives for alert dialog components.
+ * Exports AlertDialog, AlertDialogContent, AlertDialogAction, AlertDialogCancel.
+ */
 
 import * as React from "react"
 import * as AlertDialogPrimitive from "@radix-ui/react-alert-dialog"

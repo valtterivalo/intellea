@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Admin endpoint to update user roles from Stripe.
+ * Exports POST.
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';

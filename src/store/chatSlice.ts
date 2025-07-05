@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Zustand slice managing chat messages.
+ * Exports createChatSlice, ChatMessage.
+ */
 import { StateCreator } from 'zustand';
 import { AppState } from './useAppStore';
 

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Generates token for realtime voice agent.
+ * Exports POST.
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';

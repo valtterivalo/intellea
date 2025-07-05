@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Widget for voice interaction with the agent.
+ * Exports VoiceAgentWidget.
+ */
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Mic, MicOff, Bot, Loader2, ChevronsDown, HelpCircle } from 'lucide-react';

@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Test page with sample graph data.
+ * Exports TestPage.
+ */
 
 import React, { useState } from 'react';
 import VisualizationComponent from '@/components/VisualizationComponent';

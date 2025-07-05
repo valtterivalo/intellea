@@ -1,4 +1,8 @@
 "use client"
+/**
+ * @fileoverview Sliding sheet dialog components.
+ * Exports Sheet, SheetContent, SheetTrigger.
+ */
 
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"

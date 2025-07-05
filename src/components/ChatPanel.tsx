@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Chat input panel for conversations.
+ * Exports ChatPanel.
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore, ChatMessage } from '@/store/useAppStore';
 import { Textarea } from '@/components/ui/textarea';

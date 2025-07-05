@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Creates a Stripe Checkout session.
+ * Exports POST.
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import { stripe, getStripeCustomerId } from '@/lib/stripe';

@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Animates and displays model outputs.
+ * Exports OutputRenderer.
+ */
 
 import React from 'react';
 import { motion } from 'framer-motion';

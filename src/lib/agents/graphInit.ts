@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Agent to create an initial concept graph.
+ * Exports GraphInitAgent.
+ */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
 

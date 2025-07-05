@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Factory for Upstash Redis client.
+ * Exports createClient.
+ */
 import { Redis } from '@upstash/redis';
 
 let client: Redis | null = null;

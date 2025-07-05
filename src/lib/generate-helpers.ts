@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Helpers for generating graph embeddings and layout.
+ * Exports getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions.
+ */
 import OpenAI from 'openai';
 import { UMAP } from 'umap-js';
 import type { NodeObject as GraphNode, KnowledgeCard } from '@/types/intellea';

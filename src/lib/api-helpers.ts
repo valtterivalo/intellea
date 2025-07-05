@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Helpers for API authentication and responses.
+ * Exports verifyUserAccess.
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';

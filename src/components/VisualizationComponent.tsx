@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview 3D force graph visualization component.
+ * Exports VisualizationComponent.
+ */
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';

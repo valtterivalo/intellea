@@ -1,3 +1,7 @@
+/**
+ * @fileoverview State slice for session management.
+ * Exports createSessionSlice.
+ */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { StateCreator } from 'zustand';

@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Handles Supabase auth callback.
+ * Exports GET.
+ */
 import { NextResponse } from 'next/server'
 import { type CookieOptions, createServerClient } from '@supabase/ssr'
 

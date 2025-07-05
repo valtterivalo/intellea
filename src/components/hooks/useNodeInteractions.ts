@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Hook for graph node mouse/keyboard interaction.
+ * Exports useNodeInteractions.
+ */
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d';
 import { useGraphState, GraphData, AppGraphNode } from './useGraphState';

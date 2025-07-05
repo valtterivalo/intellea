@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Overlay showing voice command help.
+ * Exports VoiceHelpOverlay.
+ */
 
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';

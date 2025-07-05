@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Realtime agent tools for updating app state.
+ * Exports tools.
+ */
 import { tool } from '@openai/agents/realtime';
 import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';

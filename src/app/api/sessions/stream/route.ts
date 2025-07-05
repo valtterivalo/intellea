@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Experimental streaming session chat.
+ * Exports POST.
+ */
 import { NextRequest } from 'next/server'
 import OpenAI from 'openai'
 

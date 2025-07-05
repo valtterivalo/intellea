@@ -1,3 +1,7 @@
+/**
+ * @fileoverview List expanded concepts for a session.
+ * Exports GET.
+ */
 import { NextResponse } from 'next/server';
 import { createClient as createRedisClient } from '@/lib/redis';
 import { createClient } from '@/lib/supabase/server';
