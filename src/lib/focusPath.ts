@@ -4,6 +4,12 @@
  */
 import type { GraphData } from '@/store/useAppStore';
 
+/**
+ * @description Calculate a set of node IDs representing the focus path.
+ * @param nodeId - Starting node identifier.
+ * @param vizData - Graph data used for traversal.
+ * @returns Object with a set of focus path IDs or null.
+ */
 export const calculateFocusPath = (
   nodeId: string,
   vizData: GraphData

@@ -2,12 +2,25 @@
  * @fileoverview Library utilities.
  * Exports: computeProgress, suggestNextNode
  */
+
+/**
+ * @description Compute completion percentage for a set of nodes.
+ * @param total - Total number of nodes.
+ * @param completedIds - IDs of completed nodes.
+ * @returns Percentage complete from 0 to 100.
+ */
 export function computeProgress(total: number, completedIds: Set<string>): number {
   if (total === 0) return 0;
   return (completedIds.size / total) * 100;
 }
 
 import type { GraphData, NodeObject } from '@/store/useAppStore';
+/**
+ * @description Suggest the next uncompleted node using BFS traversal.
+ * @param graph - Graph data to evaluate.
+ * @param completedIds - Set of completed node IDs.
+ * @returns The next node to complete or null.
+ */
 
 export function suggestNextNode(graph: GraphData | null, completedIds: Set<string>): NodeObject | null {
   if (!graph || !graph.nodes || !graph.links || graph.nodes.length === 0) {

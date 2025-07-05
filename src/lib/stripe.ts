@@ -28,6 +28,12 @@ const supabaseAdmin = createClient(
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: '2025-05-28.basil',
 });
+/**
+ * @description Retrieve or create a Stripe customer for a user.
+ * @param userId - Supabase user ID.
+ * @param email - User email address.
+ * @returns Stripe customer ID.
+ */
 
 export const getStripeCustomerId = async (userId: string, email: string) => {
   try {

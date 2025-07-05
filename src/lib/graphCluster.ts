@@ -10,11 +10,9 @@ interface ClusterGraphData {
 type ClusterMap = Record<string, string>;
 
 /**
- * Compute community clusters for a graph.
- *
+ * @description Compute community clusters for a graph.
  * Tries to use `graphology` with the Louvain algorithm when available and
  * otherwise groups connected components.
- *
  * @param data - Graph nodes and links to cluster.
  * @returns Mapping of node id to cluster id.
  */

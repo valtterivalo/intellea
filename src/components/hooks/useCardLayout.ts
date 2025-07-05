@@ -15,6 +15,13 @@ export interface CardLayout {
   isFocusActive: boolean;
 }
 
+/**
+ * @description Compute layout groupings for knowledge cards based on focus state.
+ * @param knowledgeCards - Array of cards from the graph.
+ * @param visualizationData - Graph data used for relationships.
+ * @param activeClickedNodeId - Node currently focused in the UI.
+ * @returns Structured card layout information.
+ */
 export function useCardLayout(
   knowledgeCards: KnowledgeCardType[] | null | undefined,
   visualizationData: GraphData | null,

@@ -2,9 +2,12 @@
  * @fileoverview Library utilities.
  * Exports: getClusterColor, getNodeColor
  */
+
 /**
- * Maps a node's depth in the graph to a stable hex color.
+ * @description Map a node's depth in the graph to a stable hex color.
  * The palette mirrors the visual legend used in the UI.
+ * @param depth - Depth value starting at 0 for the root.
+ * @returns Hex color string.
  */
 export function getNodeColor(depth: number): string {
   if (depth === 0) return '#ef4444';
@@ -27,6 +30,11 @@ const clusterPalette = [
   '#17becf',
 ];
 
+/**
+ * @description Get a cluster color from the predefined palette.
+ * @param clusterId - Cluster identifier.
+ * @returns Hex color string.
+ */
 export function getClusterColor(clusterId: string | number): string {
   const idx = parseInt(String(clusterId), 10);
   return clusterPalette[idx % clusterPalette.length];

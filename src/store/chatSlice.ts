@@ -15,6 +15,9 @@ export interface ChatSlice {
   send: (content: string) => Promise<void>;
 }
 
+/**
+ * @description Create the chat slice handling AI chat messages.
+ */
 export const createChatSlice: StateCreator<AppState, [], [], ChatSlice> = (set, get) => ({
   messages: [],
   send: async (content: string) => {

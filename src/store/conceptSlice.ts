@@ -31,6 +31,9 @@ export interface ConceptSlice {
   loadExpandedConcepts: (sessionId: string) => Promise<void>;
 }
 
+/**
+ * @description Create the concept management slice for handling expanded concepts.
+ */
 export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = (set, get) => ({
   expandedConceptData: null,
   isExpandingConcept: false,

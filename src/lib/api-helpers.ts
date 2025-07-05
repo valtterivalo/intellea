@@ -12,8 +12,9 @@ interface UserAccessResult {
 }
 
 /**
- * Ensures a user profile exists in the database.
- * Creates one if it doesn't exist.
+ * @description Ensure that a user profile row exists.
+ * @param userId - Supabase user ID.
+ * @returns `true` if the profile exists or was created.
  */
 export async function ensureUserProfile(userId: string): Promise<boolean> {
     const supabase = await createClient();
@@ -41,9 +42,8 @@ export async function ensureUserProfile(userId: string): Promise<boolean> {
 }
 
 /**
- * Verifies that a user is authenticated and has an active subscription.
- * To be used in server-side API routes.
- * @returns {Promise<UserAccessResult>} An object containing the user on success, or an error response on failure.
+ * @description Verify that the user is authenticated and subscribed.
+ * @returns Object containing the user or an error response.
  */
 export async function verifyUserAccess(): Promise<UserAccessResult> {
     const supabase = await createClient();

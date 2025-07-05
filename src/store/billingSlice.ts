@@ -12,6 +12,10 @@ export interface BillingSlice {
   fetchSubscriptionStatus: (supabase: SupabaseClient, userId: string) => Promise<void>;
 }
 
+/**
+ * @description Create the billing slice of the global store.
+ * Handles subscription status retrieval.
+ */
 export const createBillingSlice: StateCreator<BillingSlice, [], [], BillingSlice> = (set) => ({
   subscriptionStatus: null,
   isSubscriptionLoading: false,

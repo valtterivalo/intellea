@@ -4,6 +4,10 @@ import { useCallback } from 'react';
 import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
 import { createClient } from '@/lib/supabase/client';
 
+/**
+ * @description Hook returning a submit handler for topic prompts.
+ * Handles session creation and saves on subsequent prompts.
+ */
 export function usePromptSubmit() {
   const supabase = createClient();
 

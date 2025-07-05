@@ -125,6 +125,10 @@ const inMemoryStorage: StateStorage = {
 
 // Allow tests to override the storage mechanism used by the persisted store.
 let externalStorage: StateStorage | undefined;
+/**
+ * @description Override the storage mechanism used by the persisted store.
+ * @param storage - Optional custom storage implementation.
+ */
 export const setAppStoreStorage = (storage?: StateStorage) => {
   externalStorage = storage;
   useAppStore.persist.setOptions({
@@ -140,6 +144,9 @@ const getStorage = (): StateStorage => {
   return inMemoryStorage;
 };
 
+/**
+ * @description React hook exposing the global application store.
+ */
 export const useAppStore = create<AppState>()(
   persist(
     (set, get, api) => ({

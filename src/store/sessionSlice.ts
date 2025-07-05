@@ -26,6 +26,9 @@ export interface SessionSlice {
   resetActiveSessionState: () => void;
 }
 
+/**
+ * @description Create the session management slice of the store.
+ */
 export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = (set, get) => ({
   sessionsList: null,
   isSessionListLoading: false,
