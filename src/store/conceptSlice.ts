@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-ignore
 
@@ -14,6 +13,7 @@ interface ExpandedConceptData {
 
 import type { StateCreator } from 'zustand';
 import { AppState } from './useAppStore';
+import type { NodeObject } from '@/types/intellea';
 
 export interface ConceptSlice {
   expandedConceptData: ExpandedConceptData | null;
@@ -51,8 +51,8 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
         const nodeIds = output.visualizationData.nodes.map((n: {id: string}) => n.id).sort().join(',');
         const linkPairs = output.visualizationData.links
           .map((l: {source: unknown; target: unknown}) => {
-            const source = typeof l.source === 'object' && l.source ? (l.source as any).id : l.source;
-            const target = typeof l.target === 'object' && l.target ? (l.target as any).id : l.target;
+            const source = typeof l.source === 'object' && l.source ? (l.source as NodeObject).id : l.source;
+            const target = typeof l.target === 'object' && l.target ? (l.target as NodeObject).id : l.target;
             return `${source}->${target}`;
           })
           .sort()
@@ -85,8 +85,8 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           isRoot: node.isRoot || false,
         }));
         const sanitizedLinks = output.visualizationData.links.map((link: {source: unknown; target: unknown}) => {
-          const source = typeof link.source === 'object' && link.source ? (link.source as any).id : link.source;
-          const target = typeof link.target === 'object' && link.target ? (link.target as any).id : link.target;
+          const source = typeof link.source === 'object' && link.source ? (link.source as NodeObject).id : link.source;
+          const target = typeof link.target === 'object' && link.target ? (link.target as NodeObject).id : link.target;
           return { source, target };
         });
         sanitizedVizData = { nodes: sanitizedNodes, links: sanitizedLinks };
@@ -195,8 +195,8 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
         const nodeIds = output.visualizationData.nodes.map((n: {id: string}) => n.id).sort().join(',');
         const linkPairs = output.visualizationData.links
           .map((l: {source: unknown; target: unknown}) => {
-            const source = typeof l.source === 'object' && l.source ? (l.source as any).id : l.source;
-            const target = typeof l.target === 'object' && l.target ? (l.target as any).id : l.target;
+            const source = typeof l.source === 'object' && l.source ? (l.source as NodeObject).id : l.source;
+            const target = typeof l.target === 'object' && l.target ? (l.target as NodeObject).id : l.target;
             return `${source}->${target}`;
           })
           .sort()
@@ -229,8 +229,8 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           isRoot: node.isRoot || false,
         }));
         const sanitizedLinks = output.visualizationData.links.map((link: {source: unknown; target: unknown}) => {
-          const source = typeof link.source === 'object' && link.source ? (link.source as any).id : link.source;
-          const target = typeof link.target === 'object' && link.target ? (link.target as any).id : link.target;
+          const source = typeof link.source === 'object' && link.source ? (link.source as NodeObject).id : link.source;
+          const target = typeof link.target === 'object' && link.target ? (link.target as NodeObject).id : link.target;
           return { source, target };
         });
         sanitizedVizData = { nodes: sanitizedNodes, links: sanitizedLinks };
@@ -414,7 +414,7 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
       }
 
       const newCache = new Map<string, { data: ExpandedConceptData; graphHash: string }>();
-      responseData.expandedConcepts.forEach((concept: {nodeId: string; title: string; content: string; relatedConcepts: any; graphHash: string}) => {
+      responseData.expandedConcepts.forEach((concept: {nodeId: string; title: string; content: string; relatedConcepts: ExpandedConceptData['relatedConcepts']; graphHash: string}) => {
         if (!concept.nodeId || !concept.title || !concept.content || !concept.relatedConcepts || !concept.graphHash) {
           return;
         }
@@ -422,7 +422,7 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           data: {
             title: concept.title,
             content: concept.content,
-            relatedConcepts: concept.relatedConcepts as any,
+            relatedConcepts: concept.relatedConcepts as ExpandedConceptData['relatedConcepts'],
           },
           graphHash: concept.graphHash,
         });

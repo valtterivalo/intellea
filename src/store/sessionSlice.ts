@@ -1,9 +1,9 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { computeClusters } from '@/lib/graphCluster';
-import type { AppState, IntelleaResponse, NodeObject, SessionSummary } from './useAppStore';
+import type { AppState, IntelleaResponse, NodeObject, SessionSummary, LoadedSessionData } from './useAppStore';
+import { isLoadedSessionData } from './utils';
 
 export interface SessionSlice {
   sessionsList: SessionSummary[] | null;
@@ -66,27 +66,17 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       if (error) throw error;
       if (!loadedData) throw new Error('Session not found.');
 
-      const sessionData = loadedData.session_data as unknown;
-      if (
-        !sessionData ||
-        typeof sessionData !== 'object' ||
-        !(sessionData as any).explanationMarkdown ||
-        !(sessionData as any).knowledgeCards ||
-        !Array.isArray((sessionData as any).knowledgeCards) ||
-        !(sessionData as any).visualizationData ||
-        typeof (sessionData as any).visualizationData !== 'object' ||
-        !(sessionData as any).visualizationData.nodes ||
-        !Array.isArray((sessionData as any).visualizationData.nodes) ||
-        !(sessionData as any).visualizationData.links ||
-        !Array.isArray((sessionData as any).visualizationData.links)
-      ) {
-        console.error('Loaded session data has invalid structure:', sessionData);
+      const sessionDataUnknown = loadedData.session_data as unknown;
+      if (!isLoadedSessionData(sessionDataUnknown)) {
+        console.error('Loaded session data has invalid structure:', sessionDataUnknown);
         throw new Error('Loaded session data has an invalid or outdated structure.');
       }
 
-      const clusters = computeClusters((sessionData as any).visualizationData);
+      const sessionData: LoadedSessionData = sessionDataUnknown;
+
+      const clusters = computeClusters(sessionData.visualizationData);
       set({
-        output: sessionData as IntelleaResponse,
+        output: sessionData,
         activePrompt: loadedData.last_prompt,
         currentSessionId: sessionId,
         currentSessionTitle: loadedData.title,

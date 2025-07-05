@@ -1,4 +1,4 @@
-import type { IntelleaResponse } from './useAppStore';
+import type { IntelleaResponse, LoadedSessionData } from './useAppStore';
 
 export function isIntelleaResponse(obj: unknown): obj is IntelleaResponse {
   return (
@@ -15,4 +15,8 @@ export function isIntelleaResponse(obj: unknown): obj is IntelleaResponse {
     'links' in obj.visualizationData &&
     Array.isArray(obj.visualizationData.links)
   );
+}
+
+export function isLoadedSessionData(obj: unknown): obj is LoadedSessionData {
+  return isIntelleaResponse(obj);
 }

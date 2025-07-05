@@ -48,3 +48,9 @@ export interface ExpandedConceptData {
     relation: string;
   }>;
 }
+
+export interface LoadedSessionData {
+  explanationMarkdown: string | null;
+  knowledgeCards: KnowledgeCard[] | null;
+  visualizationData: GraphData;
+}
