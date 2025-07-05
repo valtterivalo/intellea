@@ -10,10 +10,13 @@ interface ClusterGraphData {
 type ClusterMap = Record<string, string>;
 
 /**
- * Compute clusters for a graph.
+ * Compute community clusters for a graph.
  *
- * Tries to use `graphology` with the Louvain algorithm if available.
- * Falls back to grouping connected components when the library is missing.
+ * Tries to use `graphology` with the Louvain algorithm when available and
+ * otherwise groups connected components.
+ *
+ * @param data - Graph nodes and links to cluster.
+ * @returns Mapping of node id to cluster id.
  */
 export function computeClusters(data: ClusterGraphData): ClusterMap {
   try {
@@ -48,21 +51,21 @@ export function computeClusters(data: ClusterGraphData): ClusterMap {
       adj[t].add(s);
     });
     const clusters: ClusterMap = {};
-    let cid = 0;
+    let clusterIndex = 0;
     for (const id of Object.keys(adj)) {
       if (clusters[id]) continue;
       const queue = [id];
-      clusters[id] = String(cid);
+      clusters[id] = String(clusterIndex);
       while (queue.length) {
-        const n = queue.pop() as string;
-        for (const nb of adj[n]) {
-          if (!clusters[nb]) {
-            clusters[nb] = String(cid);
-            queue.push(nb);
+        const current = queue.pop() as string;
+        for (const neighborId of adj[current]) {
+          if (!clusters[neighborId]) {
+            clusters[neighborId] = String(clusterIndex);
+            queue.push(neighborId);
           }
         }
       }
-      cid++;
+      clusterIndex++;
     }
     return clusters;
   }
