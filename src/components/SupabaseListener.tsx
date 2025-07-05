@@ -1,4 +1,8 @@
 'use client'
+/**
+ * @fileoverview React component.
+ * Exports: SupabaseListener
+ */
 
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'

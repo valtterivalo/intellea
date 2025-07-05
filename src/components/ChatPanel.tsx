@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: ChatPanel
+ */
 import React, { useEffect, useRef, useState } from 'react';
 import { useAppStore, ChatMessage } from '@/store/useAppStore';
 import { Textarea } from '@/components/ui/textarea';

@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview Next.js page component.
+ * Exports: TestPage
+ */
 
 import React, { useState } from 'react';
 import VisualizationComponent from '@/components/VisualizationComponent';

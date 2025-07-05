@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: GET, POST
+ */
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';

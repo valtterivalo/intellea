@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: DELETE, GET, PUT
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 // import type { IntelleaResponse } from '@/store/useAppStore'; // Available for future use

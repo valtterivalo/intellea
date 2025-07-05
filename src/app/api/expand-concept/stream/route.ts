@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: POST
+ */
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';

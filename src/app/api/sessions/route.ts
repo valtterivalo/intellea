@@ -1,3 +1,7 @@
+/**
+ * @fileoverview API route handlers.
+ * Exports: GET, POST
+ */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
 

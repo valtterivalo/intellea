@@ -1,3 +1,7 @@
+/**
+ * @fileoverview OpenAI agent definition.
+ * Exports: GraphInitAgent
+ */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
 

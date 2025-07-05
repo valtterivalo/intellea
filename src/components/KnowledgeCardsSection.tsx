@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: React
+ */
 
 import React, { useCallback, useMemo, useRef, useEffect } from 'react';
 import { useAppStore, KnowledgeCard as KnowledgeCardType } from '@/store/useAppStore';

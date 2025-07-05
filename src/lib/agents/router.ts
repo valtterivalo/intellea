@@ -1,3 +1,7 @@
+/**
+ * @fileoverview OpenAI agent definition.
+ * Exports: RouterAgent
+ */
 import { Agent } from '@openai/agents';
 import { ConceptExpanderAgent } from './conceptExpand';
 import { GraphInitAgent } from './graphInit';

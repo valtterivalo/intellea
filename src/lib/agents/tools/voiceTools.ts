@@ -1,3 +1,7 @@
+/**
+ * @fileoverview OpenAI agent definition.
+ * Exports: exitFullscreenTool, getCurrentViewContextTool, showChatPanelTool, showGraphPanelTool
+ */
 import { tool } from '@openai/agents/realtime';
 import { z } from 'zod';
 import { useAppStore } from '@/store/useAppStore';

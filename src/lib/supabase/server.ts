@@ -1,3 +1,7 @@
+/**
+ * @fileoverview Supabase helper.
+ * Exports: createClient
+ */
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 

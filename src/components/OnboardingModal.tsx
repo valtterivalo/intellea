@@ -1,4 +1,8 @@
 'use client';
+/**
+ * @fileoverview React component.
+ * Exports: OnboardingModal
+ */
 
 import React, { useEffect } from 'react';
 import { Button } from '@/components/ui/button';
