@@ -41,7 +41,7 @@ export async function getNodeEmbeddings(
   try {
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Requesting embeddings for ${texts.length} texts...`);
     const response = await openai.embeddings.create({
-      model: 'text-embedding-3-small',
+      model: 'text-embedding-3-large',
       input: texts,
     });
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('Embeddings received.');

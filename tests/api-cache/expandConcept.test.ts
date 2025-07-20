@@ -90,10 +90,8 @@ describe.skip('expand-concept API cache & concurrency', () => {
 
   it('should return 202 with Retry-After if lock exists (concurrent request)', async () => {
     const redis = redisLib.createClient();
-    // Manually set a lock
     await redis.set('lock:test-session:test-hash', '1', 'EX', 300);
 
-    // Simulate a POST request with the same session/hash
     const req = {
       json: async () => ({
         nodeId: 'n1',
@@ -104,8 +102,6 @@ describe.skip('expand-concept API cache & concurrency', () => {
       headers: {},
     };
 
-    // Patch the handler to use the same session/hash for lock
-    // (You may need to adjust this depending on your actual handler logic)
     const res = await app(req as any);
     expect(res.status).toBe(202);
     const data = await res.json();

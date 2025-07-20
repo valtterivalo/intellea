@@ -1,9 +1,10 @@
 /**
- * @fileoverview OpenAI agent definition.
+ * @fileoverview Graph initialization agent with Kimi K2 support
  * Exports: GraphInitAgent
  */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
+import { getModel } from '../models/config';
 
 // Zod schemas for validation, based on types in src/types/intellea.ts
 
@@ -77,7 +78,7 @@ export const GraphInitAgent = new Agent({
     name: "graph_init",
     instructions: INITIAL_SYSTEM_PROMPT,
     outputType: GraphInitOutSchema,
-    model: "gpt-4.1",
+    model: getModel('kimi-k2'), // Use Kimi K2 via Groq with OpenAI fallback
     modelSettings: {
         temperature: 0.3
     },

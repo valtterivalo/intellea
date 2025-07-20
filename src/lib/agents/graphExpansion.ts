@@ -1,9 +1,10 @@
 /**
- * @fileoverview OpenAI agent definition.
+ * @fileoverview Graph expansion agent with Kimi K2 support
  * Exports: GraphExpansionAgent
  */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
+import { getModel } from '../models/config';
 
 const NodeObjectSchema = z.object({
   id: z.string(),
@@ -59,7 +60,7 @@ export const GraphExpansionAgent = new Agent({
     name: "graph_expansion",
     instructions: EXPANSION_SYSTEM_PROMPT,
     outputType: ExpansionResponseSchema,
-    model: "gpt-4.1",
+    model: getModel('kimi-k2'), // Use Kimi K2 via Groq with OpenAI fallback
     modelSettings: {
         temperature: 0.4,
     },

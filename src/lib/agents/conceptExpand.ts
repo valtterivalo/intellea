@@ -1,9 +1,10 @@
 /**
- * @fileoverview OpenAI agent definition.
+ * @fileoverview Concept expansion agent with Kimi K2 support
  * Exports: ConceptExpanderAgent
  */
 import { Agent } from '@openai/agents';
 import { z } from 'zod';
+import { getModel } from '../models/config';
 
 // Zod schema for a related concept, part of the expansion output.
 const RelatedConceptSchema = z.object({
@@ -58,5 +59,5 @@ export const ConceptExpanderAgent = new Agent({
     name: "concept_expander",
     instructions: EXPAND_CONCEPT_PROMPT,
     outputType: ExpandOutSchema,
-    model: "gpt-4.1",
+    model: getModel('kimi-k2'), // Use Kimi K2 via Groq with OpenAI fallback
 }); 

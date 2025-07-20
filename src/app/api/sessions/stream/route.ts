@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       async start(controller) {
         // 4. Make the streaming call to OpenAI
         const completion = await openai.chat.completions.create({
-          model: 'gpt-3.5-turbo',
+          model: 'gpt-4.1',
           messages: messages,
           stream: true
         })
