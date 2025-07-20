@@ -1,5 +1,4 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { markNodeLearnedTool } from '@/lib/agents/tools';
 import { useAppStore } from '@/store/useAppStore';
 
 describe.skip('mark_node_learned tool', () => {
@@ -8,7 +7,9 @@ describe.skip('mark_node_learned tool', () => {
   });
 
   it('marks a node as learned', async () => {
-    await markNodeLearnedTool.invoke({} as any, JSON.stringify({ nodeId: 'x' }));
+    // Tool no longer exists - this test should be updated or removed
+    const store = useAppStore.getState();
+    store.markCompleted('x');
     expect(useAppStore.getState().completedNodeIds.has('x')).toBe(true);
   });
 });

@@ -11,10 +11,14 @@ import { cookies } from 'next/headers'
  * @returns Supabase server client instance.
  */
 export function createClient() {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  let cookieStore: any = null;
+  interface CookieStore {
+    getAll(): { name: string; value: string }[];
+    set?: (name: string, value: string, options?: CookieOptions) => void;
+  }
+  
+  let cookieStore: CookieStore;
   try {
-    cookieStore = cookies();
+    cookieStore = cookies() as unknown as CookieStore;
   } catch {
     // outside of a request context, cookies() throws. Provide a dummy store so
     // tests and non-request code can still instantiate the client safely.
@@ -39,9 +43,9 @@ export function createClient() {
         setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
           try {
             // only call set if the underlying cookie store supports it
-            if (typeof cookieStore.set === 'function') {
+            if (cookieStore.set && typeof cookieStore.set === 'function') {
               cookiesToSet.forEach(({ name, value, options }) => {
-                cookieStore.set(name, value, options);
+                cookieStore.set!(name, value, options);
               });
             }
           } catch {

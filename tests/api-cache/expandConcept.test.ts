@@ -90,7 +90,7 @@ describe.skip('expand-concept API cache & concurrency', () => {
 
   it('should return 202 with Retry-After if lock exists (concurrent request)', async () => {
     const redis = redisLib.createClient();
-    await redis.set('lock:test-session:test-hash', '1', 'EX', 300);
+    await redis.set('lock:test-session:test-hash', '1', { ex: 300 });
 
     const req = {
       json: async () => ({

@@ -5,7 +5,6 @@
 import { NextRequest } from 'next/server'
 import OpenAI from 'openai'
 
-// ... existing code (if any) ...
 
 export async function POST(req: NextRequest) {
   try {

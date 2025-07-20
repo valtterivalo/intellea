@@ -46,8 +46,7 @@ const ForceGraph3DComponent = dynamic(
       <p className="text-muted-foreground italic text-sm p-4">Loading 3D Graph...</p>
     ),
   }
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-) as any;
+) as React.ComponentType<Record<string, unknown>>;
 
 // Type assertion helper (not memoized)
 const asAppNode = (node: NodeObject): AppGraphNode => node as AppGraphNode;

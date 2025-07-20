@@ -101,13 +101,17 @@ you can exit fullscreen with \`exit_fullscreen\`.`,
             item !== null && 
             'type' in item && 
             'role' in item &&
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (item as any).type === 'message' && 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            ((item as any).role === 'user' || (item as any).role === 'assistant')
+            'type' in item &&
+            'role' in item &&
+            'content' in item &&
+            (item as { type: string }).type === 'message' && 
+            ['user', 'assistant'].includes((item as { role: string }).role)
           ) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const typedItem = item as any;
+            const typedItem = item as {
+              type: string;
+              role: 'user' | 'assistant';
+              content: Array<{ text?: string; transcript?: string }>;
+            };
             const part = typedItem.content?.find((c: unknown) => typeof c === 'object' && c !== null && ('text' in c || 'transcript' in c));
             const text = part?.text ?? part?.transcript ?? '';
             setHistory((h) => [...h, { speaker: typedItem.role, text }]);
@@ -146,8 +150,7 @@ you can exit fullscreen with \`exit_fullscreen\`.`,
       newSession.on('error', (error: unknown) => {
         console.error("RealtimeSession error:", error);
         if (typeof error === 'object' && error !== null && 'error' in error) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            console.error("Underlying error:", (error as any).error);
+            console.error("Underlying error:", (error as { error: unknown }).error);
         }
       });
 
