@@ -37,10 +37,7 @@ import {
   useAppStore,
   SessionSummary,
 } from '@/store/useAppStore';
-import { loadStripe } from '@stripe/stripe-js';
 import { useShallow } from 'zustand/react/shallow';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 interface AppHeaderProps {
   onShowOnboarding: () => void;
@@ -78,7 +75,6 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
     fetchSessions,
     fetchSubscriptionStatus,
     loadSession,
-    createSession,
     saveSession,
     deleteSession,
     updateSessionTitleLocally,

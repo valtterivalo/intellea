@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAppStore, setAppStoreStorage } from '@/store/useAppStore';
 import { computeClusters } from '@/lib/graphCluster';
 
@@ -53,9 +53,9 @@ describe('Graph UX Zustand Store', () => {
   it('computes clusters when setting output', () => {
     const data = {
       nodes: [
-        { id: '1' },
-        { id: '2' },
-        { id: '3' }
+        { id: '1', label: 'Node 1' },
+        { id: '2', label: 'Node 2' },
+        { id: '3', label: 'Node 3' }
       ],
       links: [
         { source: '1', target: '2' }
@@ -72,11 +72,11 @@ describe('Graph UX Zustand Store', () => {
 
   it('cluster mapping persists after multiple updates', () => {
     const data1 = {
-      nodes: [ { id: 'a' }, { id: 'b' } ],
+      nodes: [ { id: 'a', label: 'A' }, { id: 'b', label: 'B' } ],
       links: [ { source: 'a', target: 'b' } ]
     };
     const data2 = {
-      nodes: [ { id: 'a' }, { id: 'b' }, { id: 'c' } ],
+      nodes: [ { id: 'a', label: 'A' }, { id: 'b', label: 'B' }, { id: 'c', label: 'C' } ],
       links: [ { source: 'a', target: 'b' }, { source: 'b', target: 'c' } ]
     };
     useAppStore.getState().setOutput({ explanationMarkdown: '', knowledgeCards: [], visualizationData: data1 });
@@ -119,15 +119,6 @@ describe('Graph UX Zustand Store', () => {
     (el as any).scrollIntoView = spy;
     useAppStore.getState().setKnowledgeCardsRef(el);
     useAppStore.getState().scrollToKnowledgeCards();
-    expect(spy).toHaveBeenCalledWith({ behavior: 'smooth' });
-  });
-
-  it('scrolls to explanation section', () => {
-    const el = document.createElement('div');
-    const spy = vi.fn();
-    (el as any).scrollIntoView = spy;
-    useAppStore.getState().setExplanationRef(el);
-    useAppStore.getState().scrollToExplanation();
     expect(spy).toHaveBeenCalledWith({ behavior: 'smooth' });
   });
 

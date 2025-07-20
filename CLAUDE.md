@@ -15,7 +15,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `pnpm test` - Run Vitest test suite
 - `pnpm test:watch` - Run Vitest in watch mode
 - `pnpm e2e` - Run Cypress end-to-end tests
-- `pnpm knip` - Check for unused dependencies and dead code
 - `pnpm type-check` - Run TypeScript type checking without emitting files
 - `pnpm dev:setup` - Run development setup script
 - `pnpm dev:reset` - Clear Next.js cache and restart dev server
@@ -154,11 +153,11 @@ Required for development:
 
 **Build & Development:**
 - `next.config.ts` - Next.js configuration (minimal, using defaults)
-- `tailwind.config.ts` - Tailwind CSS with tailwindcss-animate plugin
-- `components.json` - shadcn component configuration with New York style
-- `vitest.config.ts` - Test configuration with jsdom environment
+- `tailwind.config.ts` - Tailwind CSS with `tailwindcss-animate` plugin
+- `components.json` - `shadcn` component configuration with "New York" style
+- `vitest.config.ts` - Test configuration with `jsdom` environment
 - `cypress.config.ts` - E2E testing configuration
-- `knip.config.ts` - Unused dependency detection with Tailwind exclusions
+- `tsconfig.json` - TypeScript configuration
 
 **Type Definitions:**
 - `src/types/intellea.ts` - Core data structures (NodeObject, GraphData, etc.)

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useCallback } from 'react';
-import { useAppStore, IntelleaResponse } from '@/store/useAppStore';
+import { useAppStore } from '@/store/useAppStore';
 import OutputRenderer from '@/components/OutputRenderer';
 import Breadcrumbs from '@/components/Breadcrumbs';
 import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
@@ -25,7 +25,6 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useShallow } from 'zustand/react/shallow';
 import { useNodeExpansion } from './hooks/useNodeExpansion';
-import type { NodeObject } from 'react-force-graph-2d';
 
 interface GraphViewProps {
   onSubscribe: () => Promise<void>;
@@ -47,9 +46,7 @@ const GraphView: React.FC<GraphViewProps> = ({
     isSessionLoading,
     subscriptionStatus,
     isSubscriptionLoading,
-    error,
     forceExpandRequest,
-    viewMode,
   } = useAppStore(
     useShallow((state) => ({
       output: state.output,
@@ -58,15 +55,11 @@ const GraphView: React.FC<GraphViewProps> = ({
       isSessionLoading: state.isSessionLoading,
       subscriptionStatus: state.subscriptionStatus,
       isSubscriptionLoading: state.isSubscriptionLoading,
-      error: state.error,
       forceExpandRequest: state.forceExpandRequest,
-      viewMode: state.viewMode,
     }))
   );
 
   const {
-    setPrompt,
-    setViewMode,
     setForceExpandRequest,
     removeUnpinnedChildren,
     setKnowledgeCardsRef,

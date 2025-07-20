@@ -100,7 +100,6 @@ pnpm e2e                  # Run Cypress end-to-end tests
 # Code Quality
 pnpm lint                 # ESLint
 pnpm type-check          # TypeScript checking
-pnpm knip                # Find unused dependencies
 
 # Subscription Debugging
 pnpm debug:subscription user@example.com  # Check user subscription status

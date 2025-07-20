@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useAppStore, IntelleaResponse, NodeObject } from '@/store/useAppStore';
+import { useAppStore, NodeObject } from '@/store/useAppStore';
 import { createClient } from '@/lib/supabase/client';
 
 /**
