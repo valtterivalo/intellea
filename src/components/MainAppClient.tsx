@@ -23,11 +23,17 @@ export default function MainAppClient() {
   const [isCheckoutLoading, setIsCheckoutLoading] = useState(false);
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (priceId: string) => {
     setIsCheckoutLoading(true);
     setError(null);
     try {
-      const response = await fetch('/api/stripe/create-checkout', { method: 'POST' });
+      const response = await fetch('/api/stripe/create-checkout', { 
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ priceId }),
+      });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || 'Failed to create checkout session');
@@ -46,10 +52,17 @@ export default function MainAppClient() {
     }
   };
 
+  // Wrapper for backward compatibility with components expecting no parameters
+  const handleSubscribeDefault = async () => {
+    // Default to monthly plan
+    const defaultPriceId = process.env.NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID || 'price_1Rn0F0DNd0v7AIsQEj41DcmU';
+    await handleSubscribe(defaultPriceId);
+  };
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <AppHeader onShowOnboarding={() => setShowOnboarding(true)} onSubscribe={handleSubscribe} isCheckoutLoading={isCheckoutLoading} />
-      <GraphView onSubscribe={handleSubscribe} isCheckoutLoading={isCheckoutLoading} showOnboarding={showOnboarding} setShowOnboarding={setShowOnboarding} />
+      <AppHeader onShowOnboarding={() => setShowOnboarding(true)} onSubscribe={handleSubscribeDefault} isCheckoutLoading={isCheckoutLoading} />
+      <GraphView onSubscribe={handleSubscribeDefault} isCheckoutLoading={isCheckoutLoading} showOnboarding={showOnboarding} setShowOnboarding={setShowOnboarding} />
       <PromptFooter />
       <VoiceAgentWidget />
     </div>

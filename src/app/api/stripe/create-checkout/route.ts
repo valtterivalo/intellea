@@ -3,11 +3,27 @@
  * Exports: POST
  */
 import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { stripe, getStripeCustomerId } from '@/lib/stripe';
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    const { priceId } = body;
+
+    // Validate priceId
+    const validPriceIds = [
+      process.env.STRIPE_MONTHLY_PRICE_ID,
+      process.env.STRIPE_YEARLY_PRICE_ID
+    ].filter(Boolean);
+
+    if (!priceId || !validPriceIds.includes(priceId)) {
+      return NextResponse.json(
+        { error: 'Invalid price ID' },
+        { status: 400 }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -27,7 +43,7 @@ export async function POST() {
       payment_method_types: ['card'],
       line_items: [
         {
-          price: process.env.STRIPE_PRICE_ID, // We'll set this up in the Stripe dashboard
+          price: priceId,
           quantity: 1,
         },
       ],
