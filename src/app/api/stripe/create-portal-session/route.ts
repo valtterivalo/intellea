@@ -36,8 +36,8 @@ export async function POST() {
     let customerId = profile.stripe_customer_id;
     try {
       await stripe.customers.retrieve(customerId);
-    } catch (error: any) {
-      if (error.code === 'resource_missing') {
+    } catch (error) {
+      if (error instanceof Error && 'code' in error && error.code === 'resource_missing') {
         console.log(`Customer ${customerId} not found in Stripe, creating new customer for user ${user.id}`);
         
         // Create a new customer
@@ -69,11 +69,11 @@ export async function POST() {
     });
 
     return NextResponse.json({ url: portalSession.url });
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error creating portal session:', error);
     
     // Handle specific Stripe portal configuration error
-    if (error.type === 'StripeInvalidRequestError' && 
+    if (error instanceof Error && 'type' in error && error.type === 'StripeInvalidRequestError' && 
         error.message?.includes('No configuration provided')) {
       return NextResponse.json(
         { 

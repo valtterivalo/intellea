@@ -144,6 +144,10 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
           store.currentSessionTitle = `${sessionTitle} (Demo)`;
         } else {
           // Store all data in session_data field as per current schema
+          if (!user) {
+            throw new Error('User not found when creating session');
+          }
+          
           const sessionPayload = {
             user_id: user.id,
             title: sessionTitle,
