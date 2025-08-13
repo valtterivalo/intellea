@@ -97,12 +97,12 @@ async function handleExpansion(
 
     const finalNodes = combinedNodesRaw.map((node, index) => ({
         ...node,
-        fx: allPositions[index]?.fx ?? (node as any).fx ?? 0,
-        fy: allPositions[index]?.fy ?? (node as any).fy ?? 0,
-        fz: allPositions[index]?.fz ?? (node as any).fz ?? 0,
-        x: (node as any).x ?? 0,
-        y: (node as any).y ?? 0,
-        z: (node as any).z ?? 0,
+        fx: allPositions[index]?.fx ?? ('fx' in node ? node.fx as number : 0) ?? 0,
+        fy: allPositions[index]?.fy ?? ('fy' in node ? node.fy as number : 0) ?? 0,
+        fz: allPositions[index]?.fz ?? ('fz' in node ? node.fz as number : 0) ?? 0,
+        x: ('x' in node ? node.x as number : 0) ?? 0,
+        y: ('y' in node ? node.y as number : 0) ?? 0,
+        z: ('z' in node ? node.z as number : 0) ?? 0,
     }));
 
     return {
@@ -124,8 +124,8 @@ export async function POST(req: NextRequest) {
   let prompt: string;
   let nodeId: string | undefined;
   let nodeLabel: string | undefined;
-  let currentVisualizationData: any;
-  let currentKnowledgeCards: any;
+  let currentVisualizationData: { nodes: NodeObject[]; links: LinkObject[] } | undefined;
+  let currentKnowledgeCards: KnowledgeCard[] | undefined;
   let files: File[] = [];
 
   if (contentType.includes('multipart/form-data')) {

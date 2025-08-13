@@ -123,7 +123,7 @@ export async function searchVectorStore(
   vectorStoreId: string,
   query: string,
   maxResults: number = 10
-): Promise<any> {
+): Promise<unknown> {
   try {
     if (process.env.APP_DEBUG === 'true') console.log(`Searching vector store ${vectorStoreId} for: "${query}"`);
     

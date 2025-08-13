@@ -37,7 +37,7 @@ export async function ensureUserVectorStore(userId: string): Promise<string> {
       await getVectorStore(user.openai_vector_store_id);
       if (process.env.APP_DEBUG === 'true') console.log(`Using existing vector store: ${user.openai_vector_store_id}`);
       return user.openai_vector_store_id;
-    } catch (error) {
+    } catch {
       console.warn(`Vector store ${user.openai_vector_store_id} not found, creating new one`);
     }
   }
@@ -106,7 +106,7 @@ export async function processAndStoreDocuments(
     
     try {
       // Upload to OpenAI Files API
-      const uploadResult = await uploadFile(file, userId);
+      const uploadResult = await uploadFile(file);
       
       // Add to vector store
       await addFileToVectorStore(vectorStoreId, uploadResult.fileId, file.name);

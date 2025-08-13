@@ -43,8 +43,7 @@ export interface FileUploadResult {
  * Upload a file to OpenAI Files API
  */
 export async function uploadFile(
-  file: File,
-  userId: string
+  file: File
 ): Promise<FileUploadResult> {
   // Validate file type
   if (!FILE_LIMITS.SUPPORTED_TYPES.includes(file.type as SupportedFileType)) {
@@ -135,7 +134,7 @@ export async function getFileInfo(fileId: string): Promise<OpenAI.Files.FileObje
 export async function getFileContent(fileId: string): Promise<ArrayBuffer> {
   try {
     const response = await openai.files.content(fileId);
-    return response;
+    return await response.arrayBuffer();
   } catch (error) {
     console.error(`Failed to get OpenAI file content ${fileId}:`, error);
     throw new Error(`Get file content failed: ${error instanceof Error ? error.message : 'Unknown error'}`);

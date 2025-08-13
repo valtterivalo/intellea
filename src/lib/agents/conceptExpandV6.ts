@@ -117,17 +117,6 @@ Please search the uploaded documents for detailed information about "${nodeLabel
       model: openai.responses('gpt-5'),
       system: EXPAND_CONCEPT_WITH_DOCS_PROMPT,
       prompt: expansionPrompt,
-      tools: {
-        file_search: openai.tools.fileSearch({
-          vectorStoreIds: [vectorStoreId],
-          maxNumResults: 15, // Get good coverage for concept expansion
-          ranking: {
-            ranker: 'auto',
-          },
-        }),
-      },
-      // Force file search to ensure document grounding
-      toolChoice: { type: 'tool', toolName: 'file_search' },
       schema: ExpandOutSchema,
     });
     

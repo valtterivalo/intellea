@@ -50,7 +50,14 @@ export async function setCachedExpandedConcept(sessionId: string, graphHash: str
   try {
     const redis = createRedisClient();
     const cacheKey = getCacheKey(sessionId, graphHash);
-    await redis.set(cacheKey, JSON.stringify(data), { ex: ttlSeconds });
+    // Handle both ioredis and Upstash Redis APIs
+    if ('setex' in redis) {
+      // ioredis API
+      await (redis as { setex: (key: string, seconds: number, value: string) => Promise<unknown> }).setex(cacheKey, ttlSeconds, JSON.stringify(data));
+    } else {
+      // Upstash Redis API  
+      await (redis as { set: (key: string, value: string, options?: { ex?: number }) => Promise<unknown> }).set(cacheKey, JSON.stringify(data), { ex: ttlSeconds });
+    }
   } catch (error) {
     if (process.env.APP_DEBUG === 'true') console.log('Redis unavailable, skipping cache set:', error);
   }
@@ -65,17 +72,24 @@ export async function acquireLock(sessionId: string, graphHash: string, ttlSecon
   try {
     const redis = createRedisClient();
     const lockKey = getLockKey(sessionId, graphHash);
-    try {
+    // Handle both ioredis and Upstash Redis APIs
+    if ('setnx' in redis) {
+      // ioredis API
+      const result = await (redis as { set: (key: string, value: string, mode: string, duration: number, flag: string) => Promise<string | null> }).set(lockKey, '1', 'EX', ttlSeconds, 'NX');
+      return result === 'OK';
+    } else {
       // Upstash Redis API
-      const result = await redis.set(lockKey, '1', { nx: true, ex: ttlSeconds });
-      return !!result;
-    } catch {
-      // Fallback for mocks lacking full option support
-      const exists = await redis.exists(lockKey);
-      if (exists) return false;
-      await redis.set(lockKey, '1');
-      await redis.expire(lockKey, ttlSeconds);
-      return true;
+      try {
+        const result = await (redis as { set: (key: string, value: string, options?: { nx?: boolean; ex?: number }) => Promise<string | null> }).set(lockKey, '1', { nx: true, ex: ttlSeconds });
+        return !!result;
+      } catch {
+        // Fallback for mocks lacking full option support
+        const exists = await (redis as { exists: (key: string) => Promise<number> }).exists(lockKey);
+        if (exists) return false;
+        await (redis as { set: (key: string, value: string) => Promise<unknown> }).set(lockKey, '1');
+        await (redis as { expire: (key: string, seconds: number) => Promise<unknown> }).expire(lockKey, ttlSeconds);
+        return true;
+      }
     }
   } catch (error) {
     if (process.env.APP_DEBUG === 'true') console.log('Redis unavailable, skipping lock acquisition:', error);

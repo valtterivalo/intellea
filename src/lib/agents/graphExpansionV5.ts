@@ -59,7 +59,7 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
  */
 export async function expandGraphFromNode(
   nodeToExpand: { id: string; label: string },
-  currentGraphStructure: { nodes: any[]; links: any[] },
+  currentGraphStructure: { nodes: { id: string; label: string; [key: string]: unknown }[]; links: { source: string | { id: string }; target: string | { id: string }; [key: string]: unknown }[] },
   contextPrompt?: string
 ) {
   // Use fast model for graph generation - prefer Groq if available

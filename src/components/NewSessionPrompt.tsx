@@ -115,10 +115,10 @@ const NewSessionPrompt: React.FC = () => {
 
         // Create session with generated data
         const initialOutput = data.output;
-        const rootNode = initialOutput.visualizationData?.nodes?.find((n: any) => n.isRoot === true);
+        const rootNode = initialOutput.visualizationData?.nodes?.find((n: { isRoot?: boolean }) => n.isRoot === true);
         
         // Use LLM-generated session title, with fallbacks
-        let sessionTitle = initialOutput.sessionTitle || rootNode?.label || 'Untitled Session';
+        const sessionTitle = initialOutput.sessionTitle || rootNode?.label || 'Untitled Session';
 
         // Store all data in session_data field as per current schema
         const sessionPayload = {
