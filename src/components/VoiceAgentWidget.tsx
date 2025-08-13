@@ -23,8 +23,6 @@ import {
   readKnowledgeCardTool,
   readExpandedConceptTool,
   zoomToFitGraphTool,
-  showChatPanelTool,
-  showGraphPanelTool,
   exitFullscreenTool,
 } from '@/lib/agents/tools';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -68,7 +66,6 @@ you can read the currently expanded concept using \`read_expanded_concept\`.
 you can focus the camera on a node using the \`focus_node\` tool.
 you can add notes to nodes with \`add_node_note\` and read them with \`get_node_note\`.
 to understand what is currently on the screen, use the \`get_current_view_context\` tool.
-you can switch views with \`show_chat_panel\` and \`show_graph_panel\`.
 you can exit fullscreen with \`exit_fullscreen\`.`,
         tools: [
           selectNodeTool,
@@ -85,8 +82,6 @@ you can exit fullscreen with \`exit_fullscreen\`.`,
           zoomToFitGraphTool,
           readKnowledgeCardTool,
           readExpandedConceptTool,
-          showChatPanelTool,
-          showGraphPanelTool,
           exitFullscreenTool,
         ],
       });

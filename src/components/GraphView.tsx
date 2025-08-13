@@ -8,6 +8,7 @@ import FullscreenGraphContainer from '@/components/FullscreenGraphContainer';
 import ExpandedConceptCard from '@/components/ExpandedConceptCard';
 import StickyKnowledgeCard from '@/components/StickyKnowledgeCard';
 import OnboardingModal from '@/components/OnboardingModal';
+import NewSessionPrompt from '@/components/NewSessionPrompt';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -166,7 +167,7 @@ const GraphView: React.FC<GraphViewProps> = ({
                 </Button>
               </div>
             ) : (
-              <span>Enter a topic or question below to start exploring.</span>
+              <NewSessionPrompt />
             )}
           </div>
         )}

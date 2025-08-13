@@ -12,8 +12,6 @@ import type { SessionSlice } from './sessionSlice';
 import { createSessionSlice } from './sessionSlice';
 import type { BillingSlice } from './billingSlice';
 import { createBillingSlice } from './billingSlice';
-import type { ChatSlice, ChatMessage } from './chatSlice';
-import { createChatSlice } from './chatSlice';
 import type { VoiceSlice } from './voiceSlice';
 import { createVoiceSlice } from './voiceSlice';
 import type {
@@ -34,8 +32,7 @@ export type {
   IntelleaResponse,
   ExpansionResponse,
   ExpandedConceptData,
-  LoadedSessionData,
-  ChatMessage
+  LoadedSessionData
 };
 import type { ConceptSlice } from './conceptSlice';
 import { createConceptSlice } from './conceptSlice';
@@ -52,7 +49,7 @@ export interface SessionSummary {
 
 // --- Data Structure Types ---
 
-export interface AppState extends GraphSlice, SessionSlice, BillingSlice, ConceptSlice, ChatSlice, VoiceSlice {
+export interface AppState extends GraphSlice, SessionSlice, BillingSlice, ConceptSlice, VoiceSlice {
   prompt: string;
   activePrompt: string | null;
   output: IntelleaResponse | string | null;
@@ -66,8 +63,6 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   error: string | null;
   // Graph State
   isGraphFullscreen: boolean;
-  // View state
-  viewMode: 'graph' | 'chat';
   // Scroll trigger state
   scrollToNodeId: string | null;
   // Force-expand state
@@ -88,8 +83,6 @@ export interface AppState extends GraphSlice, SessionSlice, BillingSlice, Concep
   removeUnpinnedChildren: (nodeId: string) => void;
   updateKnowledgeCard: (nodeId: string, text: string) => void;
 
-  // View mode
-  setViewMode: (mode: 'graph' | 'chat') => void;
 
   // Scroll trigger action
   setScrollToNodeId: (nodeId: string | null) => void;
@@ -159,7 +152,6 @@ export const useAppStore = create<AppState>()(
       ...createGraphSlice(set, get, api),
       ...createBillingSlice(set, get, api),
       ...createConceptSlice(set, get, api),
-      ...createChatSlice(set, get, api),
       ...createVoiceSlice(set, get, api),
       // Focus state
       activeFocusPathIds: null,
@@ -169,7 +161,6 @@ export const useAppStore = create<AppState>()(
       error: null,
       // Graph state
       isGraphFullscreen: false,
-      viewMode: 'graph',
       // Scroll trigger state
       scrollToNodeId: null,
       // Force-expand state
@@ -373,8 +364,6 @@ export const useAppStore = create<AppState>()(
       },
 
       toggleGraphFullscreen: () => set((state) => ({ isGraphFullscreen: !state.isGraphFullscreen })),
-
-      setViewMode: (mode) => set({ viewMode: mode }),
 
       setScrollToNodeId: (nodeId) => set({ scrollToNodeId: nodeId }),
 

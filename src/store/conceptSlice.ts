@@ -284,7 +284,8 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           nodeId,
           nodeLabel,
           visualizationData: sanitizedVizData,
-          knowledgeCards: output && typeof output === 'object' && 'knowledgeCards' in output ? output.knowledgeCards : null
+          knowledgeCards: output && typeof output === 'object' && 'knowledgeCards' in output ? output.knowledgeCards : null,
+          sessionId: get().currentSessionId
         }),
       });
 
@@ -317,7 +318,7 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
                 
                 if (eventData.type === 'chunk') {
                   // Debug: Log what we're receiving
-                  console.log('Client received chunk:', typeof eventData.content, eventData.content);
+                  if (process.env.NEXT_PUBLIC_DEBUG === 'true') console.log('Client received chunk:', typeof eventData.content, eventData.content);
                   
                   // Try to extract meaningful content from JSON streaming
                   const rawChunk = eventData.content;

@@ -1,6 +1,6 @@
 /**
  * @fileoverview OpenAI agent definition.
- * Exports: exitFullscreenTool, getCurrentViewContextTool, showChatPanelTool, showGraphPanelTool
+ * Exports: exitFullscreenTool, getCurrentViewContextTool
  */
 import { tool } from '@openai/agents/realtime';
 import { z } from 'zod';
@@ -58,29 +58,6 @@ export const getCurrentViewContextTool = tool({
     }
 });
 
-export const showChatPanelTool = tool({
-    name: 'show_chat_panel',
-    description: 'Switches the view to the chat panel.',
-    parameters: z.object({}),
-    execute: async () => {
-        const { isVoiceSessionActive, setViewMode } = useAppStore.getState();
-        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
-        setViewMode('chat');
-        return 'Chat panel opened.';
-    }
-});
-
-export const showGraphPanelTool = tool({
-    name: 'show_graph_panel',
-    description: 'Switches the view to the graph panel.',
-    parameters: z.object({}),
-    execute: async () => {
-        const { isVoiceSessionActive, setViewMode } = useAppStore.getState();
-        if (!isVoiceSessionActive) return 'Cannot execute tool: voice session is not active.';
-        setViewMode('graph');
-        return 'Graph panel opened.';
-    }
-});
 
 export const exitFullscreenTool = tool({
     name: 'exit_fullscreen',

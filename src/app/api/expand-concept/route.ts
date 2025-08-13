@@ -5,8 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';
-import { run } from '@openai/agents';
-import { ConceptExpanderAgent } from '@/lib/agents/conceptExpand';
+import { expandConcept } from '@/lib/agents/conceptExpandV6';
 import type { ExpandedConceptData } from '@/types/intellea';
 import { verifyUserAccess } from '@/lib/api-helpers';
 
@@ -81,19 +80,14 @@ export async function POST(req: NextRequest) {
 
     let expandedData: ExpandedConceptResponse | null = null;
     try {
-      const agentInput = JSON.stringify({
-          nodeToExpand: { id: nodeId, label: nodeLabel },
-          visualizationData,
-          knowledgeCards
-      });
+      // Prepare graph context for AI SDK v5 agent
+      const graphContext = {
+        nodes: visualizationData?.nodes || [],
+        links: visualizationData?.links || [],
+        knowledgeCards: knowledgeCards || []
+      };
 
-      const result = await run(ConceptExpanderAgent, agentInput);
-
-      if (!result.finalOutput) {
-        throw new Error('Empty response from Agent');
-      }
-
-      expandedData = result.finalOutput as ExpandedConceptResponse;
+      expandedData = await expandConcept(nodeId, nodeLabel, graphContext);
 
       if (!expandedData || !expandedData.title || !expandedData.content || !Array.isArray(expandedData.relatedConcepts)) {
         console.error('Invalid or empty response structure from Agent after parsing.', expandedData);

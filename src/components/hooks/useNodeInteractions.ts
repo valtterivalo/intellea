@@ -128,6 +128,14 @@ export function useNodeInteractions(
           typeof currentOutput === 'object' && currentOutput?.visualizationData
             ? currentOutput.visualizationData
             : null;
+        
+        // Check if this is a root node - if so, don't set focus path to prevent blank graph
+        const isRootNode = vizData?.nodes.find(n => n.id === appNode.id && n.isRoot);
+        if (isRootNode) {
+          if (process.env.NEXT_PUBLIC_DEBUG === 'true') console.log('Skipping focus for root node:', appNode.id);
+          return;
+        }
+        
         setActiveFocusPath(appNode.id, vizData);
 
         if (graphRef.current) {

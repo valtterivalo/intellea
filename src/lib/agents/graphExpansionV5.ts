@@ -1,10 +1,11 @@
 /**
- * @fileoverview Graph expansion agent with Kimi K2 support
- * Exports: GraphExpansionAgent
+ * @fileoverview Graph expansion with AI SDK v5
+ * Exports: expandGraphFromNode
  */
-import { Agent } from '@openai/agents';
+import { generateObject } from 'ai';
 import { z } from 'zod';
-import { getModel } from '../models/config';
+import { openai } from '@ai-sdk/openai';
+import { groq } from '@ai-sdk/groq';
 
 const NodeObjectSchema = z.object({
   id: z.string(),
@@ -24,7 +25,7 @@ const KnowledgeCardSchema = z.object({
 }).strict();
 
 /**
- * Zod schema for the output of the GraphExpansionAgent.
+ * Zod schema for the output of graph expansion.
  */
 const ExpansionResponseSchema = z.object({
     nodes: z.array(NodeObjectSchema),
@@ -54,14 +55,39 @@ const EXPANSION_SYSTEM_PROMPT = `You are Intellea, an AI assistant expanding an 
 `;
 
 /**
- * Agent responsible for expanding an existing knowledge graph from a specific node.
+ * Expand knowledge graph from a specific node using AI SDK v5
  */
-export const GraphExpansionAgent = new Agent({
-    name: "graph_expansion",
-    instructions: EXPANSION_SYSTEM_PROMPT,
-    outputType: ExpansionResponseSchema,
-    model: getModel('kimi-k2'), // Use Kimi K2 via Groq with OpenAI fallback
-    modelSettings: {
-        temperature: 0.4,
-    },
-}); 
+export async function expandGraphFromNode(
+  nodeToExpand: { id: string; label: string },
+  currentGraphStructure: { nodes: any[]; links: any[] },
+  contextPrompt?: string
+) {
+  // Use fast model for graph generation - prefer Groq if available
+  const model = process.env.GROQ_API_KEY 
+    ? groq('moonshotai/kimi-k2-instruct')
+    : openai('gpt-5-mini');
+  
+  const expansionPrompt = `
+**Node to Expand:**
+- ID: ${nodeToExpand.id}
+- Label: ${nodeToExpand.label}
+
+**Current Graph Structure:**
+- Nodes: ${JSON.stringify(currentGraphStructure.nodes)}
+- Links: ${JSON.stringify(currentGraphStructure.links)}
+
+${contextPrompt ? `**Additional Context:**\n${contextPrompt}` : ''}
+
+Expand the graph by generating new nodes, links, and knowledge cards related to the node "${nodeToExpand.label}" (ID: ${nodeToExpand.id}).
+`;
+
+  const result = await generateObject({
+    model,
+    system: EXPANSION_SYSTEM_PROMPT,
+    prompt: expansionPrompt,
+    schema: ExpansionResponseSchema,
+    temperature: 0.4,
+  });
+
+  return result.object;
+}

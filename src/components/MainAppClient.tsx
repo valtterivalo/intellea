@@ -9,7 +9,6 @@ import { useAppStore } from '@/store/useAppStore';
 import { loadStripe } from '@stripe/stripe-js';
 import AppHeader from '@/components/AppHeader';
 import GraphView from '@/components/GraphView';
-import PromptFooter from '@/components/PromptFooter';
 import VoiceAgentWidget from '@/components/VoiceAgentWidget';
 
 if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -63,7 +62,6 @@ export default function MainAppClient() {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <AppHeader onShowOnboarding={() => setShowOnboarding(true)} onSubscribe={handleSubscribeDefault} isCheckoutLoading={isCheckoutLoading} />
       <GraphView onSubscribe={handleSubscribeDefault} isCheckoutLoading={isCheckoutLoading} showOnboarding={showOnboarding} setShowOnboarding={setShowOnboarding} />
-      <PromptFooter />
       <VoiceAgentWidget />
     </div>
   );
@@ -71,4 +69,3 @@ export default function MainAppClient() {
 
 export { default as AppHeader } from './AppHeader';
 export { default as GraphView } from './GraphView';
-export { default as PromptFooter } from './PromptFooter';

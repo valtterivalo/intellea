@@ -10,7 +10,7 @@ import { cookies } from 'next/headers'
  * Handles cookie management gracefully outside of request contexts.
  * @returns Supabase server client instance.
  */
-export function createClient() {
+export async function createClient() {
   interface CookieStore {
     getAll(): { name: string; value: string }[];
     set?: (name: string, value: string, options?: CookieOptions) => void;
@@ -18,7 +18,8 @@ export function createClient() {
   
   let cookieStore: CookieStore;
   try {
-    cookieStore = cookies() as unknown as CookieStore;
+    const cookieInstance = await cookies();
+    cookieStore = cookieInstance as unknown as CookieStore;
   } catch {
     // outside of a request context, cookies() throws. Provide a dummy store so
     // tests and non-request code can still instantiate the client safely.

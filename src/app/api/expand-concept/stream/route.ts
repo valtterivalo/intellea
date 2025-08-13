@@ -1,14 +1,14 @@
 /**
- * @fileoverview API route handlers.
+ * @fileoverview API route handlers with vector store support.
  * Exports: POST
  */
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';
-import { Runner } from '@openai/agents';
-import { ConceptExpanderAgent } from '@/lib/agents/conceptExpand';
 import type { ExpandedConceptData } from '@/types/intellea';
 import { verifyUserAccess } from '@/lib/api-helpers';
+import { expandConcept } from '@/lib/agents/conceptExpandV6';
+import { getSessionVectorStore } from '@/lib/services/documentManager';
 
 // Ensure API keys are available
 if (!process.env.OPENAI_API_KEY) {
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
     // Parse the request body
     const requestData = await req.json();
-    const { nodeId, nodeLabel, visualizationData, knowledgeCards } = requestData;
+    const { nodeId, nodeLabel, visualizationData, knowledgeCards, sessionId } = requestData;
 
     if (!nodeId || !nodeLabel) {
       return new Response(
@@ -101,89 +101,97 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    // Create streaming response
-    const stream = new ReadableStream({
-      async start(controller) {
-        try {
-          const agentInput = JSON.stringify({
-            nodeToExpand: { id: nodeId, label: nodeLabel },
-            visualizationData,
-            knowledgeCards
-          });
-
-          const runner = new Runner({
-            model: 'gpt-4.1-mini'
-          });
-
-          const result = await runner.run(ConceptExpanderAgent, agentInput, { stream: true });
-
-          // Stream the text output with Node.js compatibility
-          const textStream = result.toTextStream({ compatibleWithNodeStreams: true });
-
-          for await (const chunk of textStream) {
-            // Debug: Log what we're actually getting
-            console.log('Streaming chunk:', typeof chunk, chunk);
-            
-            // Convert Buffer to string if needed
-            let chunkText: string;
-            if (Buffer.isBuffer(chunk)) {
-              chunkText = chunk.toString('utf8');
-            } else if (typeof chunk === 'string') {
-              chunkText = chunk;
-            } else {
-              chunkText = String(chunk);
-            }
-            
-            console.log('Decoded chunk text:', chunkText);
-            
-            controller.enqueue(
-              new TextEncoder().encode(`data: ${JSON.stringify({ type: 'chunk', content: chunkText })}\n\n`)
-            );
-          }
-
-          // Wait for completion to get final structured output
-          await result.completed;
-
-          if (!result.finalOutput) {
-            throw new Error('Empty response from Agent');
-          }
-
-          const expandedData = result.finalOutput as ExpandedConceptData;
-
-          if (!expandedData || !expandedData.title || !expandedData.content || !Array.isArray(expandedData.relatedConcepts)) {
-            console.error('Invalid or empty response structure from Agent after parsing.', expandedData);
-            throw new Error('Invalid response structure from AI service.');
-          }
-
-          // Send final structured data
-          controller.enqueue(
-            new TextEncoder().encode(`data: ${JSON.stringify({ type: 'complete', data: expandedData })}\n\n`)
-          );
-
-          // Cache the response (24h TTL)
-          await apiCache.setCachedExpandedConcept(sessionUserId, graphHash, expandedData, 60 * 60 * 24);
-
-        } catch (error: unknown) {
-          console.error('Error expanding concept via Agent:', error);
-          const message = error instanceof Error ? error.message : 'Failed to process expansion request.';
-          controller.enqueue(
-            new TextEncoder().encode(`data: ${JSON.stringify({ type: 'error', error: message })}\n\n`)
-          );
-        } finally {
-          // Release the lock
-          await apiCache.releaseLock(sessionUserId, graphHash);
-          controller.close();
-        }
+    // Get session vector store for document-grounded expansion (if available)
+    let vectorStoreId: string | null = null;
+    let hasDocuments = false;
+    
+    if (sessionId) {
+      vectorStoreId = await getSessionVectorStore(sessionId);
+      hasDocuments = !!vectorStoreId;
+      
+      if (hasDocuments) {
+        if (process.env.APP_DEBUG === 'true') console.log(`Using vector store ${vectorStoreId} for document-grounded concept expansion`);
       }
-    });
+    }
 
-    return new Response(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      },
-    });
+    // Use new concept expansion with vector store support
+    try {
+      const graphContext = {
+        nodes: visualizationData?.nodes || [],
+        links: visualizationData?.links || [],
+        knowledgeCards: knowledgeCards || [],
+      };
+      
+      // Call the updated expansion agent
+      const expansionResult = await expandConcept(
+        nodeId,
+        nodeLabel,
+        graphContext,
+        hasDocuments,
+        vectorStoreId || undefined
+      );
+
+      // Create the structured response from the expansion result
+      const expandedData: ExpandedConceptData = {
+        title: expansionResult.title,
+        content: expansionResult.content,
+        relatedConcepts: expansionResult.relatedConcepts || []
+      };
+
+      // Convert to a custom SSE stream format that matches our existing client expectations
+      const stream = new ReadableStream({
+        async start(controller) {
+          try {
+            // Since we have the complete result, simulate streaming for UX
+            const content = expandedData.content;
+            const chunkSize = 50; // Characters per chunk for smooth streaming
+            
+            // Stream the content as chunks
+            for (let i = 0; i < content.length; i += chunkSize) {
+              const chunk = content.slice(i, i + chunkSize);
+              controller.enqueue(
+                new TextEncoder().encode(`data: ${JSON.stringify({ type: 'chunk', content: chunk })}\n\n`)
+              );
+              
+              // Small delay for smooth streaming experience
+              await new Promise(resolve => setTimeout(resolve, 20));
+            }
+
+            // Send completion event with full structured data
+            controller.enqueue(
+              new TextEncoder().encode(`data: ${JSON.stringify({ type: 'complete', data: expandedData })}\n\n`)
+            );
+
+            // Cache the response (24h TTL)
+            await apiCache.setCachedExpandedConcept(sessionUserId, graphHash, expandedData, 60 * 60 * 24);
+            
+          } catch (error: unknown) {
+            console.error('Error in streaming concept expansion:', error);
+            const message = error instanceof Error ? error.message : 'Failed to process expansion request.';
+            controller.enqueue(
+              new TextEncoder().encode(`data: ${JSON.stringify({ type: 'error', error: message })}\n\n`)
+            );
+          } finally {
+            // Release the lock
+            await apiCache.releaseLock(sessionUserId, graphHash);
+            controller.close();
+          }
+        }
+      });
+
+      return new Response(stream, {
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          'Connection': 'keep-alive',
+        },
+      });
+    } catch (error: unknown) {
+      console.error('Error setting up streaming concept expansion:', error);
+      // Release the lock on setup failure
+      await apiCache.releaseLock(sessionUserId, graphHash);
+      throw error;
+    }
 
   } catch (error: unknown) {
     console.error('Outer error handler for /api/expand-concept/stream:', error);

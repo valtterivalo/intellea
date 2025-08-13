@@ -12,6 +12,7 @@ import FileUpload from './FileUpload';
 const PromptFooter: React.FC = () => {
   const handleSubmit = usePromptSubmit();
   const [showFileUpload, setShowFileUpload] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const {
     prompt,
@@ -20,8 +21,6 @@ const PromptFooter: React.FC = () => {
     isSubscriptionLoading,
     subscriptionStatus,
     currentSessionId,
-    viewMode,
-    setViewMode,
   } = useAppStore(
     useShallow((state) => ({
       prompt: state.prompt,
@@ -30,19 +29,14 @@ const PromptFooter: React.FC = () => {
       isSubscriptionLoading: state.isSubscriptionLoading,
       subscriptionStatus: state.subscriptionStatus,
       currentSessionId: state.currentSessionId,
-      viewMode: state.viewMode,
-      setViewMode: state.setViewMode,
     }))
   );
 
   const promptDisabled = isLoading || isSubscriptionLoading || (subscriptionStatus !== 'active' && !currentSessionId);
   const sendDisabled = promptDisabled || !prompt.trim();
 
-  const handleFileProcessed = (content: string, fileName: string) => {
-    // Set the processed document content as a prompt for the document analyzer
-    const documentPrompt = `I have processed a document titled "${fileName}". Here is the extracted content:\n\n${content}\n\nPlease analyze this document and create a knowledge graph that breaks it down into first principles, identifying the core concept and its supporting ideas.`;
-    setPrompt(documentPrompt);
-    setShowFileUpload(false);
+  const handleFilesSelected = (files: File[]) => {
+    setUploadedFiles(files);
   };
 
   const toggleFileUpload = () => {
@@ -54,24 +48,6 @@ const PromptFooter: React.FC = () => {
       <div className="max-w-6xl mx-auto w-full px-4">
         <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="flex gap-1 p-1 bg-muted rounded-lg flex-shrink-0">
-              <Button
-                variant={viewMode === 'graph' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('graph')}
-                className="text-sm"
-              >
-                Knowledge Graph
-              </Button>
-              <Button
-                variant={viewMode === 'chat' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setViewMode('chat')}
-                className="text-sm"
-              >
-                Chat View
-              </Button>
-            </div>
             <div className="flex gap-2 flex-1">
               <Textarea
                 placeholder={promptDisabled ? 'Activate a subscription or load a session to explore.' : 'Ask about a topic, concept, or process...'}
@@ -107,7 +83,10 @@ const PromptFooter: React.FC = () => {
           {showFileUpload && (
             <div className="bg-muted/30 p-4 rounded-lg">
               <h3 className="text-sm font-medium mb-3">Upload Document</h3>
-              <FileUpload onFileProcessed={handleFileProcessed} />
+              <FileUpload 
+                onFilesSelected={handleFilesSelected} 
+                selectedFiles={uploadedFiles}
+              />
               <p className="text-xs text-muted-foreground mt-2">
                 Upload a PDF, TXT, MD, or DOCX file to create a knowledge graph from its content
               </p>

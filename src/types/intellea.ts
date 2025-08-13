@@ -33,6 +33,7 @@ export interface KnowledgeCard {
 }
 
 export interface IntelleaResponse {
+  sessionTitle?: string; // Optional for backward compatibility
   explanationMarkdown: string | null;
   knowledgeCards: KnowledgeCard[] | null;
   visualizationData: GraphData;
