@@ -7,7 +7,7 @@ import React from 'react';
 // No longer needed: import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { createClient } from '@/lib/supabase/server'; // Import the new server client utility
 
-import AuthComponent from '@/components/AuthComponent';
+import LandingPage from '@/components/LandingPage';
 import HomeClient from '@/components/HomeClient';
 
 // Make page component async
@@ -19,15 +19,9 @@ export default async function Home() {
   const supabase = await createClient(); // Use the new utility, it handles cookies internally
   const { data: { user }, error } = await supabase.auth.getUser(); // Use getUser() and expect { user }
 
-  // If error or no user, show the Auth component
+  // If error or no user, show the landing page with demo option
   if (error || !user) {
-    return (
-        <div className="flex flex-col items-center justify-center min-h-screen py-2">
-             <h1 className="text-4xl font-bold mb-6">Welcome to Intellea</h1>
-            <p className="text-lg text-muted-foreground mb-8">Please sign in to continue</p>
-            <AuthComponent />
-        </div>
-    );
+    return <LandingPage allowDemo={true} />;
   }
 
   // If session exists, render the client wrapper

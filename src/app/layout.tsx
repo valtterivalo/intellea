@@ -39,8 +39,15 @@ weight: ["400", "700"],
 });
 
 export const metadata: Metadata = {
-  title: "Intellea - Interactive AI Learning", // Keep existing metadata
-  description: "Learn complex topics visually with an interactive AI interface.",
+  title: "Intellea - Interactive AI Learning",
+  description: "A more intuitive way to learn and research with interactive knowledge graphs",
+  icons: {
+    icon: [
+      { url: '/intellea-assets/intellea_favicon_16.png', sizes: '16x16', type: 'image/png' },
+      { url: '/intellea-assets/intellea_favicon_32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/intellea-assets/intellea_favicon.svg', type: 'image/svg+xml' },
+    ],
+  },
 };
 
 // Make the layout component async

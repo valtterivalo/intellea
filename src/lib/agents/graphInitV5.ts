@@ -67,7 +67,7 @@ const INITIAL_SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generati
    - Create a link for each parent in a node's \`parentIds\` array
    - \`{ "source": "parent_id", "target": "child_id" }\`
 7. Generate ONE \`knowledgeCard\` for EACH node with \`nodeId\` matching the node \`id\`.
-8. Create a concise, descriptive \`sessionTitle\` that captures the essence of the learning session (5-10 words).
+8. Create a concise, descriptive \`sessionTitle\` that captures the essence of the learning session (5-10 words). DO NOT copy the user's prompt. Generate a meaningful, professional title that summarizes the topic being explored.
 9. Provide \`explanationMarkdown\` explaining the topic's interconnected structure.
 
 **Multi-Parent Examples:**
@@ -94,7 +94,7 @@ Physics (depth: 1)        │
 
 **JSON Structure:**
 {
-  "sessionTitle": "string", // Concise, descriptive title for the learning session (5-10 words)
+  "sessionTitle": "string", // Concise, descriptive title for the learning session (5-10 words) - NOT a copy of the user prompt
   "explanationMarkdown": "string", // Brief explanation of the interconnected topic structure
   "knowledgeCards": [ { "nodeId": "string", "title": "string", "description": "string" } ], // One card per node
   "visualizationData": {

@@ -24,7 +24,11 @@ function createFormDataWithFiles(prompt: string, files: File[]): FormData {
   return formData;
 }
 
-const NewSessionPrompt: React.FC = () => {
+interface NewSessionPromptProps {
+  isDemo?: boolean;
+}
+
+const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
@@ -44,7 +48,7 @@ const NewSessionPrompt: React.FC = () => {
     }))
   );
 
-  const promptDisabled = isLoading || isSubscriptionLoading || subscriptionStatus !== 'active';
+  const promptDisabled = isLoading || isSubscriptionLoading || (!isDemo && subscriptionStatus !== 'active');
   const sendDisabled = promptDisabled || (!prompt.trim() && uploadedFiles.length === 0);
 
   const handleFilesSelected = (files: File[]) => {
@@ -54,7 +58,7 @@ const NewSessionPrompt: React.FC = () => {
   const handleSubmitWithFiles = async () => {
     if (!prompt.trim() && uploadedFiles.length === 0) return;
     if (isLoading) return;
-    if (subscriptionStatus !== 'active') {
+    if (!isDemo && subscriptionStatus !== 'active') {
       console.error('You need an active subscription to generate new content.');
       return;
     }
@@ -83,7 +87,7 @@ const NewSessionPrompt: React.FC = () => {
         }
         
         const { data: { user } } = await createClient().auth.getUser();
-        if (!user) {
+        if (!isDemo && !user) {
           throw new Error('User not logged in. Cannot create session.');
         }
 
@@ -119,38 +123,54 @@ const NewSessionPrompt: React.FC = () => {
         
         // Use LLM-generated session title, with fallbacks
         const sessionTitle = initialOutput.sessionTitle || rootNode?.label || 'Untitled Session';
-
-        // Store all data in session_data field as per current schema
-        const sessionPayload = {
-          user_id: user.id,
-          title: sessionTitle,
-          last_prompt: currentPrompt,
-          session_data: {
-            visualizationData: initialOutput.visualizationData,
-            knowledgeCards: initialOutput.knowledgeCards || [],
-            explanationMarkdown: initialOutput.explanationMarkdown || ''
-          }
-        };
-
-        const { data: sessionData, error: sessionError } = await createClient()
-          .from('sessions')
-          .insert(sessionPayload)
-          .select('id')
-          .single();
-
-        if (sessionError || !sessionData) {
-          throw new Error(`Failed to create session: ${sessionError?.message}`);
+        
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('Session title extraction:', {
+            aiSessionTitle: initialOutput.sessionTitle,
+            rootNodeLabel: rootNode?.label,
+            finalTitle: sessionTitle,
+            initialOutput: initialOutput
+          });
         }
 
         // Update store
         useAppStore.getState().setOutput(initialOutput);
         useAppStore.getState().setActivePrompt(currentPrompt);
         const store = useAppStore.getState();
-        store.currentSessionId = sessionData.id;
-        store.currentSessionTitle = sessionTitle;
+        
+        if (isDemo) {
+          // For demo mode, don't save to database, just set local state
+          store.currentSessionId = 'demo-session';
+          store.currentSessionTitle = `${sessionTitle} (Demo)`;
+        } else {
+          // Store all data in session_data field as per current schema
+          const sessionPayload = {
+            user_id: user.id,
+            title: sessionTitle,
+            last_prompt: currentPrompt,
+            session_data: {
+              visualizationData: initialOutput.visualizationData,
+              knowledgeCards: initialOutput.knowledgeCards || [],
+              explanationMarkdown: initialOutput.explanationMarkdown || ''
+            }
+          };
+
+          const { data: sessionData, error: sessionError } = await createClient()
+            .from('sessions')
+            .insert(sessionPayload)
+            .select('id')
+            .single();
+
+          if (sessionError || !sessionData) {
+            throw new Error(`Failed to create session: ${sessionError?.message}`);
+          }
+
+          store.currentSessionId = sessionData.id;
+          store.currentSessionTitle = sessionTitle;
+        }
 
         if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
-          if (process.env.NEXT_PUBLIC_DEBUG === 'true') console.log('New session created with files. ID:', sessionData.id);
+          if (process.env.NEXT_PUBLIC_DEBUG === 'true') console.log('New session created. ID:', isDemo ? 'demo-session' : store.currentSessionId);
         }
       } else {
         // Existing session
@@ -221,13 +241,20 @@ const NewSessionPrompt: React.FC = () => {
             Start Exploring
           </CardTitle>
           <p className="text-muted-foreground">
-            Ask about any topic, concept, or process to create an interactive knowledge graph
+            {isDemo ? 
+              'Try our interactive knowledge graphs with any topic (text-only demo)' :
+              'Ask about any topic, concept, or process to create an interactive knowledge graph'
+            }
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-3">
             <Textarea
-              placeholder={promptDisabled ? 'Activate a subscription to explore.' : 'Ask about a topic, concept, or process...'}
+              placeholder={
+                promptDisabled ? 
+                  (isDemo ? 'Loading demo...' : 'Activate a subscription to explore.') :
+                  'Ask about a topic, concept, or process...'
+              }
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               disabled={promptDisabled || isLoading}
@@ -240,23 +267,25 @@ const NewSessionPrompt: React.FC = () => {
               }}
             />
             <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleFileUpload}
-                disabled={promptDisabled}
-                className="flex-shrink-0"
-              >
-                {showFileUpload ? <X className="mr-2 h-4 w-4" /> : <Paperclip className="mr-2 h-4 w-4" />}
-                {showFileUpload ? 'Cancel Upload' : 'Upload Document'}
-              </Button>
+              {!isDemo && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleFileUpload}
+                  disabled={promptDisabled}
+                  className="flex-shrink-0"
+                >
+                  {showFileUpload ? <X className="mr-2 h-4 w-4" /> : <Paperclip className="mr-2 h-4 w-4" />}
+                  {showFileUpload ? 'Cancel Upload' : 'Upload Document'}
+                </Button>
+              )}
               <Button 
                 onClick={handleSubmitWithFiles} 
                 disabled={sendDisabled}
                 className="flex-1"
               >
                 {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                {isLoading ? 'Generating...' : 'Start Exploring'}
+                {isLoading ? 'Generating...' : (isDemo ? 'Try Demo' : 'Start Exploring')}
               </Button>
             </div>
           </div>
@@ -274,15 +303,16 @@ const NewSessionPrompt: React.FC = () => {
             </div>
           )}
 
-          <div className="text-center text-xs text-muted-foreground border-t pt-4">
-            <p className="mb-2">Try asking about:</p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <span className="bg-muted px-2 py-1 rounded text-xs">Machine Learning</span>
-              <span className="bg-muted px-2 py-1 rounded text-xs">Climate Change</span>
-              <span className="bg-muted px-2 py-1 rounded text-xs">Quantum Physics</span>
-              <span className="bg-muted px-2 py-1 rounded text-xs">Philosophy of Mind</span>
+          {isDemo && (
+            <div className="text-center text-xs text-muted-foreground border-t pt-4 mt-4">
+              <p className="mb-1">Demo limitations:</p>
+              <p>• Text-only topics (no file uploads)</p>
+              <p>• No session saving</p>
+              <p className="mt-2">
+                <strong>Sign up for full access</strong> - unlimited sessions, document uploads, and more
+              </p>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
     </div>

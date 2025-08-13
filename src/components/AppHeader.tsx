@@ -182,6 +182,7 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
               </SheetDescription>
             </SheetHeader>
             <ScrollArea className="flex-grow pr-4">
+              <div className="w-full max-w-full overflow-hidden">
               {isSessionListLoading || isSubscriptionLoading ? (
                 <div className="flex items-center justify-center h-full">
                   <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
@@ -195,17 +196,17 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
               ) : sessionsList && sessionsList.length === 0 ? (
                 <p className="text-muted-foreground text-center py-4">No sessions found. Create one!</p>
               ) : sessionsList && sessionsList.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2 w-full max-w-full overflow-hidden">
                   {sessionsList.map((session: SessionSummary) => (
                     <div
                       key={session.id}
-                      className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-muted ${
+                      className={`flex items-center justify-between p-2 rounded-md cursor-pointer hover:bg-muted w-full max-w-full ${
                         session.id === currentSessionId ? 'bg-muted font-semibold' : ''
                       }`}
                       onClick={() => handleLoadSession(session.id)}
                     >
-                      <div className="flex flex-col overflow-hidden mr-2">
-                        <span className="text-sm truncate" title={session.title ?? 'Untitled Session'}>
+                      <div className="flex flex-col overflow-hidden flex-1 min-w-0 mr-3 max-w-[250px] sm:max-w-[300px]">
+                        <span className="text-sm truncate font-medium" title={session.title ?? 'Untitled Session'}>
                           {session.title || 'Untitled Session'}
                         </span>
                         <span className="text-xs text-muted-foreground truncate">
@@ -215,7 +216,7 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="flex-shrink-0 text-muted-foreground hover:text-destructive"
+                        className="flex-shrink-0 h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDeleteSession(session.id, session.title ?? 'Untitled Session');
@@ -229,6 +230,7 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
                   ))}
                 </div>
               ) : null}
+              </div>
             </ScrollArea>
             <SheetFooter className="mt-auto pt-4 border-t">
               <Button
@@ -255,7 +257,7 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
           <h1 className="text-lg font-semibold leading-none tracking-tight">New Session</h1>
         )}
         {isSavingSession && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-        <SearchNodes className="w-48" />
+        {currentSessionId && <SearchNodes className="w-48" />}
       </div>
       <div className="flex items-center gap-2">
         {isSubscriptionLoading ? (

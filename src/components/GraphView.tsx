@@ -42,21 +42,21 @@ const GraphView: React.FC<GraphViewProps> = ({
 }) => {
   const {
     output,
-    activePrompt,
     isLoading,
     isSessionLoading,
     subscriptionStatus,
     isSubscriptionLoading,
     forceExpandRequest,
+    currentSessionTitle,
   } = useAppStore(
     useShallow((state) => ({
       output: state.output,
-      activePrompt: state.activePrompt,
       isLoading: state.isLoading,
       isSessionLoading: state.isSessionLoading,
       subscriptionStatus: state.subscriptionStatus,
       isSubscriptionLoading: state.isSubscriptionLoading,
       forceExpandRequest: state.forceExpandRequest,
+      currentSessionTitle: state.currentSessionTitle,
     }))
   );
 
@@ -94,17 +94,8 @@ const GraphView: React.FC<GraphViewProps> = ({
     }
   };
 
-  const formatPromptAsTitle = (p: string | null): string => {
-    if (!p) return 'Response';
-    let title = p
-      .toLowerCase()
-      .split(' ')
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
-    if (title.length > 50) {
-      title = title.substring(0, 47) + '...';
-    }
-    return title;
+  const getSessionTitle = (): string => {
+    return currentSessionTitle || 'Untitled Session';
   };
 
   return (
@@ -113,7 +104,7 @@ const GraphView: React.FC<GraphViewProps> = ({
         {output && typeof output === 'object' ? (
           <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
             <CardHeader className="flex-shrink-0">
-              <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
+              <CardTitle>{getSessionTitle()}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-0 min-h-0">
               <ScrollArea className="h-full w-full" ref={scrollContainerRef}>
@@ -132,7 +123,7 @@ const GraphView: React.FC<GraphViewProps> = ({
         ) : output && typeof output === 'string' ? (
           <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
             <CardHeader className="flex-shrink-0">
-              <CardTitle>{formatPromptAsTitle(activePrompt)}</CardTitle>
+              <CardTitle>{getSessionTitle()}</CardTitle>
             </CardHeader>
             <CardContent className="flex-1 p-0 min-h-0">
               <ScrollArea className="h-full w-full" ref={scrollContainerRef}>
