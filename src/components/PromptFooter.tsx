@@ -88,7 +88,7 @@ const PromptFooter: React.FC = () => {
                 selectedFiles={uploadedFiles}
               />
               <p className="text-xs text-muted-foreground mt-2">
-                Upload a PDF, TXT, MD, or DOCX file to create a knowledge graph from its content
+                Upload documents to create a knowledge graph from their content
               </p>
             </div>
           )}

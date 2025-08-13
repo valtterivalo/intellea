@@ -4,32 +4,13 @@
  */
 
 import OpenAI from 'openai';
+import { FILE_LIMITS, type SupportedFileType } from '@/lib/constants/fileConstants';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-// Storage limits (per user)
-export const FILE_LIMITS = {
-  MAX_FILE_SIZE: 512 * 1024 * 1024, // 512 MB per file
-  MAX_TOTAL_STORAGE: 10 * 1024 * 1024 * 1024, // 10 GB per user (conservative)
-  SUPPORTED_TYPES: [
-    'application/pdf',
-    'text/plain',
-    'text/markdown', 
-    'application/msword',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    'text/csv',
-    'application/json',
-    'text/javascript',
-    'text/typescript',
-    'text/x-python',
-    'text/html',
-    'text/css',
-  ] as const,
-} as const;
-
-export type SupportedFileType = typeof FILE_LIMITS.SUPPORTED_TYPES[number];
+export { FILE_LIMITS, type SupportedFileType };
 
 export interface FileUploadResult {
   fileId: string;

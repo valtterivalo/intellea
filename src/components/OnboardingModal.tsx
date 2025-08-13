@@ -36,7 +36,6 @@ const OnboardingModal: React.FC<OnboardingModalProps> = ({ open, onClose }) => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm" role="dialog" aria-modal="true">
       <div className="bg-card rounded-lg shadow-xl border w-96 p-6 relative">
-        <h2 className="text-xl font-semibold mb-2">Welcome to Intellea</h2>
         <p className="text-sm mb-3 text-muted-foreground">Useful keyboard shortcuts:</p>
         <ul className="list-disc pl-5 text-sm space-y-1">
           <li><span className="font-mono">F</span> - Focus selected node</li>

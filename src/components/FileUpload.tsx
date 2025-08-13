@@ -9,6 +9,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, File, X, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { FILE_LIMITS } from '@/lib/constants/fileConstants';
 
 interface FileUploadProps {
   onFilesSelected: (files: File[]) => void;
@@ -17,25 +18,18 @@ interface FileUploadProps {
   selectedFiles?: File[];
 }
 
-const SUPPORTED_FILE_TYPES = [
-  'application/pdf',
-  'text/plain', 
-  'text/markdown',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
-];
-
 export default function FileUpload({
   onFilesSelected,
   className = '',
-  maxSizeBytes = 10 * 1024 * 1024, // 10MB
+  maxSizeBytes = FILE_LIMITS.MAX_FILE_SIZE, // Use configured limit
   selectedFiles = [],
 }: FileUploadProps) {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const validateFile = (file: File): string | null => {
-    if (!SUPPORTED_FILE_TYPES.includes(file.type)) {
-      return 'Unsupported file type. Please upload PDF, TXT, MD, or DOCX files.';
+    if (!FILE_LIMITS.SUPPORTED_TYPES.includes(file.type as typeof FILE_LIMITS.SUPPORTED_TYPES[number])) {
+      return 'Unsupported file type. See supported formats below.';
     }
     if (file.size > maxSizeBytes) {
       return `File size exceeds ${Math.round(maxSizeBytes / 1024 / 1024)}MB limit.`;
@@ -126,7 +120,7 @@ export default function FileUpload({
           Drop files here or click to select
         </p>
         <p className="text-xs text-muted-foreground">
-          Supports PDF, TXT, MD, DOCX • Max {Math.round(maxSizeBytes / 1024 / 1024)}MB per file
+          Max {Math.round(maxSizeBytes / 1024 / 1024)}MB per file
         </p>
       </div>
 
