@@ -1,0 +1,238 @@
+/**
+ * @fileoverview Optimized streaming graph generation that avoids slow base64 processing
+ * Exports: generateInitialGraphStreamingOptimized
+ */
+
+import { z } from 'zod';
+import { streamObject } from 'ai';
+import { openai } from '@ai-sdk/openai';
+import { groq } from '@ai-sdk/groq';
+import { StatusMessages, type StreamEmitter } from '@/types/streaming';
+import type { IntelleaResponse } from '@/types/intellea';
+
+// Enhanced Zod schemas supporting multi-parent hierarchical structures
+const NodeObjectSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  isRoot: z.boolean(),
+  depth: z.number().min(0).max(3).optional(), // 0=root, 1=level1, 2=level2, 3=level3
+  parentIds: z.array(z.string()).optional(), // Array of parent node IDs, empty for root
+}).strict();
+
+const LinkObjectSchema = z.object({
+    source: z.string(),
+    target: z.string(),
+}).strict();
+
+const GraphDataSchema = z.object({
+    nodes: z.array(NodeObjectSchema),
+    links: z.array(LinkObjectSchema),
+}).strict();
+
+const KnowledgeCardSchema = z.object({
+    nodeId: z.string(),
+    title: z.string(),
+    description: z.string(),
+}).strict();
+
+const GraphInitOutSchema = z.object({
+    sessionTitle: z.string(),
+    explanationMarkdown: z.string().nullable(),
+    knowledgeCards: z.array(KnowledgeCardSchema).nullable(),
+    visualizationData: GraphDataSchema,
+}).strict();
+
+const INITIAL_SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generating structured multi-parent hierarchical learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object.
+
+**Instructions:**
+1. Identify the core subject/topic from the user's prompt.
+2. Create a central "root" node representing this core topic. This node MUST have:
+   - isRoot: true
+   - depth: 0
+   - parentIds: [] (empty array)
+
+3. Generate 8-15 interconnected nodes representing key concepts, subtopics, or components related to the root topic.
+
+4. Create meaningful links between nodes to show relationships and dependencies.
+
+5. Generate informative knowledge cards for each node with detailed descriptions.
+
+6. Create a concise session title (2-4 words) that captures the essence of the learning topic.
+
+**Multi-Parent Hierarchical Structure:**
+- Nodes can have multiple parents (realistic knowledge representation)
+- Use parentIds array to specify all direct parents for each node
+- Depth represents the minimum distance from root (0=root, 1=direct children, 2=grandchildren, 3=great-grandchildren)
+- Links should connect: parent → child relationships AND conceptual relationships
+- Ensure rich interconnections while maintaining logical hierarchy
+
+**Output Requirements:**
+- sessionTitle: Concise 2-4 word title
+- explanationMarkdown: Overview paragraph explaining the topic and how concepts connect
+- knowledgeCards: Array of cards with nodeId, title, and detailed description
+- visualizationData: Graph with nodes and links
+
+**Quality Guidelines:**
+- Nodes should represent substantial, meaningful concepts (not trivial details)
+- Each node should have clear, informative descriptions
+- Links should represent meaningful relationships between concepts
+- Maintain academic rigor while being accessible
+
+When documents are provided, focus on extracting and organizing the key concepts from those documents while maintaining the hierarchical structure.`;
+
+/**
+ * Optimized streaming graph generation that avoids slow file processing
+ */
+export async function generateInitialGraphStreamingOptimized(
+  prompt: string,
+  emitter: StreamEmitter,
+  hasDocuments = false,
+  fileIds?: string[],
+  isDemo = false
+) {
+  try {
+    emitter.emit({
+      type: 'status',
+      message: hasDocuments ? StatusMessages.ANALYZING_TOPIC : StatusMessages.ANALYZING_TOPIC,
+      progress: 10
+    });
+
+    // For demo mode, always use the cheapest model
+    const model = isDemo
+      ? openai('gpt-5-mini')  // Cheap model for demos
+      : hasDocuments && fileIds && fileIds.length > 0
+        ? openai('gpt-5')  // Use GPT-5 for document analysis
+        : groq('moonshotai/kimi-k2-instruct');  // Fast Kimi K2 for text-only
+
+    const systemPrompt = hasDocuments 
+      ? `${INITIAL_SYSTEM_PROMPT}\n\nWhen documents are provided, analyze their content and create a knowledge graph that captures the key concepts and relationships from the documents, while also considering the user's specific request.`
+      : INITIAL_SYSTEM_PROMPT;
+
+    emitter.emit({
+      type: 'status',
+      message: StatusMessages.BUILDING_GRAPH,
+      progress: 20
+    });
+
+    if (hasDocuments && fileIds && fileIds.length > 0 && !isDemo) {
+      // Use uploaded file IDs with OpenAI (no base64 conversion needed!)
+      emitter.emit({
+        type: 'status',
+        message: 'Analyzing document content...',
+        progress: 30
+      });
+
+      // Create message content with uploaded file IDs
+      const fileContent = fileIds.map(fileId => ({
+        type: 'file' as const,
+        file: fileId // Use the uploaded file ID directly
+      }));
+
+      const messageContent = [
+        { type: 'text' as const, text: prompt },
+        ...fileContent
+      ];
+
+      if (process.env.APP_DEBUG === 'true') console.log('Using uploaded file IDs:', fileIds);
+
+      emitter.emit({
+        type: 'status',
+        message: StatusMessages.CREATING_CONNECTIONS,
+        progress: 40
+      });
+
+      const { partialObjectStream, object } = streamObject({
+        model: model,
+        system: systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: messageContent
+          }
+        ],
+        schema: GraphInitOutSchema,
+      });
+
+      let nodeCount = 0;
+      let linkCount = 0;
+
+      for await (const partialObject of partialObjectStream) {
+        const currentNodeCount = partialObject.visualizationData?.nodes?.length || 0;
+        const currentLinkCount = partialObject.visualizationData?.links?.length || 0;
+        
+        if (currentNodeCount > nodeCount || currentLinkCount > linkCount) {
+          nodeCount = currentNodeCount;
+          linkCount = currentLinkCount;
+          
+          emitter.emit({
+            type: 'graph-partial',
+            data: partialObject,
+            nodeCount,
+            linkCount
+          });
+          
+          const estimatedProgress = Math.min(90, 30 + (nodeCount * 4));
+          emitter.emit({
+            type: 'status',
+            message: `Building graph... (${nodeCount} nodes, ${linkCount} connections)`,
+            progress: estimatedProgress
+          });
+        }
+      }
+
+      return await object;
+    } else {
+      // Standard text-only processing (fast)
+      emitter.emit({
+        type: 'status',
+        message: StatusMessages.CREATING_CONNECTIONS,
+        progress: 40
+      });
+      
+      const { partialObjectStream, object } = streamObject({
+        model: model,
+        system: systemPrompt,
+        prompt: prompt,
+        schema: GraphInitOutSchema,
+      });
+
+      let nodeCount = 0;
+      let linkCount = 0;
+
+      for await (const partialObject of partialObjectStream) {
+        const currentNodeCount = partialObject.visualizationData?.nodes?.length || 0;
+        const currentLinkCount = partialObject.visualizationData?.links?.length || 0;
+        
+        if (currentNodeCount > nodeCount || currentLinkCount > linkCount) {
+          nodeCount = currentNodeCount;
+          linkCount = currentLinkCount;
+          
+          emitter.emit({
+            type: 'graph-partial',
+            data: partialObject,
+            nodeCount,
+            linkCount
+          });
+          
+          const estimatedProgress = Math.min(90, 40 + (nodeCount * 3));
+          emitter.emit({
+            type: 'status',
+            message: `Building graph... (${nodeCount} nodes, ${linkCount} connections)`,
+            progress: estimatedProgress
+          });
+        }
+      }
+
+      return await object;
+    }
+
+  } catch (error) {
+    console.error('Error in generateInitialGraphStreamingOptimized:', error);
+    emitter.emit({
+      type: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error during graph generation',
+      stage: 'graph-generation'
+    });
+    throw error;
+  }
+}

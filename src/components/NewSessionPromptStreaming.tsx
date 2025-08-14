@@ -1,7 +1,7 @@
 'use client';
 /**
  * @fileoverview React component for new session creation with streaming progress.
- * Exports: NewSessionPrompt
+ * Exports: NewSessionPromptStreaming
  */
 
 import React, { useState, useEffect } from 'react';
@@ -16,11 +16,11 @@ import { useStreamingGeneration } from '@/hooks/useStreamingGeneration';
 import FileUpload from './FileUpload';
 import StreamingProgress from './StreamingProgress';
 
-interface NewSessionPromptProps {
+interface NewSessionPromptStreamingProps {
   isDemo?: boolean;
 }
 
-const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) => {
+const NewSessionPromptStreaming: React.FC<NewSessionPromptStreamingProps> = ({ isDemo = false }) => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const streaming = useStreamingGeneration();
@@ -262,4 +262,4 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
   );
 };
 
-export default NewSessionPrompt;
+export default NewSessionPromptStreaming;
