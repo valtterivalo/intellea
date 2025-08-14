@@ -8,6 +8,7 @@ import { openai } from '@ai-sdk/openai';
 import { groq } from '@ai-sdk/groq';
 import type { StreamEmitter } from '@/types/streaming';
 import { StatusMessages } from '@/types/streaming';
+import type { IntelleaResponse } from '@/types/intellea';
 
 // Enhanced Zod schemas supporting multi-parent hierarchical structures
 const NodeObjectSchema = z.object({
@@ -197,7 +198,7 @@ export async function generateInitialGraphStreaming(
           
           emitter.emit({
             type: 'graph-partial',
-            data: partialObject,
+            data: partialObject as Partial<IntelleaResponse>,
             nodeCount,
             linkCount
           });
@@ -237,7 +238,7 @@ export async function generateInitialGraphStreaming(
           
           emitter.emit({
             type: 'graph-partial',
-            data: partialObject,
+            data: partialObject as Partial<IntelleaResponse>,
             nodeCount,
             linkCount
           });

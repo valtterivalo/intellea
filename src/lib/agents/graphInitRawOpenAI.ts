@@ -102,7 +102,7 @@ export async function generateInitialGraphWithRawOpenAI(
     });
 
     // Build content array for OpenAI Responses API
-    const content = [
+    const content: Array<{ type: 'input_text'; text: string } | { type: 'input_file'; file_id: string }> = [
       {
         type: 'input_text',
         text: prompt

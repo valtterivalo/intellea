@@ -56,7 +56,7 @@ export function createStreamEmitter(): {
     close() {
       try {
         controller.close();
-      } catch (error) {
+      } catch {
         // Stream already closed
       }
     }

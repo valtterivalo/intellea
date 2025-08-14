@@ -105,7 +105,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
 
       const store = useAppStore.getState();
       store.currentSessionId = sessionData.id;
-      store.currentSessionTitle = data.sessionTitle;
+      store.currentSessionTitle = data.sessionTitle || 'Untitled Session';
       
       if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
         console.log('New session created. ID:', sessionData.id);

@@ -3,7 +3,7 @@
  * Exports: POST
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { generateInitialGraphStreamingOptimized } from '@/lib/agents/graphInitStreamingOptimized';
+// import { generateInitialGraphStreamingOptimized } from '@/lib/agents/graphInitStreamingOptimized';
 import { generateInitialGraphWithRawOpenAI } from '@/lib/agents/graphInitRawOpenAI';
 import { getNodeTextForEmbedding } from '@/lib/generate-helpers';
 import { getNodeEmbeddingsStreaming, calculateNodePositionsStreaming } from '@/lib/generate-helpers-streaming';
@@ -54,14 +54,13 @@ async function handleInitialGenerationStreaming(
           isDemo
         );
       } else {
-        // Use AI SDK for text-only generation (faster)
-        initialResponseRaw = await generateInitialGraphStreamingOptimized(
+        // Use raw OpenAI for all cases for now (simpler, working approach)
+        initialResponseRaw = await generateInitialGraphWithRawOpenAI(
           prompt,
           emitter,
-          false, // no documents for AI SDK path
-          [],   // no file IDs
+          [], // no file IDs for text-only
           isDemo
-        ) as IntelleaResponse;
+        );
       }
       
       const nodes = initialResponseRaw.visualizationData.nodes;

@@ -84,7 +84,7 @@ export function useStreamingGeneration(): UseStreamingGenerationResult {
       });
 
       if (!response.ok) {
-        let errorData;
+        let errorData: { error?: string } | undefined;
         try {
           errorData = await response.json();
         } catch {
