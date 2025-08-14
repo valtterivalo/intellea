@@ -7,17 +7,17 @@ import { generateInitialGraph } from '@/lib/agents/graphInitV5';
 import { expandGraphFromNode } from '@/lib/agents/graphExpansionV5';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
 import type { IntelleaResponse, ExpansionResponse, NodeObject, LinkObject, KnowledgeCard } from '@/types/intellea';
-import { verifyUserAccess } from '@/lib/api-helpers';
+import { verifyUserAccessWithDemo } from '@/lib/api-helpers';
 import { processAndStoreDocuments } from '@/lib/services/documentManager';
 import { createClient } from '@/lib/supabase/server';
 
 // --- Handlers for each strategy ---
 
-async function handleInitialGeneration(prompt: string, userId: string, files?: File[], sessionId?: string): Promise<IntelleaResponse> {
+async function handleInitialGeneration(prompt: string, userId: string, files?: File[], sessionId?: string, isDemo = false): Promise<IntelleaResponse> {
     const hasDocuments = files && files.length > 0;
     let vectorStoreId: string | undefined;
     
-    if (hasDocuments && files) {
+    if (hasDocuments && files && !isDemo) {
         if (process.env.APP_DEBUG === 'true') console.log(`Processing ${files.length} documents for initial generation`);
         
         // Use hybrid approach: direct processing + background storage
@@ -28,7 +28,7 @@ async function handleInitialGeneration(prompt: string, userId: string, files?: F
     }
     
     // Generate graph with direct document processing (immediate, rich context)
-    const initialResponseRaw = await generateInitialGraph(prompt, hasDocuments, files);
+    const initialResponseRaw = await generateInitialGraph(prompt, hasDocuments && !isDemo, isDemo ? undefined : files, isDemo);
     const nodes = initialResponseRaw.visualizationData.nodes;
     const cards = initialResponseRaw.knowledgeCards || [];
 
@@ -114,11 +114,6 @@ async function handleExpansion(
 // --- Main Route Handler ---
 
 export async function POST(req: NextRequest) {
-  const { error, user } = await verifyUserAccess();
-  if (error || !user) {
-    return error || NextResponse.json({ error: 'User not authenticated' }, { status: 401 });
-  }
-
   // Handle both FormData (with files) and JSON requests
   const contentType = req.headers.get('content-type') || '';
   let prompt: string;
@@ -127,6 +122,7 @@ export async function POST(req: NextRequest) {
   let currentVisualizationData: { nodes: NodeObject[]; links: LinkObject[] } | undefined;
   let currentKnowledgeCards: KnowledgeCard[] | undefined;
   let files: File[] = [];
+  let isDemo = false;
 
   if (contentType.includes('multipart/form-data')) {
     // Handle FormData with files
@@ -134,6 +130,7 @@ export async function POST(req: NextRequest) {
     prompt = formData.get('prompt') as string;
     nodeId = formData.get('nodeId') as string | undefined;
     nodeLabel = formData.get('nodeLabel') as string | undefined;
+    isDemo = formData.get('isDemo') === 'true';
     
     // Extract files
     const fileEntries = Array.from(formData.entries()).filter(([key]) => key.startsWith('file_'));
@@ -154,8 +151,9 @@ export async function POST(req: NextRequest) {
   } else {
     // Handle JSON requests (no files or data URLs)
     const body = await req.json();
-    ({ prompt, nodeId, nodeLabel, currentVisualizationData, currentKnowledgeCards } = body);
+    ({ prompt, nodeId, nodeLabel, currentVisualizationData, currentKnowledgeCards, isDemo } = body);
     files = body.files || [];
+    isDemo = isDemo === true;
     
     if (process.env.APP_DEBUG === 'true') {
       if (process.env.APP_DEBUG === 'true') console.log('API JSON request received:', {
@@ -166,6 +164,12 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // Verify user access with demo support
+  const { error, user } = await verifyUserAccessWithDemo(isDemo, req);
+  if (error) {
+    return error;
+  }
+
   try {
     if (nodeId && nodeLabel && currentVisualizationData && currentKnowledgeCards) {
       // Expansion strategy
@@ -173,7 +177,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(responsePayload);
     } else if (prompt) {
       // Initial generation strategy
-      const responsePayload = await handleInitialGeneration(prompt, user.id, files);
+      const responsePayload = await handleInitialGeneration(prompt, user?.id || 'demo-user', files, undefined, isDemo);
       return NextResponse.json({ output: responsePayload });
     } else {
       return NextResponse.json({ error: 'Request must include either a prompt or node details for expansion' }, { status: 400 });

@@ -8,9 +8,12 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowRight, Upload, Eye, Network } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowRight, Upload, Eye, Network, AlertCircle, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { useAppStore } from '@/store/useAppStore';
 import NewSessionPrompt from './NewSessionPrompt';
+import MainAppClient from './MainAppClient';
 import Image from 'next/image';
 
 interface LandingPageProps {
@@ -20,6 +23,10 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
   const router = useRouter();
   const [showDemo, setShowDemo] = useState(false);
+  const currentSessionId = useAppStore((state) => state.currentSessionId);
+  const output = useAppStore((state) => state.output);
+  const error = useAppStore((state) => state.error);
+  const setError = useAppStore((state) => state.setError);
 
   const handleAuth = () => {
     router.push('/auth');
@@ -28,6 +35,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
   const handleTryDemo = () => {
     setShowDemo(true);
   };
+
+  // If demo session has been created successfully, show the main app
+  if (currentSessionId === 'demo-session' && output) {
+    return <MainAppClient />;
+  }
 
   if (showDemo) {
     return (
@@ -54,7 +66,25 @@ const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
             </div>
           </div>
         </header>
-        <main className="flex-1 flex items-center justify-center p-6">
+        <main className="flex-1 flex flex-col items-center justify-center p-6">
+          {error && (
+            <div className="w-full max-w-2xl mb-6">
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <div className="flex items-center justify-between w-full">
+                  <AlertDescription className="flex-1">{error}</AlertDescription>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setError(null)}
+                    className="ml-2 p-1 h-auto"
+                  >
+                    <X className="h-3 w-3" />
+                  </Button>
+                </div>
+              </Alert>
+            </div>
+          )}
           <NewSessionPrompt isDemo={true} />
         </main>
       </div>
@@ -109,7 +139,8 @@ const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
             )}
           </div>
 
-          {/* Demo Iframe Placeholder */}
+{/* 
+          Demo Iframe Placeholder - Commented out for clean landing page
           <div className="max-w-4xl mx-auto">
             <Card>
               <CardContent className="p-8">
@@ -122,6 +153,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
               </CardContent>
             </Card>
           </div>
+          */}
         </div>
 
         {/* Features */}

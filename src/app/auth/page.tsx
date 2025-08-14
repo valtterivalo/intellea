@@ -23,16 +23,18 @@ export default function AuthPage() {
         
         <Card>
           <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Image
-                src="/intellea-assets/intellea_combined_warm.svg"
-                alt="Intellea"
-                width={160}
-                height={48}
-                className="h-12 w-auto"
-              />
+            <div className="flex mb-4">
+              <div className="flex w-full justify-end pr-12 -ml-2">
+                <Image
+                  src="/intellea-assets/intellea_combined_warm.svg"
+                  alt="Intellea"
+                  width={160}
+                  height={48}
+                  className="h-12 w-auto"
+                />
+              </div>
             </div>
-            <CardTitle className="text-2xl">Welcome to Intellea</CardTitle>
+            <CardTitle className="text-2xl">Sign in</CardTitle>
           </CardHeader>
           <CardContent>
             <AuthComponent />

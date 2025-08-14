@@ -126,18 +126,27 @@ Physics (depth: 1)        │
 export async function generateInitialGraph(
   prompt: string, 
   hasDocuments = false,
-  files?: File[]
+  files?: File[],
+  isDemo = false
 ) {
-  // Use multimodal model for document processing, Kimi K2 for text-only
-  const model = hasDocuments 
-    ? openai.responses('gpt-5')  // Use Responses API for document processing
-    : groq('moonshotai/kimi-k2-instruct');  // Smart and fast for text-only
+  // For demo mode, always use the cheapest model
+  // Otherwise, use multimodal model for document processing, Kimi K2 for text-only
+  const model = isDemo
+    ? openai('gpt-5-mini')  // Cheapest OpenAI model for demos
+    : hasDocuments 
+      ? openai.responses('gpt-5')  // Use Responses API for document processing
+      : groq('moonshotai/kimi-k2-instruct');  // Smart and fast for text-only
   
   const systemPrompt = hasDocuments 
     ? `${INITIAL_SYSTEM_PROMPT}\n\nWhen documents are provided, analyze their content and create a knowledge graph that captures the key concepts and relationships from the documents, while also considering the user's specific request.`
     : INITIAL_SYSTEM_PROMPT;
 
-  if (hasDocuments && files) {
+  // Block file processing in demo mode
+  if (isDemo && hasDocuments && files && files.length > 0) {
+    throw new Error('File uploads are not available in demo mode. Please sign up for full access.');
+  }
+
+  if (hasDocuments && files && !isDemo) {
     // For multimodal content, use messages format with File objects
     if (process.env.APP_DEBUG === 'true') console.log('Processing files for AI SDK:', files.map(f => ({ 
       name: f.name, 

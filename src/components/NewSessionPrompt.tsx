@@ -95,8 +95,12 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
         const response = await fetch('/api/generate', {
           method: 'POST',
           body: uploadedFiles.length > 0 
-            ? createFormDataWithFiles(currentPrompt, uploadedFiles)
-            : JSON.stringify({ prompt: currentPrompt }),
+            ? (() => {
+                const formData = createFormDataWithFiles(currentPrompt, uploadedFiles);
+                if (isDemo) formData.append('isDemo', 'true');
+                return formData;
+              })()
+            : JSON.stringify({ prompt: currentPrompt, isDemo }),
           headers: uploadedFiles.length > 0 
             ? {} // Let browser set Content-Type for FormData
             : { 'Content-Type': 'application/json' }
@@ -109,12 +113,28 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
           } catch {
             /* ignore */
           }
+          
+          // Handle rate limiting gracefully for demo mode
+          if (response.status === 429 && isDemo) {
+            useAppStore.getState().setError('Demo limit reached. You can try again in 1 hour, or sign up now for unlimited access.');
+            useAppStore.getState().setActivePrompt(currentPrompt);
+            return; // Don't throw, just return to show the error in UI
+          }
+          
           throw new Error(errorData?.error || `HTTP error! status: ${response.status} - ${response.statusText}`);
         }
 
         const data = await response.json();
         if (data.error) {
           throw new Error(data.error);
+        }
+
+        if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
+          console.log('Response data received:', { 
+            hasOutput: !!data.output, 
+            outputKeys: data.output ? Object.keys(data.output) : [],
+            visualizationNodes: data.output?.visualizationData?.nodes?.length || 0
+          });
         }
 
         // Create session with generated data
@@ -134,14 +154,17 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
         }
 
         // Update store
-        useAppStore.getState().setOutput(initialOutput);
-        useAppStore.getState().setActivePrompt(currentPrompt);
         const store = useAppStore.getState();
+        store.setOutput(initialOutput);
+        store.setActivePrompt(currentPrompt);
         
         if (isDemo) {
           // For demo mode, don't save to database, just set local state
           store.currentSessionId = 'demo-session';
           store.currentSessionTitle = `${sessionTitle} (Demo)`;
+          
+          // Clear the prompt after successful demo
+          store.setPrompt('');
         } else {
           // Store all data in session_data field as per current schema
           if (!user) {
@@ -185,8 +208,12 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
         const response = await fetch('/api/generate', {
           method: 'POST',
           body: uploadedFiles.length > 0 
-            ? createFormDataWithFiles(currentPrompt, uploadedFiles)
-            : JSON.stringify({ prompt: currentPrompt }),
+            ? (() => {
+                const formData = createFormDataWithFiles(currentPrompt, uploadedFiles);
+                if (isDemo) formData.append('isDemo', 'true');
+                return formData;
+              })()
+            : JSON.stringify({ prompt: currentPrompt, isDemo }),
           headers: uploadedFiles.length > 0 
             ? {} // Let browser set Content-Type for FormData
             : { 'Content-Type': 'application/json' }
@@ -199,6 +226,14 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
           } catch {
             /* ignore */
           }
+          
+          // Handle rate limiting gracefully for demo mode
+          if (response.status === 429 && isDemo) {
+            useAppStore.getState().setError('Demo limit reached. You can try again in 1 hour, or sign up now for unlimited access.');
+            useAppStore.getState().setActivePrompt(currentPrompt);
+            return; // Don't throw, just return to show the error in UI
+          }
+          
           throw new Error(errorData?.error || `HTTP error! status: ${response.status} - ${response.statusText}`);
         }
 

@@ -3,12 +3,19 @@
  * Exports: ensureUserProfile, verifyUserAccess
  */
 import { createClient } from '@/lib/supabase/server';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import type { User } from '@supabase/supabase-js';
+import { checkDemoRateLimit } from './demo-rate-limit';
 
 interface UserAccessResult {
     user: User | null;
     error: NextResponse | null;
+}
+
+interface DemoUserAccessResult {
+    user: User | null;
+    error: NextResponse | null;
+    isDemo: boolean;
 }
 
 /**
@@ -73,4 +80,30 @@ export async function verifyUserAccess(): Promise<UserAccessResult> {
     }
 
     return { user, error: null };
+}
+
+/**
+ * @description Verify user access with support for demo mode.
+ * @param isDemo - Whether this is a demo request.
+ * @param req - Request object for rate limiting (required for demo mode).
+ * @returns Object containing the user, error, and demo status.
+ */
+export async function verifyUserAccessWithDemo(isDemo: boolean = false, req?: NextRequest): Promise<DemoUserAccessResult> {
+    // For demo mode, check rate limiting
+    if (isDemo) {
+        if (!req) {
+            return { user: null, error: NextResponse.json({ error: 'Internal error: Request required for demo mode' }, { status: 500 }), isDemo: true };
+        }
+        
+        const isRateLimited = await checkDemoRateLimit(req);
+        if (isRateLimited) {
+            return { user: null, error: NextResponse.json({ error: 'Demo limit reached. Please try again in 1 hour or sign up for unlimited access.' }, { status: 429 }), isDemo: true };
+        }
+        
+        return { user: null, error: null, isDemo: true };
+    }
+
+    // For non-demo mode, use regular verification
+    const { user, error } = await verifyUserAccess();
+    return { user, error, isDemo: false };
 } 
