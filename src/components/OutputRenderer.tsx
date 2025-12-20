@@ -15,6 +15,7 @@ import { Maximize } from 'lucide-react';
 // Import the new section components
 import ExplanationSection from './ExplanationSection';
 import KnowledgeCardsSection from './KnowledgeCardsSection';
+import LearningProgressPanel from './LearningProgressPanel';
 
 // Define props for OutputRenderer
 interface OutputRendererProps {
@@ -68,6 +69,7 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
     return (
       <div className="space-y-6">
         <ExplanationSection />
+        <LearningProgressPanel />
         <div ref={knowledgeCardsRef}>
           <KnowledgeCardsSection />
         </div>

@@ -376,7 +376,16 @@ export const useAppStore = create<AppState>()(
         currentSessionId: state.currentSessionId, // Only persist the current session ID
         onboardingDismissed: state.onboardingDismissed,
         nodeNotes: state.nodeNotes,
+        completedNodeIds: Array.from(state.completedNodeIds),
       }),
+      merge: (persistedState, currentState) => {
+        const typedState = persistedState as Partial<AppState> & { completedNodeIds?: string[] };
+        return {
+          ...currentState,
+          ...typedState,
+          completedNodeIds: new Set(typedState.completedNodeIds ?? []),
+        };
+      },
     }
   )
 );

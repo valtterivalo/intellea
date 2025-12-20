@@ -72,6 +72,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     activeFocusPathIds,
     selectedNodeId,
     pinnedNodes,
+    completedNodeIds,
     collapseNode,
     // expandNodeInStore, // Available for future use
     // setSelectedNodeId, // Available for future use
@@ -139,6 +140,9 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       if (pinnedNodes[appNode.id]) {
         return '#22c55e';
       }
+      if (completedNodeIds.has(appNode.id)) {
+        return '#38bdf8';
+      }
       if (colorByCluster) {
         const clusterIndex = clusters[appNode.id];
         if (clusterIndex !== undefined) {
@@ -147,7 +151,7 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       }
       return depthColor(depth);
     },
-    [selectedNodeId, pinnedNodes, nodeDepths, colorByCluster, clusters]
+    [selectedNodeId, pinnedNodes, completedNodeIds, nodeDepths, colorByCluster, clusters]
   );
   // --- End Node Color Logic ---
 

@@ -7,16 +7,45 @@ import { createClient } from '@supabase/supabase-js';
 import { stripe } from '@/lib/stripe';
 import Stripe from 'stripe';
 
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  throw new Error('Missing Supabase admin environment variables');
+}
+
+if (!process.env.ADMIN_SECRET_KEY) {
+  throw new Error('Missing ADMIN_SECRET_KEY environment variable');
+}
+
 // Create admin client with service role
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-// Simple auth check - you might want to make this more secure
 const isAuthorized = (req: NextRequest) => {
   const authHeader = req.headers.get('Authorization');
   return authHeader === `Bearer ${process.env.ADMIN_SECRET_KEY}`;
+};
+
+const findUserByEmail = async (email: string) => {
+  const normalizedEmail = email.toLowerCase();
+  const perPage = 200;
+  const maxPages = 20;
+
+  for (let page = 1; page <= maxPages; page += 1) {
+    const { data, error } = await supabaseAdmin.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      throw error;
+    }
+    const user = data.users.find((item) => item.email?.toLowerCase() === normalizedEmail);
+    if (user) {
+      return user;
+    }
+    if (data.users.length < perPage) {
+      break;
+    }
+  }
+
+  return null;
 };
 
 export async function GET(req: NextRequest) {
@@ -36,8 +65,7 @@ export async function GET(req: NextRequest) {
     // Find user by email or ID
     let user;
     if (email) {
-      const { data: users } = await supabaseAdmin.auth.admin.listUsers();
-      user = users.users.find(u => u.email === email);
+      user = await findUserByEmail(email);
     } else if (userId) {
       const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
       user = userData.user;

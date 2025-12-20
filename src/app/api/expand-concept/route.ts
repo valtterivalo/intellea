@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';
 import { expandConcept } from '@/lib/agents/conceptExpandV6';
+import { getSessionVectorStore } from '@/lib/services/documentManager';
 import type { ExpandedConceptData } from '@/types/intellea';
 import { verifyUserAccess } from '@/lib/api-helpers';
 
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
     // Parse the request body
     const requestData = await req.json();
-    const { nodeId, nodeLabel, visualizationData, knowledgeCards } = requestData;
+    const { nodeId, nodeLabel, visualizationData, knowledgeCards, sessionId } = requestData;
 
     if (!nodeId || !nodeLabel) {
       return NextResponse.json({ error: 'Missing required fields: nodeId, nodeLabel' }, { status: 400 });
@@ -87,7 +88,21 @@ export async function POST(req: NextRequest) {
         knowledgeCards: knowledgeCards || []
       };
 
-      expandedData = await expandConcept(nodeId, nodeLabel, graphContext);
+      let vectorStoreId: string | null = null;
+      let hasDocuments = false;
+
+      if (sessionId) {
+        vectorStoreId = await getSessionVectorStore(sessionId);
+        hasDocuments = Boolean(vectorStoreId);
+      }
+
+      expandedData = await expandConcept(
+        nodeId,
+        nodeLabel,
+        graphContext,
+        hasDocuments,
+        vectorStoreId || undefined
+      );
 
       if (!expandedData || !expandedData.title || !expandedData.content || !Array.isArray(expandedData.relatedConcepts)) {
         console.error('Invalid or empty response structure from Agent after parsing.', expandedData);

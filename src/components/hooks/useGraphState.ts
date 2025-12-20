@@ -37,6 +37,7 @@ export function useGraphState(visualizationData?: GraphData) {
   const activeFocusPathIds = useAppStore((state) => state.activeFocusPathIds);
   const selectedNodeId = useAppStore((state) => state.selectedNodeId);
   const pinnedNodes = useAppStore((state) => state.pinnedNodes);
+  const completedNodeIds = useAppStore((state) => state.completedNodeIds);
   const clusters = useAppStore((state) => state.clusters);
   const collapsedNodes = useAppStore((state) => state.collapsedNodes);
   const setSelectedNodeId = useAppStore((state) => state.setSelectedNodeId);
@@ -73,6 +74,7 @@ export function useGraphState(visualizationData?: GraphData) {
     activeFocusPathIds,
     selectedNodeId,
     pinnedNodes,
+    completedNodeIds,
     clusters,
     collapsedNodes,
     setSelectedNodeId,

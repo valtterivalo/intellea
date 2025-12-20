@@ -8,6 +8,12 @@ intellea is an interactive learning app that turns prompts and documents into ex
 - authenticated users create sessions, explore graphs, and expand concepts
 - subscriptions are required for full access
 
+## features
+
+- learning progress tracking with next-node suggestions
+- mark nodes as learned from cards or expanded views
+- export sessions as json and copy a concise summary
+
 ## stack
 
 - next.js 15 (app router), react 19, typescript, tailwind css v4

@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { CheckCircle2, Circle, X } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,8 +31,11 @@ const ExpandedConceptCard: React.FC = () => {
   const focusedNodeId = useAppStore(state => state.focusedNodeId);
   const nodeNotes = useAppStore(state => state.nodeNotes);
   const setNodeNote = useAppStore(state => state.setNodeNote);
+  const completedNodeIds = useAppStore(state => state.completedNodeIds);
+  const toggleCompleted = useAppStore(state => state.toggleCompleted);
 
   const [noteValue, setNoteValue] = useState('');
+  const isCompleted = focusedNodeId ? completedNodeIds.has(focusedNodeId) : false;
 
   useEffect(() => {
     if (focusedNodeId) {
@@ -150,7 +153,22 @@ const ExpandedConceptCard: React.FC = () => {
           <div className="relative h-[90vh] w-[90vw] rounded-lg border bg-card shadow-xl overflow-hidden">
             <div className="h-full flex flex-col overflow-hidden p-6">
               <div className="pb-2 pt-2 border-b mb-4">
-                <h1 className="text-2xl font-bold">{expandedConceptData.title}</h1>
+                <div className="flex items-center justify-between gap-3">
+                  <h1 className="text-2xl font-bold">{expandedConceptData.title}</h1>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => focusedNodeId && toggleCompleted(focusedNodeId)}
+                    className="flex items-center gap-2"
+                  >
+                    {isCompleted ? (
+                      <CheckCircle2 className="h-4 w-4 text-sky-600" />
+                    ) : (
+                      <Circle className="h-4 w-4" />
+                    )}
+                    {isCompleted ? 'Learned' : 'Mark learned'}
+                  </Button>
+                </div>
               </div>
               <div className="flex-1 overflow-auto pr-2">
                 <div className="prose dark:prose-invert max-w-none">

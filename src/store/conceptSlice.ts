@@ -138,7 +138,8 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
           nodeId,
           nodeLabel,
           visualizationData: sanitizedVizData,
-          knowledgeCards: output && typeof output === 'object' && 'knowledgeCards' in output ? output.knowledgeCards : null
+          knowledgeCards: output && typeof output === 'object' && 'knowledgeCards' in output ? output.knowledgeCards : null,
+          sessionId: currentSessionId,
         }),
       });
 
@@ -442,4 +443,3 @@ export const createConceptSlice: StateCreator<AppState, [], [], ConceptSlice> = 
     }
   },
 });
-

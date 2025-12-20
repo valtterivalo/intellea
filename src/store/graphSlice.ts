@@ -30,6 +30,7 @@ export interface GraphSlice {
   pinNode: (nodeId: string) => void;
   unpinNode: (nodeId: string) => void;
   markCompleted: (nodeId: string) => void;
+  toggleCompleted: (nodeId: string) => void;
   setClusters: (clusters: Record<string, string>) => void;
   setOnboardingDismissed: (dismissed: boolean) => void;
   setNodeNote: (nodeId: string, note: string) => void;
@@ -84,6 +85,16 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
       updated.add(nodeId);
       return { completedNodeIds: updated };
     }),
+  toggleCompleted: (nodeId) =>
+    set((state) => {
+      const updated = new Set(state.completedNodeIds);
+      if (updated.has(nodeId)) {
+        updated.delete(nodeId);
+      } else {
+        updated.add(nodeId);
+      }
+      return { completedNodeIds: updated };
+    }),
   setClusters: (clusters) => set({ clusters }),
   setOnboardingDismissed: (dismissed) => set({ onboardingDismissed: dismissed }),
   setNodeNote: (nodeId, note) =>
@@ -105,4 +116,3 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
   zoomGraphToFit: () =>
     set((state) => ({ zoomToFitCount: state.zoomToFitCount + 1 })),
 });
-

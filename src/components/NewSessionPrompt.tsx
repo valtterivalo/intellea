@@ -25,6 +25,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const lastPromptRef = useRef<string>('');
+  const lastHasDocumentsRef = useRef<boolean>(false);
 
   const {
     prompt,
@@ -48,7 +49,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
     }))
   );
 
-  const createSessionInSupabase = useCallback(async (data: IntelleaResponse, lastPrompt: string) => {
+  const createSessionInSupabase = useCallback(async (data: IntelleaResponse, lastPrompt: string, hasDocuments: boolean) => {
     try {
       const { data: { user } } = await createClient().auth.getUser();
       if (!user) {
@@ -56,10 +57,27 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
         return;
       }
 
+      let vectorStoreId: string | null = null;
+      if (hasDocuments) {
+        const { data: profile, error: profileError } = await createClient()
+          .from('profiles')
+          .select('openai_vector_store_id')
+          .eq('id', user.id)
+          .single();
+
+        if (profileError) {
+          throw profileError;
+        }
+
+        vectorStoreId = profile?.openai_vector_store_id ?? null;
+      }
+
       const sessionPayload = {
         user_id: user.id,
         title: data.sessionTitle,
         last_prompt: lastPrompt,
+        has_documents: hasDocuments,
+        vector_store_id: vectorStoreId,
         session_data: {
           visualizationData: data.visualizationData,
           knowledgeCards: data.knowledgeCards || [],
@@ -102,7 +120,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
       return;
     }
 
-    await createSessionInSupabase(finalData, lastPromptRef.current);
+    await createSessionInSupabase(finalData, lastPromptRef.current, lastHasDocumentsRef.current);
   }, [createSessionInSupabase, isDemo, setActivePrompt, setOutput, setPrompt]);
 
   const handleStreamingError = useCallback((message: string) => {
@@ -131,6 +149,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
 
     const currentPrompt = prompt;
     lastPromptRef.current = currentPrompt;
+    lastHasDocumentsRef.current = uploadedFiles.length > 0;
     const activeSessionId = useAppStore.getState().currentSessionId;
 
     if (activeSessionId !== null) {
@@ -156,6 +175,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
   };
 
   const toggleFileUpload = () => {
+    if (isDemo) return;
     setShowFileUpload(!showFileUpload);
     if (showFileUpload) {
       setUploadedFiles([]);
@@ -233,7 +253,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
             </div>
           </div>
           
-          {showFileUpload && (
+          {!isDemo && showFileUpload && (
             <div className="bg-muted/30 p-4 rounded-lg">
               <h3 className="text-sm font-medium mb-3">Upload Documents</h3>
               <FileUpload 

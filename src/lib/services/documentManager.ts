@@ -198,12 +198,17 @@ export async function getSessionVectorStore(sessionId: string): Promise<string |
   
   const { data: session, error } = await supabase
     .from('sessions')
-    .select('vector_store_id, user_id')
+    .select('vector_store_id, user_id, has_documents')
     .eq('id', sessionId)
     .single();
     
   if (error || !session) {
     console.error(`Failed to get session vector store: ${error?.message}`);
+    return null;
+  }
+
+  const hasDocuments = Boolean(session.has_documents) || Boolean(session.vector_store_id);
+  if (!hasDocuments) {
     return null;
   }
   

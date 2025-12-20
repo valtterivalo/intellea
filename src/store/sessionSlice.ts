@@ -82,6 +82,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       const sessionData: LoadedSessionData = sessionDataUnknown;
 
       const clusters = computeClusters(sessionData.visualizationData);
+      const shouldResetCompleted = get().currentSessionId !== sessionId;
       set({
         output: sessionData,
         activePrompt: loadedData.last_prompt,
@@ -92,6 +93,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
         focusedNodeId: null,
         activeClickedNodeId: null,
         clusters,
+        completedNodeIds: shouldResetCompleted ? new Set() : get().completedNodeIds,
       });
 
       await get().loadExpandedConcepts(sessionId);
@@ -238,7 +240,7 @@ export const createSessionSlice: StateCreator<AppState, [], [], SessionSlice> = 
       expandedConceptData: null,
       expandedConceptCache: new Map(),
       clusters: {},
+      completedNodeIds: new Set(),
       visitedNodeIds: [],
     }),
 });
-

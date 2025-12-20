@@ -7,7 +7,7 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Camera, Expand, StickyNote } from 'lucide-react';
+import { Camera, CheckCircle2, Circle, Expand, StickyNote } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore'; // Import the store
 import { isIntelleaResponse } from '@/store/utils';
 import { useShallow } from 'zustand/react/shallow'; // Import useShallow for multiple state slices
@@ -30,7 +30,9 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
     subscriptionStatus,
     visualizationData,
     nodeNotes,
-    activeClickedNodeId
+    activeClickedNodeId,
+    completedNodeIds,
+    toggleCompleted,
   } = useAppStore(
     useShallow((state) => ({ // Use useShallow for multiple selections
       setFocusedNodeId: state.setFocusedNodeId,
@@ -42,6 +44,8 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
       visualizationData: isIntelleaResponse(state.output) ? state.output.visualizationData : null,
       nodeNotes: state.nodeNotes,
       activeClickedNodeId: state.activeClickedNodeId,
+      completedNodeIds: state.completedNodeIds,
+      toggleCompleted: state.toggleCompleted,
     }))
   );
 
@@ -62,11 +66,13 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
   const isSubscriptionActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
   const hasNote = !!nodeNotes[card.nodeId];
   const isCurrentlyFocused = activeClickedNodeId === card.nodeId;
+  const isCompleted = completedNodeIds.has(card.nodeId);
 
   return (
     <Card
       className={cn(
         "flex flex-col shadow-sm hover:shadow-md transition-shadow duration-200",
+        isCompleted ? "border-sky-300/70 bg-sky-50/30" : "",
         variant === 'focused'
           ? "min-w-[320px] max-w-[480px] w-full"
           : variant === 'sticky'
@@ -74,11 +80,23 @@ const KnowledgeCard: React.FC<KnowledgeCardProps> = ({ card, variant = 'default'
           : "min-w-[280px] max-w-[340px] flex-1"
       )}
     >
-      <CardHeader className="pb-2 pt-3 px-4"> {/* Adjusted padding */}
-        <CardTitle className="text-lg leading-tight flex items-center gap-1">
-          {card.title}
-          {hasNote && <StickyNote className="h-4 w-4" />}
-        </CardTitle>
+      <CardHeader className="pb-2 pt-3 px-4">
+        <div className="flex items-center justify-between gap-2">
+          <CardTitle className="text-lg leading-tight flex items-center gap-1">
+            {card.title}
+            {hasNote && <StickyNote className="h-4 w-4" />}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => toggleCompleted(card.nodeId)}
+            aria-label={isCompleted ? 'Mark as not learned' : 'Mark as learned'}
+            title={isCompleted ? 'Mark as not learned' : 'Mark as learned'}
+          >
+            {isCompleted ? <CheckCircle2 className="h-4 w-4 text-sky-600" /> : <Circle className="h-4 w-4" />}
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="text-sm text-muted-foreground flex-grow px-4 pb-3"> {/* Adjusted padding */}
         <p>{card.description}</p>

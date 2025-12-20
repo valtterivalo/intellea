@@ -9,6 +9,7 @@ import ExpandedConceptCard from '@/components/ExpandedConceptCard';
 import StickyKnowledgeCard from '@/components/StickyKnowledgeCard';
 import OnboardingModal from '@/components/OnboardingModal';
 import NewSessionPrompt from '@/components/NewSessionPrompt';
+import SessionActions from '@/components/SessionActions';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -103,8 +104,9 @@ const GraphView: React.FC<GraphViewProps> = ({
       <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full min-h-0">
         {output && typeof output === 'object' ? (
           <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
-            <CardHeader className="flex-shrink-0">
+            <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between gap-3">
               <CardTitle>{getSessionTitle()}</CardTitle>
+              <SessionActions />
             </CardHeader>
             <CardContent className="flex-1 p-0 min-h-0">
               <ScrollArea className="h-full w-full" ref={scrollContainerRef}>
@@ -122,8 +124,9 @@ const GraphView: React.FC<GraphViewProps> = ({
           </Card>
         ) : output && typeof output === 'string' ? (
           <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
-            <CardHeader className="flex-shrink-0">
+            <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between gap-3">
               <CardTitle>{getSessionTitle()}</CardTitle>
+              <SessionActions />
             </CardHeader>
             <CardContent className="flex-1 p-0 min-h-0">
               <ScrollArea className="h-full w-full" ref={scrollContainerRef}>
