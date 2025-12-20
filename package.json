@@ -11,7 +11,6 @@
     "test:watch": "vitest",
     "e2e": "cypress run",
     "type-check": "tsc --noEmit",
-    "dev:setup": "node scripts/setup-dev.js",
     "dev:reset": "rm -rf .next && pnpm dev",
     "dev:logs": "next dev --turbopack | grep -E '(Error|Warn|Info)'",
     "debug:subscription": "node debug-subscription.js"

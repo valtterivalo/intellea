@@ -4,7 +4,7 @@
  * Exports: NewSessionPrompt
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,6 +15,7 @@ import { createClient } from '@/lib/supabase/client';
 import { useStreamingGeneration } from '@/hooks/useStreamingGeneration';
 import FileUpload from './FileUpload';
 import StreamingProgress from './StreamingProgress';
+import type { IntelleaResponse } from '@/types/intellea';
 
 interface NewSessionPromptProps {
   isDemo?: boolean;
@@ -23,7 +24,7 @@ interface NewSessionPromptProps {
 const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) => {
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const streaming = useStreamingGeneration();
+  const lastPromptRef = useRef<string>('');
 
   const {
     prompt,
@@ -31,6 +32,9 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
     isLoading,
     isSubscriptionLoading,
     subscriptionStatus,
+    setOutput,
+    setActivePrompt,
+    setError,
   } = useAppStore(
     useShallow((state) => ({
       prompt: state.prompt,
@@ -38,49 +42,20 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
       isLoading: state.isLoading,
       isSubscriptionLoading: state.isSubscriptionLoading,
       subscriptionStatus: state.subscriptionStatus,
+      setOutput: state.setOutput,
+      setActivePrompt: state.setActivePrompt,
+      setError: state.setError,
     }))
   );
 
-  // Handle streaming completion
-  useEffect(() => {
-    if (streaming.state.finalData && !streaming.state.isLoading) {
-      const finalData = streaming.state.finalData;
-      const store = useAppStore.getState();
-      
-      // Update store with final data
-      store.setOutput(finalData);
-      store.setActivePrompt(prompt);
-      
-      if (isDemo) {
-        // For demo mode, set demo session
-        store.currentSessionId = 'demo-session';
-        store.currentSessionTitle = `${finalData.sessionTitle} (Demo)`;
-        store.setPrompt('');
-      } else {
-        // For authenticated users, create session in Supabase
-        createSessionInSupabase(finalData, prompt);
-      }
-    }
-  }, [streaming.state.finalData, streaming.state.isLoading, isDemo, prompt]);
-
-  // Handle streaming errors
-  useEffect(() => {
-    if (streaming.state.error) {
-      const store = useAppStore.getState();
-      store.setError(streaming.state.error);
-    }
-  }, [streaming.state.error]);
-
-  const createSessionInSupabase = async (data: typeof streaming.state.finalData, lastPrompt: string) => {
-    if (!data) return;
-    
+  const createSessionInSupabase = useCallback(async (data: IntelleaResponse, lastPrompt: string) => {
     try {
       const { data: { user } } = await createClient().auth.getUser();
       if (!user) {
         console.error('User not found when creating session');
         return;
       }
-      
+
       const sessionPayload = {
         user_id: user.id,
         title: data.sessionTitle,
@@ -106,14 +81,38 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
       const store = useAppStore.getState();
       store.currentSessionId = sessionData.id;
       store.currentSessionTitle = data.sessionTitle || 'Untitled Session';
-      
+
       if (process.env.NEXT_PUBLIC_DEBUG === 'true') {
         console.log('New session created. ID:', sessionData.id);
       }
     } catch (error) {
       console.error('Error creating session:', error);
     }
-  };
+  }, []);
+
+  const handleStreamingComplete = useCallback(async (finalData: IntelleaResponse) => {
+    setOutput(finalData);
+    setActivePrompt(lastPromptRef.current);
+
+    if (isDemo) {
+      const store = useAppStore.getState();
+      store.currentSessionId = 'demo-session';
+      store.currentSessionTitle = `${finalData.sessionTitle} (Demo)`;
+      setPrompt('');
+      return;
+    }
+
+    await createSessionInSupabase(finalData, lastPromptRef.current);
+  }, [createSessionInSupabase, isDemo, setActivePrompt, setOutput, setPrompt]);
+
+  const handleStreamingError = useCallback((message: string) => {
+    setError(message);
+  }, [setError]);
+
+  const streaming = useStreamingGeneration({
+    onComplete: handleStreamingComplete,
+    onError: handleStreamingError,
+  });
 
   const promptDisabled = streaming.state.isLoading || isLoading || isSubscriptionLoading || (!isDemo && subscriptionStatus !== 'active');
   const sendDisabled = promptDisabled || (!prompt.trim() && uploadedFiles.length === 0);
@@ -131,6 +130,7 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
     }
 
     const currentPrompt = prompt;
+    lastPromptRef.current = currentPrompt;
     const activeSessionId = useAppStore.getState().currentSessionId;
 
     if (activeSessionId !== null) {

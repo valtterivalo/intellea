@@ -3,7 +3,6 @@
  * Exports: POST
  */
 import { NextRequest, NextResponse } from 'next/server';
-// import { generateInitialGraphStreamingOptimized } from '@/lib/agents/graphInitStreamingOptimized';
 import { generateInitialGraphWithRawOpenAI } from '@/lib/agents/graphInitRawOpenAI';
 import { getNodeTextForEmbedding } from '@/lib/generate-helpers';
 import { getNodeEmbeddingsStreaming, calculateNodePositionsStreaming } from '@/lib/generate-helpers-streaming';

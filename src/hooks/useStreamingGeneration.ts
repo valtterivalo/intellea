@@ -28,7 +28,12 @@ export interface GenerationParams {
   isDemo?: boolean;
 }
 
-export function useStreamingGeneration(): UseStreamingGenerationResult {
+export interface StreamingCallbacks {
+  onComplete?: (data: IntelleaResponse) => void;
+  onError?: (message: string) => void;
+}
+
+export function useStreamingGeneration(callbacks: StreamingCallbacks = {}): UseStreamingGenerationResult {
   const [state, setState] = useState<StreamingState>({
     isLoading: false,
     progress: 0,
@@ -36,6 +41,8 @@ export function useStreamingGeneration(): UseStreamingGenerationResult {
   });
 
   const abortControllerRef = useRef<AbortController | null>(null);
+  const callbacksRef = useRef<StreamingCallbacks>(callbacks);
+  callbacksRef.current = callbacks;
 
   const startGeneration = useCallback(async ({ prompt, files = [], isDemo = false }: GenerationParams) => {
     // Cancel any existing generation
@@ -98,6 +105,7 @@ export function useStreamingGeneration(): UseStreamingGenerationResult {
             isLoading: false,
             error: errorData?.error || 'Rate limit exceeded. Please try again later.',
           }));
+          callbacksRef.current.onError?.(errorData?.error || 'Rate limit exceeded. Please try again later.');
           return;
         }
         
@@ -126,7 +134,7 @@ export function useStreamingGeneration(): UseStreamingGenerationResult {
             if (line.startsWith('data: ')) {
               try {
                 const eventData = JSON.parse(line.slice(6));
-                handleStreamingEvent(eventData, setState);
+                handleStreamingEvent(eventData, setState, callbacksRef);
               } catch (error) {
                 console.error('Error parsing streaming event:', error, 'Line:', line);
               }
@@ -145,11 +153,13 @@ export function useStreamingGeneration(): UseStreamingGenerationResult {
           message: 'Generation cancelled',
         }));
       } else {
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
         setState(prev => ({
           ...prev,
           isLoading: false,
-          error: error instanceof Error ? error.message : 'Unknown error occurred',
+          error: errorMessage,
         }));
+        callbacksRef.current.onError?.(errorMessage);
       }
     }
   }, []);
@@ -170,7 +180,8 @@ export function useStreamingGeneration(): UseStreamingGenerationResult {
 
 function handleStreamingEvent(
   event: StreamingEvent,
-  setState: React.Dispatch<React.SetStateAction<StreamingState>>
+  setState: React.Dispatch<React.SetStateAction<StreamingState>>,
+  callbacksRef: React.MutableRefObject<StreamingCallbacks>
 ) {
   switch (event.type) {
     case 'status':
@@ -269,6 +280,7 @@ function handleStreamingEvent(
         message: 'Knowledge graph ready!',
         finalData: event.data,
       }));
+      callbacksRef.current.onComplete?.(event.data);
       break;
 
     case 'error':
@@ -278,6 +290,7 @@ function handleStreamingEvent(
         error: event.error,
         stage: event.stage,
       }));
+      callbacksRef.current.onError?.(event.error);
       break;
 
     default:
