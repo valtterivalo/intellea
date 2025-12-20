@@ -3,30 +3,30 @@
  * Exports: GET, POST
  */
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { stripe } from '@/lib/stripe';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { getStripe } from '@/lib/stripe';
 import Stripe from 'stripe';
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing Supabase admin environment variables');
-}
+let supabaseAdminClient: SupabaseClient | null = null;
 
-if (!process.env.ADMIN_SECRET_KEY) {
-  throw new Error('Missing ADMIN_SECRET_KEY environment variable');
-}
-
-// Create admin client with service role
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+const getSupabaseAdmin = () => {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Missing Supabase admin environment variables');
+  }
+  if (!supabaseAdminClient) {
+    supabaseAdminClient = createClient(supabaseUrl, serviceRoleKey);
+  }
+  return supabaseAdminClient;
+};
 
 const isAuthorized = (req: NextRequest) => {
   const authHeader = req.headers.get('Authorization');
   return authHeader === `Bearer ${process.env.ADMIN_SECRET_KEY}`;
 };
 
-const findUserByEmail = async (email: string) => {
+const findUserByEmail = async (supabaseAdmin: SupabaseClient, email: string) => {
   const normalizedEmail = email.toLowerCase();
   const perPage = 200;
   const maxPages = 20;
@@ -53,6 +53,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
+  const supabaseAdmin = getSupabaseAdmin();
+  const stripe = getStripe();
+
   const { searchParams } = new URL(req.url);
   const email = searchParams.get('email');
   const userId = searchParams.get('userId');
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest) {
     // Find user by email or ID
     let user;
     if (email) {
-      user = await findUserByEmail(email);
+      user = await findUserByEmail(supabaseAdmin, email);
     } else if (userId) {
       const { data: userData } = await supabaseAdmin.auth.admin.getUserById(userId);
       user = userData.user;
@@ -128,6 +131,9 @@ export async function POST(req: NextRequest) {
   if (!isAuthorized(req)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const stripe = getStripe();
 
   try {
     const body = await req.json();

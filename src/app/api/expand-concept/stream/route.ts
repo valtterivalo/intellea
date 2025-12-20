@@ -10,11 +10,6 @@ import { verifyUserAccess } from '@/lib/api-helpers';
 import { expandConcept } from '@/lib/agents/conceptExpandV6';
 import { getSessionVectorStore } from '@/lib/services/documentManager';
 
-// Ensure API keys are available
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing Environment Variable OPENAI_API_KEY');
-}
-
 export async function POST(req: NextRequest) {
   await createClient(); // Initialize supabase client for potential use
 
@@ -106,7 +101,7 @@ export async function POST(req: NextRequest) {
     let hasDocuments = false;
     
     if (sessionId) {
-      vectorStoreId = await getSessionVectorStore(sessionId);
+      vectorStoreId = await getSessionVectorStore(sessionId, sessionUserId);
       hasDocuments = !!vectorStoreId;
       
       if (hasDocuments) {

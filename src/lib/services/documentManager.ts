@@ -193,14 +193,19 @@ export async function processAndStoreDocuments(
 /**
  * Get vector store ID for a session (for expansions)
  */
-export async function getSessionVectorStore(sessionId: string): Promise<string | null> {
+export async function getSessionVectorStore(sessionId: string, userId?: string): Promise<string | null> {
   const supabase = await createClient();
   
-  const { data: session, error } = await supabase
+  const sessionQuery = supabase
     .from('sessions')
     .select('vector_store_id, user_id, has_documents')
-    .eq('id', sessionId)
-    .single();
+    .eq('id', sessionId);
+
+  if (userId) {
+    sessionQuery.eq('user_id', userId);
+  }
+
+  const { data: session, error } = await sessionQuery.single();
     
   if (error || !session) {
     console.error(`Failed to get session vector store: ${error?.message}`);

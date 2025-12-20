@@ -6,16 +6,23 @@
 
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
-import { loadStripe } from '@stripe/stripe-js';
+import { loadStripe, type Stripe } from '@stripe/stripe-js';
 import AppHeader from '@/components/AppHeader';
 import GraphView from '@/components/GraphView';
 import VoiceAgentWidget from '@/components/VoiceAgentWidget';
 
-if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-  throw new Error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set');
-}
+let stripePromise: Promise<Stripe | null> | null = null;
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+const getStripePromise = () => {
+  if (!stripePromise) {
+    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+      throw new Error('NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is not set');
+    }
+    stripePromise = loadStripe(publishableKey);
+  }
+  return stripePromise;
+};
 
 export default function MainAppClient() {
   const setError = useAppStore((state) => state.setError);
@@ -39,7 +46,7 @@ export default function MainAppClient() {
       }
       const { sessionId } = await response.json();
       if (!sessionId) throw new Error('Missing session ID from checkout response');
-      const stripe = await stripePromise;
+      const stripe = await getStripePromise();
       if (!stripe) throw new Error('Stripe.js failed to load');
       const { error } = await stripe.redirectToCheckout({ sessionId });
       if (error) throw error;

@@ -10,25 +10,8 @@ import { getSessionVectorStore } from '@/lib/services/documentManager';
 import type { ExpandedConceptData } from '@/types/intellea';
 import { verifyUserAccess } from '@/lib/api-helpers';
 
-// Note: SanitizedNode and SanitizedLink interfaces available if needed for future expansions
-// interface SanitizedNode {
-//   id: string;
-//   label: string;
-//   isRoot?: boolean;
-// }
-// 
-// interface SanitizedLink {
-//   source: string;
-//   target: string;
-// }
-
 // Response structure
 type ExpandedConceptResponse = ExpandedConceptData;
-
-// Ensure API keys are available
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing Environment Variable OPENAI_API_KEY');
-}
 
 export async function POST(req: NextRequest) {
   await createClient(); // Initialize supabase client for potential use
@@ -92,7 +75,7 @@ export async function POST(req: NextRequest) {
       let hasDocuments = false;
 
       if (sessionId) {
-        vectorStoreId = await getSessionVectorStore(sessionId);
+        vectorStoreId = await getSessionVectorStore(sessionId, sessionUserId);
         hasDocuments = Boolean(vectorStoreId);
       }
 

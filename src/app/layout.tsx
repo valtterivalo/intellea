@@ -35,8 +35,15 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = await createClient();
-  const { data: { session: initialSession } } = await supabase.auth.getSession();
+  const hasSupabaseEnv = Boolean(
+    process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+  let initialSession = null;
+  if (hasSupabaseEnv) {
+    const supabase = await createClient();
+    const { data } = await supabase.auth.getSession();
+    initialSession = data.session;
+  }
 
   return (
     <html lang="en">

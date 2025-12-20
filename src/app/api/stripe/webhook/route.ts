@@ -3,31 +3,29 @@
  * Exports: POST
  */
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
-import { createClient } from '@supabase/supabase-js';
+import { getStripe } from '@/lib/stripe';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
-// Validate environment variables
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
-}
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
-  throw new Error('NEXT_PUBLIC_SUPABASE_URL is not set in environment variables');
-}
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-  throw new Error('STRIPE_WEBHOOK_SECRET is not set in environment variables');
-}
+let supabaseAdminClient: SupabaseClient | null = null;
 
-// Create a Supabase client configured to use the Service Role Key
-// This client bypasses RLS.
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+function getSupabaseAdmin(): SupabaseClient {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error('Supabase service role environment variables are not set');
+  }
+  if (!supabaseAdminClient) {
+    supabaseAdminClient = createClient(supabaseUrl, serviceRoleKey);
+  }
+  return supabaseAdminClient;
+}
 
 // --- Webhook Event Handlers ---
 
 async function handleCheckoutSessionCompleted(event: Stripe.Event) {
+  const stripe = getStripe();
+  const supabaseAdmin = getSupabaseAdmin();
   const session = event.data.object as Stripe.Checkout.Session;
   const customerId = session.customer as string;
   const subscriptionId = session.subscription as string;
@@ -68,6 +66,8 @@ async function handleCheckoutSessionCompleted(event: Stripe.Event) {
 }
 
 async function handleSubscriptionChange(event: Stripe.Event) {
+  const stripe = getStripe();
+  const supabaseAdmin = getSupabaseAdmin();
   let customerId: string;
   let subscriptionStatus: string;
   let subscriptionId: string;
@@ -189,6 +189,7 @@ export async function POST(req: Request) {
   }
 
   try {
+    const stripe = getStripe();
     const event = stripe.webhooks.constructEvent(
       body,
       signature,

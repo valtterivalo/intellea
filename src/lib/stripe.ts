@@ -3,31 +3,44 @@
  * Exports: getStripeCustomerId, stripe
  */
 import Stripe from 'stripe';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error('STRIPE_SECRET_KEY is not set');
+let stripeClient: Stripe | null = null;
+let supabaseClient: SupabaseClient | null = null;
+let supabaseAdminClient: SupabaseClient | null = null;
+
+export function getStripe(): Stripe {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    throw new Error('STRIPE_SECRET_KEY is not set');
+  }
+  if (!stripeClient) {
+    stripeClient = new Stripe(stripeKey, {
+      apiVersion: '2025-05-28.basil',
+    });
+  }
+  return stripeClient;
 }
 
-if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
-  throw new Error('Supabase environment variables are not set');
+function getSupabaseClients(): { supabase: SupabaseClient; supabaseAdmin: SupabaseClient } {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+    throw new Error('Supabase environment variables are not set');
+  }
+
+  if (!supabaseClient) {
+    supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
+  }
+
+  if (!supabaseAdminClient) {
+    supabaseAdminClient = createClient(supabaseUrl, supabaseServiceKey);
+  }
+
+  return { supabase: supabaseClient, supabaseAdmin: supabaseAdminClient };
 }
-
-// Regular client for reading data
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-);
-
-// Admin client for writing profile data (bypasses RLS)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-  apiVersion: '2025-05-28.basil',
-});
 /**
  * @description Retrieve or create a Stripe customer for a user.
  * @param userId - Supabase user ID.
@@ -37,6 +50,9 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
 
 export const getStripeCustomerId = async (userId: string, email: string) => {
   try {
+    const stripe = getStripe();
+    const { supabase, supabaseAdmin } = getSupabaseClients();
+
     // First, check if we already have a Stripe customer ID in the profiles table
     const { data: profile, error: profileError } = await supabase
       .from('profiles')

@@ -4,11 +4,12 @@
  */
 import { createClient } from '@/lib/supabase/server';
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 
 export async function POST() {
   try {
     const supabase = await createClient();
+    const stripe = getStripe();
     const { data: { user } } = await supabase.auth.getUser();
 
     if (!user) {

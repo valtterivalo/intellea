@@ -3,13 +3,9 @@
  * Exports: uploadFileWithProgress
  */
 
-import OpenAI from 'openai';
 import { FILE_LIMITS, type SupportedFileType } from '@/lib/constants/fileConstants';
 import type { StreamEmitter } from '@/types/streaming';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 export interface FileUploadResult {
   fileId: string;
@@ -69,6 +65,7 @@ export async function uploadFileWithProgress(
     });
     
     const uploadStart = Date.now();
+    const openai = getOpenAIClient();
     const uploadResponse = await openai.files.create({
       file: new File([buffer], file.name, { type: file.type }),
       purpose: 'user_data',

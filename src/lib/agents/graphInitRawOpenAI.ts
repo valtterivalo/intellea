@@ -4,14 +4,10 @@
  * Exports: generateInitialGraphWithRawOpenAI
  */
 
-import OpenAI from 'openai';
 import type { StreamEmitter } from '@/types/streaming';
 import { StatusMessages } from '@/types/streaming';
 import type { IntelleaResponse } from '@/types/intellea';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 const SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generating structured multi-parent hierarchical learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object.
 
@@ -91,6 +87,7 @@ export async function generateInitialGraphWithRawOpenAI(
   isDemo = false
 ): Promise<IntelleaResponse> {
   try {
+    const openai = getOpenAIClient();
     if (isDemo && fileIds.length > 0) {
       throw new Error('File uploads are not available in demo mode. Please sign up for full access.');
     }

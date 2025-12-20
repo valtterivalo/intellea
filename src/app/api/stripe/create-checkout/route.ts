@@ -4,7 +4,7 @@
  */
 import { createClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
-import { stripe, getStripeCustomerId } from '@/lib/stripe';
+import { getStripe, getStripeCustomerId } from '@/lib/stripe';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,6 +36,7 @@ export async function POST(request: NextRequest) {
 
     // Get or create the Stripe customer ID
     const customerId = await getStripeCustomerId(user.id, user.email!);
+    const stripe = getStripe();
 
     // Create a checkout session
     const session = await stripe.checkout.sessions.create({

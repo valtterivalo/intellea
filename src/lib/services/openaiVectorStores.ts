@@ -3,11 +3,8 @@
  * Exports: createVectorStore, addFileToVectorStore, searchVectorStore, deleteVectorStore
  */
 
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import type OpenAI from 'openai';
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 export interface VectorStoreResult {
   id: string;
@@ -32,6 +29,7 @@ export async function createVectorStore(
   name?: string
 ): Promise<VectorStoreResult> {
   try {
+    const openai = getOpenAIClient();
     const storeName = name || `User Documents - ${userId.slice(0, 8)}`;
     
     if (process.env.APP_DEBUG === 'true') console.log(`Creating vector store for user ${userId}: ${storeName}`);
@@ -75,6 +73,7 @@ export async function addFileToVectorStore(
   filename?: string
 ): Promise<void> {
   try {
+    const openai = getOpenAIClient();
     if (process.env.APP_DEBUG === 'true') console.log(`Adding file ${fileId} to vector store ${vectorStoreId}`);
     
     await openai.vectorStores.files.create(vectorStoreId, {
@@ -94,6 +93,7 @@ export async function addFileToVectorStore(
  */
 export async function getVectorStore(vectorStoreId: string): Promise<VectorStoreResult> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.vectorStores.retrieve(vectorStoreId);
     
     return {
@@ -125,6 +125,7 @@ export async function searchVectorStore(
   maxResults: number = 10
 ): Promise<unknown> {
   try {
+    const openai = getOpenAIClient();
     if (process.env.APP_DEBUG === 'true') console.log(`Searching vector store ${vectorStoreId} for: "${query}"`);
     
     const response = await openai.vectorStores.search(vectorStoreId, {
@@ -146,6 +147,7 @@ export async function listVectorStoreFiles(
   vectorStoreId: string
 ): Promise<OpenAI.VectorStores.Files.VectorStoreFile[]> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.vectorStores.files.list(vectorStoreId);
     return response.data;
   } catch (error) {
@@ -162,6 +164,7 @@ export async function removeFileFromVectorStore(
   fileId: string
 ): Promise<boolean> {
   try {
+    const openai = getOpenAIClient();
     if (process.env.APP_DEBUG === 'true') console.log(`Removing file ${fileId} from vector store ${vectorStoreId}`);
     
     const response = await openai.vectorStores.files.del(vectorStoreId, fileId);
@@ -178,6 +181,7 @@ export async function removeFileFromVectorStore(
  */
 export async function deleteVectorStore(vectorStoreId: string): Promise<boolean> {
   try {
+    const openai = getOpenAIClient();
     if (process.env.APP_DEBUG === 'true') console.log(`Deleting vector store: ${vectorStoreId}`);
     
     const response = await openai.vectorStores.del(vectorStoreId);

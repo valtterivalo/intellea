@@ -3,12 +3,9 @@
  * Exports: uploadFile, listFiles, deleteFile, getFileContent
  */
 
-import OpenAI from 'openai';
+import type OpenAI from 'openai';
 import { FILE_LIMITS, type SupportedFileType } from '@/lib/constants/fileConstants';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 export { FILE_LIMITS, type SupportedFileType };
 
@@ -44,6 +41,7 @@ export async function uploadFile(
     const buffer = Buffer.from(arrayBuffer);
     
     // Upload to OpenAI Files API
+    const openai = getOpenAIClient();
     const uploadResponse = await openai.files.create({
       file: new File([buffer], file.name, { type: file.type }),
       purpose: 'user_data', // Flexible file type for document storage
@@ -69,6 +67,7 @@ export async function uploadFile(
  */
 export async function listFiles(purpose: 'user_data' = 'user_data'): Promise<OpenAI.Files.FileObject[]> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.files.list({
       purpose,
     });
@@ -87,6 +86,7 @@ export async function deleteFile(fileId: string): Promise<boolean> {
   try {
     if (process.env.APP_DEBUG === 'true') console.log(`Deleting OpenAI file: ${fileId}`);
     
+    const openai = getOpenAIClient();
     const response = await openai.files.del(fileId);
     
     return response.deleted;
@@ -101,6 +101,7 @@ export async function deleteFile(fileId: string): Promise<boolean> {
  */
 export async function getFileInfo(fileId: string): Promise<OpenAI.Files.FileObject> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.files.retrieve(fileId);
     return response;
   } catch (error) {
@@ -114,6 +115,7 @@ export async function getFileInfo(fileId: string): Promise<OpenAI.Files.FileObje
  */
 export async function getFileContent(fileId: string): Promise<ArrayBuffer> {
   try {
+    const openai = getOpenAIClient();
     const response = await openai.files.content(fileId);
     return await response.arrayBuffer();
   } catch (error) {

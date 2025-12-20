@@ -3,12 +3,8 @@
  * Exports: addFileToVectorStoreWithProgress
  */
 
-import OpenAI from 'openai';
 import type { StreamEmitter } from '@/types/streaming';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 /**
  * Add a file to a vector store with streaming progress updates
@@ -20,6 +16,7 @@ export async function addFileToVectorStoreWithProgress(
   emitter: StreamEmitter
 ): Promise<void> {
   try {
+    const openai = getOpenAIClient();
     emitter.emit({
       type: 'file-upload-progress',
       fileName,

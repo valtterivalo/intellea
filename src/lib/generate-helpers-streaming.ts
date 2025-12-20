@@ -2,19 +2,10 @@
  * @fileoverview Streaming-aware versions of generation helpers with progress tracking.
  * Exports: getNodeEmbeddingsStreaming, calculateNodePositionsStreaming
  */
-import OpenAI from 'openai';
 import { UMAP } from 'umap-js';
 import type { NodeObject as GraphNode } from '@/types/intellea';
 import type { StreamEmitter } from '@/types/streaming';
-
-// Ensure API keys are available for embedding requests
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing Environment Variable OPENAI_API_KEY');
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 /**
  * @description Retrieve embeddings for multiple texts using OpenAI with progress updates.
@@ -39,6 +30,7 @@ export async function getNodeEmbeddingsStreaming(
     
     // For large batches, we might want to process in chunks to show progress
     // OpenAI allows up to 2048 texts per request, so usually we can do it in one call
+    const openai = getOpenAIClient();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-large',
       input: texts,

@@ -2,18 +2,9 @@
  * @fileoverview Library utilities.
  * Exports: calculateNodePositions, getNodeEmbeddings, getNodeTextForEmbedding
  */
-import OpenAI from 'openai';
 import { UMAP } from 'umap-js';
 import type { NodeObject as GraphNode, KnowledgeCard } from '@/types/intellea';
-
-// Ensure API keys are available for embedding requests
-if (!process.env.OPENAI_API_KEY) {
-  throw new Error('Missing Environment Variable OPENAI_API_KEY');
-}
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import { getOpenAIClient } from '@/lib/openaiClient';
 
 /**
  * @description Get text from a graph node to create embeddings.
@@ -40,6 +31,7 @@ export async function getNodeEmbeddings(
   if (!texts || texts.length === 0) return [];
   try {
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log(`Requesting embeddings for ${texts.length} texts...`);
+    const openai = getOpenAIClient();
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-large',
       input: texts,
@@ -141,4 +133,3 @@ export async function calculateNodePositions(
 
   return centeredPositions;
 }
-
