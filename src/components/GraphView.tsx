@@ -49,6 +49,7 @@ const GraphView: React.FC<GraphViewProps> = ({
     isSubscriptionLoading,
     forceExpandRequest,
     currentSessionTitle,
+    activeClickedNodeId,
   } = useAppStore(
     useShallow((state) => ({
       output: state.output,
@@ -58,6 +59,7 @@ const GraphView: React.FC<GraphViewProps> = ({
       isSubscriptionLoading: state.isSubscriptionLoading,
       forceExpandRequest: state.forceExpandRequest,
       currentSessionTitle: state.currentSessionTitle,
+      activeClickedNodeId: state.activeClickedNodeId,
     }))
   );
 
@@ -190,7 +192,11 @@ const GraphView: React.FC<GraphViewProps> = ({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <StickyKnowledgeCard knowledgeCardsRef={knowledgeCardsRef} scrollContainerRef={scrollContainerRef} />
+      <StickyKnowledgeCard
+        key={activeClickedNodeId ?? 'sticky-none'}
+        knowledgeCardsRef={knowledgeCardsRef}
+        scrollContainerRef={scrollContainerRef}
+      />
     </main>
   );
 };

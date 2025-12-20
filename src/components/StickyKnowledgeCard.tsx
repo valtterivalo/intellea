@@ -22,14 +22,12 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
 }) => {
   const [isSticky, setIsSticky] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-
-  // Reset minimized state when sticky card hides
-  useEffect(() => {
-    if (!isSticky) {
-      setIsMinimized(false);
+  const portalContainer = useMemo(() => {
+    if (typeof document === 'undefined') {
+      return null;
     }
-  }, [isSticky]);
+    return document.body;
+  }, []);
   
   const { activeClickedNodeId, output } = useAppStore(useShallow(state => ({
     activeClickedNodeId: state.activeClickedNodeId,
@@ -49,12 +47,19 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
       : null;
   }, [activeClickedNodeId, knowledgeCards]);
 
+  const updateStickyState = useCallback((nextSticky: boolean) => {
+    setIsSticky(nextSticky);
+    if (!nextSticky) {
+      setIsMinimized(false);
+    }
+  }, []);
+
   const handleScroll = useCallback(() => {
     const knowledgeCardsElement = knowledgeCardsRef.current;
     const scrollContainer = scrollContainerRef.current;
     
     if (!knowledgeCardsElement || !scrollContainer) {
-      setIsSticky(false);
+      updateStickyState(false);
       return;
     }
 
@@ -64,17 +69,11 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
     // Check if knowledge cards section is out of view (above the visible area)
     const cardsOutOfView = cardsRect.bottom < containerRect.top + 100; // 100px buffer
     
-    setIsSticky(cardsOutOfView);
-  }, [knowledgeCardsRef, scrollContainerRef]);
-
-  // Set up portal container
-  useEffect(() => {
-    setPortalContainer(document.body);
-  }, []);
+    updateStickyState(cardsOutOfView);
+  }, [knowledgeCardsRef, scrollContainerRef, updateStickyState]);
 
   useEffect(() => {
     if (!knowledgeCardsRef.current || !scrollContainerRef.current || !activeClickedNodeId) {
-      setIsSticky(false);
       return;
     }
 
@@ -87,9 +86,6 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
 
     actualScrollElement.addEventListener('scroll', handleScroll);
     
-    // Initial check
-    handleScroll();
-
     return () => {
       actualScrollElement.removeEventListener('scroll', handleScroll);
     };

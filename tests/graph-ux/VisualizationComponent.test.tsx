@@ -7,22 +7,45 @@ import VisualizationComponent from '@/components/VisualizationComponent';
 import { useAppStore } from '@/store/useAppStore';
 import { getNodeColor as depthColor, getClusterColor } from '@/lib/graphColors';
 
+type GraphNode = {
+  id: string;
+  depth?: number;
+  label?: string;
+};
+
+type ForceGraphProps = {
+  nodeColor?: (node: GraphNode) => string;
+  onNodeHover?: (node: GraphNode | null) => void;
+  [key: string]: unknown;
+};
+
 // Mock the 3D graph library to capture callbacks
-let graphProps: any = null;
+const graphPropsSpy = vi.fn<(props: ForceGraphProps) => void>();
+
+const getGraphProps = (): ForceGraphProps => {
+  const latestCall = graphPropsSpy.mock.calls.at(-1);
+  if (!latestCall) {
+    throw new Error('Graph props not captured');
+  }
+  return latestCall[0];
+};
+
 vi.mock('react-force-graph-3d', () => {
   const React = require('react');
+  const ForceGraphMock = React.forwardRef((props: ForceGraphProps, ref: React.ForwardedRef<unknown>) => {
+    graphPropsSpy(props);
+    React.useImperativeHandle(ref, () => ({
+      d3Force: () => ({ strength: () => {}, distance: () => {} }),
+      camera: () => ({ position: { x: 0, y: 0, z: 800 }, zoom: 1 }),
+      cameraPosition: () => {},
+      controls: () => ({ addEventListener: () => {}, removeEventListener: () => {} }),
+    }));
+    return <div data-testid="force-graph" />;
+  });
+  ForceGraphMock.displayName = 'ForceGraphMock';
   return {
     __esModule: true,
-    default: React.forwardRef((props: any, ref: any) => {
-      graphProps = props;
-      React.useImperativeHandle(ref, () => ({
-        d3Force: () => ({ strength: () => {}, distance: () => {} }),
-        camera: () => ({ position: { x: 0, y: 0, z: 800 }, zoom: 1 }),
-        cameraPosition: () => {},
-        controls: () => ({ addEventListener: () => {}, removeEventListener: () => {} }),
-      }));
-      return <div data-testid="force-graph" />;
-    }),
+    default: ForceGraphMock,
   };
 });
 
@@ -43,7 +66,7 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
       pinnedNodes: {},
       collapsedNodes: {},
     });
-    graphProps = null;
+    graphPropsSpy.mockReset();
   });
 
   it('selects node on left-click', () => {
@@ -100,7 +123,7 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     );
 
     // Simulate hovering a node via mocked graph component
-    graphProps.onNodeHover({ id: 'a', label: 'A' });
+    getGraphProps().onNodeHover?.({ id: 'a', label: 'A' });
 
     const trigger = container.querySelector('div');
     if (!trigger) throw new Error('trigger div not found');
@@ -134,7 +157,7 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
         knowledgeCards: [],
         visualizationData: { nodes: mockNodes, links: mockLinks },
       },
-    } as any);
+    });
 
     render(
       <VisualizationComponent
@@ -168,7 +191,10 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     render(
       <VisualizationComponent visualizationData={{ nodes, links: [] }} />
     );
-    const colorFn = graphProps.nodeColor;
+    const colorFn = getGraphProps().nodeColor;
+    if (!colorFn) {
+      throw new Error('nodeColor handler missing');
+    }
     expect(colorFn(nodes[0])).toBe(depthColor(0));
     expect(colorFn(nodes[1])).toBe(depthColor(1));
     expect(colorFn(nodes[2])).toBe(depthColor(2));
@@ -187,7 +213,10 @@ describe('VisualizationComponent (Graph UX handlers)', () => {
     render(
       <VisualizationComponent visualizationData={{ nodes, links: [] }} />
     );
-    const colorFn = graphProps.nodeColor;
+    const colorFn = getGraphProps().nodeColor;
+    if (!colorFn) {
+      throw new Error('nodeColor handler missing');
+    }
     expect(colorFn(nodes[0])).toBe(getClusterColor('0'));
     expect(colorFn(nodes[1])).toBe(getClusterColor('1'));
   });

@@ -19,9 +19,7 @@ type ClusterMap = Record<string, string>;
 export function computeClusters(data: ClusterGraphData): ClusterMap {
   try {
     // Dynamically import graphology packages if present
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const Graphology = require('graphology');
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const louvain = require('graphology-communities-louvain');
 
     const graph = new Graphology.UndirectedGraph();

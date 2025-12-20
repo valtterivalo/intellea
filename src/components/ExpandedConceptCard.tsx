@@ -4,7 +4,7 @@
  * Exports: ExpandedConceptCard
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { CheckCircle2, Circle, X } from 'lucide-react';
 import { useAppStore } from '@/store/useAppStore';
@@ -34,14 +34,9 @@ const ExpandedConceptCard: React.FC = () => {
   const completedNodeIds = useAppStore(state => state.completedNodeIds);
   const toggleCompleted = useAppStore(state => state.toggleCompleted);
 
-  const [noteValue, setNoteValue] = useState('');
+  const noteInputRef = useRef<HTMLTextAreaElement | null>(null);
   const isCompleted = focusedNodeId ? completedNodeIds.has(focusedNodeId) : false;
-
-  useEffect(() => {
-    if (focusedNodeId) {
-      setNoteValue(nodeNotes[focusedNodeId] || '');
-    }
-  }, [focusedNodeId, nodeNotes]);
+  const noteDefaultValue = focusedNodeId ? (nodeNotes[focusedNodeId] || '') : '';
   
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -216,14 +211,21 @@ const ExpandedConceptCard: React.FC = () => {
                 <Separator className="my-6" />
                 <h3 className="text-xl font-bold mb-2">Your Notes</h3>
                 <Textarea
-                  value={noteValue}
-                  onChange={(e) => setNoteValue(e.target.value)}
+                  key={focusedNodeId ?? 'note-input'}
+                  ref={noteInputRef}
+                  defaultValue={noteDefaultValue}
                   className="mb-2"
                 />
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => focusedNodeId && setNodeNote(focusedNodeId, noteValue)}
+                  onClick={() => {
+                    if (!focusedNodeId) {
+                      return;
+                    }
+                    const noteValue = noteInputRef.current?.value || '';
+                    setNodeNote(focusedNodeId, noteValue);
+                  }}
                 >
                   Save Note
                 </Button>
