@@ -2,7 +2,7 @@
  * @fileoverview React component.
  * Exports: useNodeInteractions
  */
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d';
 import { useGraphState, GraphData, AppGraphNode } from './useGraphState';
 import { useAppStore } from '@/store/useAppStore';
@@ -36,9 +36,6 @@ export function useNodeInteractions(
     x: number;
     y: number;
   } | null>(null);
-
-  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const lastClickedNodeId = useRef<string | null>(null);
 
   const handleExpandNode = useCallback(
     (nodeId: string) => {
@@ -108,57 +105,43 @@ export function useNodeInteractions(
   );
 
   const handleNodeClick = useCallback(
-    (node: NodeObject) => {
+    (node: NodeObject, event: MouseEvent) => {
       const appNode = node as AppGraphNode;
       if (!appNode.id) return;
 
-      if (clickTimer.current && lastClickedNodeId.current === appNode.id) {
-        clearTimeout(clickTimer.current);
-        clickTimer.current = null;
-        lastClickedNodeId.current = null;
+      setSelectedNodeId(appNode.id);
+
+      const currentOutput = useAppStore.getState().output;
+      const vizData =
+        typeof currentOutput === 'object' && currentOutput?.visualizationData
+          ? currentOutput.visualizationData
+          : null;
+
+      const isRootNode = vizData?.nodes.find((n) => n.id === appNode.id && n.isRoot);
+      if (!isRootNode) {
+        setActiveFocusPath(appNode.id, vizData);
+      }
+
+      const shouldExpand = event.detail > 1 || event.shiftKey;
+      if (shouldExpand) {
         handleExpandNode(appNode.id);
         return;
       }
 
-      lastClickedNodeId.current = appNode.id;
-      clickTimer.current = setTimeout(() => {
-        setSelectedNodeId(appNode.id);
-        const currentOutput = useAppStore.getState().output;
-        const vizData =
-          typeof currentOutput === 'object' && currentOutput?.visualizationData
-            ? currentOutput.visualizationData
-            : null;
-        
-        // Check if this is a root node - if so, don't set focus path to prevent blank graph
-        const isRootNode = vizData?.nodes.find(n => n.id === appNode.id && n.isRoot);
-        if (isRootNode) {
-          if (process.env.NEXT_PUBLIC_DEBUG === 'true') console.log('Skipping focus for root node:', appNode.id);
-          return;
-        }
-        
-        setActiveFocusPath(appNode.id, vizData);
-
-        if (graphRef.current) {
-          const focusX = appNode.fx ?? appNode.x ?? 0;
-          const focusY = appNode.fy ?? appNode.y ?? 0;
-          const focusZ = appNode.fz ?? appNode.z ?? 0;
-          const distance = 200;
-          const distRatio = 1 + distance / Math.hypot(focusX, focusY, focusZ);
-          const newCameraPosition = {
-            x: focusX * distRatio,
-            y: focusY * distRatio,
-            z: focusZ * distRatio,
-          };
-          const lookAtPosition = { x: focusX, y: focusY, z: focusZ };
-          graphRef.current.cameraPosition(
-            newCameraPosition,
-            lookAtPosition,
-            1000
-          );
-        }
-        clickTimer.current = null;
-        lastClickedNodeId.current = null;
-      }, 300);
+      if (graphRef.current) {
+        const focusX = appNode.fx ?? appNode.x ?? 0;
+        const focusY = appNode.fy ?? appNode.y ?? 0;
+        const focusZ = appNode.fz ?? appNode.z ?? 0;
+        const distance = 200;
+        const distRatio = 1 + distance / Math.hypot(focusX, focusY, focusZ);
+        const newCameraPosition = {
+          x: focusX * distRatio,
+          y: focusY * distRatio,
+          z: focusZ * distRatio,
+        };
+        const lookAtPosition = { x: focusX, y: focusY, z: focusZ };
+        graphRef.current.cameraPosition(newCameraPosition, lookAtPosition, 1000);
+      }
     },
     [setSelectedNodeId, setActiveFocusPath, handleExpandNode, graphRef]
   );

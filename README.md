@@ -1,6 +1,6 @@
 # intellea
 
-intellea is an interactive learning app that turns prompts and documents into explorable knowledge graphs with expandable concepts and knowledge cards.
+intellea is a graph-first interface that turns prompts and documents into interactive concept maps, helping users navigate large-model output without walls of text.
 
 ## app flow
 
@@ -10,13 +10,13 @@ intellea is an interactive learning app that turns prompts and documents into ex
 
 ## features
 
-- learning progress tracking with next-node suggestions
-- mark nodes as learned from cards or expanded views
-- export sessions as json and copy a concise summary
+- graph exploration with expand, pin, collapse, and focus
+- completion tracking, notes, and session export
+- graph controls for fit-to-view, smart labels, auto-rotate, and cluster coloring
 
 ## stack
 
-- next.js 15 (app router), react 19, typescript, tailwind css v4
+- next.js 16 (app router), react 19, typescript, tailwind css v4
 - supabase auth + postgres
 - openai responses api, files api, and vector stores
 - groq (kimi k2) for fast text-only generation
@@ -81,6 +81,13 @@ pnpm test
 pnpm e2e
 pnpm debug:subscription user@example.com
 ```
+
+## graph controls
+
+- click to focus a node
+- shift+click to expand a node
+- right click for pin/collapse/expand
+- use the overlay controls to fit the graph, toggle labels, auto-rotate, or switch to cluster colors
 
 ## admin and debugging
 

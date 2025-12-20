@@ -6,14 +6,14 @@
 
 import React, { useEffect, useState, useRef, useCallback } from 'react';
 import dynamic from 'next/dynamic';
-import SpriteText from 'three-spritetext';
 import { useAppStore } from '@/store/useAppStore';
 // THREE import available for future use
 // import * as THREE from 'three';
-import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d'; // Import library types
+import { ForceGraphMethods } from 'react-force-graph-3d'; // Import library types
+import GraphControlsOverlay from '@/components/GraphControlsOverlay';
 import { useGraphState, GraphData, AppGraphNode } from './hooks/useGraphState';
 import { useNodeInteractions } from './hooks/useNodeInteractions';
-import { getNodeColor as depthColor, getClusterColor } from '@/lib/graphColors';
+import { useGraphStyling } from './hooks/useGraphStyling';
 
 // Define our application-specific node structure, extending the library's base type
 
@@ -36,6 +36,13 @@ const themeColors = {
 
 // Legacy palette removed in favour of depth-based colours
 
+type GraphControls = {
+  enableDamping?: boolean;
+  dampingFactor?: number;
+  autoRotate?: boolean;
+  autoRotateSpeed?: number;
+};
+
 // Load the 3D graph component synchronously when running under tests to simplify mocking.
 // In normal runtime we keep using Next.js dynamic import to avoid SSR issues.
 const ForceGraph3DComponent = dynamic(
@@ -48,11 +55,9 @@ const ForceGraph3DComponent = dynamic(
   }
 ) as React.ComponentType<Record<string, unknown>>;
 
-// Type assertion helper (not memoized)
-const asAppNode = (node: NodeObject): AppGraphNode => node as AppGraphNode;
 
 const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, VisualizationComponentProps>(
-  function VisualizationComponent({ visualizationData, onNodeExpand }, forwardedRef) {
+  function VisualizationComponent({ visualizationData, onNodeExpand, expandingNodeId }, forwardedRef) {
   const containerRef = useRef<HTMLDivElement>(null);
   // Use ForceGraphMethods type for the ref for better type safety
   const graphRef = useRef<ForceGraphMethods | undefined>(undefined); // Initialize with undefined
@@ -66,6 +71,8 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     }
     return { width: 0, height: 0 };
   });
+  const [isAutoRotateEnabled, setIsAutoRotateEnabled] = useState(false);
+  const [areAllLabelsVisible, setAreAllLabelsVisible] = useState(false);
 
   const {
     focusedNodeId,
@@ -85,9 +92,10 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
   } = useGraphState(visualizationData);
 
   const colorByCluster = useAppStore((state) => state.colorByCluster);
+  const setColorByCluster = useAppStore((state) => state.setColorByCluster);
 
   const {
-    // hoveredNodeId, // Available for future use
+    hoveredNodeId,
     contextMenu,
     setContextMenu,
     handleNodeClick,
@@ -97,100 +105,39 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     handleCloseContextMenu,
     handleExpandNode,
   } = useNodeInteractions(graphRef, visualizationData, onNodeExpand);
-
-  const nodeDepths = React.useMemo(() => {
-    if (!visibleData) return {} as Record<string, number>;
-    const depths: Record<string, number> = {};
-    const adj: Record<string, string[]> = {};
-    visibleData.nodes.forEach((n) => {
-      depths[n.id] = (n as AppGraphNode).depth ?? undefined;
-      adj[n.id] = [];
-    });
-    visibleData.links.forEach((l) => {
-      const s = typeof l.source === 'string' ? l.source : l.source.id;
-      const t = typeof l.target === 'string' ? l.target : l.target.id;
-      if (adj[s]) adj[s].push(t);
-      if (adj[t]) adj[t].push(s);
-    });
-    const root = visibleData.nodes.find((n) => (n as AppGraphNode).depth === 0) || visibleData.nodes[0];
-    if (!root) return depths;
-    const queue = [root.id];
-    if (depths[root.id] === undefined) depths[root.id] = 0;
-    while (queue.length) {
-      const id = queue.shift()!;
-      const d = depths[id] as number;
-      for (const neighborId of adj[id] || []) {
-        if (depths[neighborId] === undefined) {
-          depths[neighborId] = d + 1;
-          queue.push(neighborId);
-        }
-      }
-    }
-    return depths;
-  }, [visibleData]);
-
-  // --- Node Color Logic (using depth helper) ---
-  const getNodeColor = useCallback(
-    (node: NodeObject) => {
-      const appNode = asAppNode(node);
-      const depth = nodeDepths[appNode.id] ?? (appNode as AppGraphNode).depth ?? 0;
-      if (selectedNodeId === appNode.id) {
-        return '#eab308';
-      }
-      if (pinnedNodes[appNode.id]) {
-        return '#22c55e';
-      }
-      if (completedNodeIds.has(appNode.id)) {
-        return '#38bdf8';
-      }
-      if (colorByCluster) {
-        const clusterIndex = clusters[appNode.id];
-        if (clusterIndex !== undefined) {
-          return getClusterColor(clusterIndex);
-        }
-      }
-      return depthColor(depth);
+  const {
+    getNodeColor,
+    getNodeVal,
+    getNodeThreeObject,
+    getLinkColor,
+    getLinkWidth,
+    getLinkDirectionalParticles,
+  } = useGraphStyling({
+    visibleData,
+    activeFocusPathIds,
+    selectedNodeId,
+    focusedNodeId,
+    pinnedNodes,
+    completedNodeIds,
+    clusters,
+    colorByCluster,
+    expandingNodeId,
+    hoveredNodeId,
+    areAllLabelsVisible,
+    themeColors: {
+      nodeExpanding: themeColors.nodeExpanding,
+      nodeMuted: themeColors.nodeMuted,
+      link: themeColors.link,
+      label: themeColors.label,
     },
-    [selectedNodeId, pinnedNodes, completedNodeIds, nodeDepths, colorByCluster, clusters]
-  );
-  // --- End Node Color Logic ---
+  });
 
-  // --- Node Size Logic ---
-  const getNodeVal = useCallback((node: NodeObject) => {
-      const appNode = asAppNode(node);
-      // Use path focus for size
-      if (activeFocusPathIds) {
-          return activeFocusPathIds.has(appNode.id) ? 15 : 5; // Larger for path nodes, smaller for others
-      }
-      // Default size if no path focus
-      return 8;
-  }, [activeFocusPathIds]);
-  // --- End Node Size Logic ---
-
-  // --- Node Label Object Logic ---
-  const getNodeThreeObject = useCallback((node: NodeObject) => {
-    const appNode = asAppNode(node);
-    const sprite = new SpriteText(appNode.label || ''); // Use empty string if label is undefined
-    sprite.material.depthWrite = false; // prevent sprite from occluding other objects
-    sprite.color = themeColors.label;
-
-    // Check if the node is part of the active focus path
-    const isInFocusPath = activeFocusPathIds?.has(appNode.id) ?? false;
-
-    sprite.textHeight = isInFocusPath ? 6 : 4; // Larger label for focused path nodes
-
-    // Calculate node value based on focus path for offset
-    const nodeVal = activeFocusPathIds 
-        ? (isInFocusPath ? 15 : 5)
-        : 8;
-        
-    // Increase multiplier and base offset for more clearance
-    const yOffset = nodeVal * 1.0 + 8; // Increased from 0.8 and 5
-    sprite.position.set(0, yOffset, 0); 
-
-    return sprite;
-  }, [activeFocusPathIds]);
-  // --- End Node Label Object Logic ---
+  const handleBackgroundClick = useCallback(() => {
+    const state = useAppStore.getState();
+    state.setSelectedNodeId(null);
+    state.setActiveFocusPath(null, null);
+    state.setFocusedNodeId(null);
+  }, []);
 
   // --- Adjust forces on mount --- 
   useEffect(() => {
@@ -201,6 +148,23 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
     graphRef.current.d3Force('link')?.distance(60);
     if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log("VisualizationComponent: Adjusted graph forces.");
   }, []); // Run once on mount
+
+  const updateControls = useCallback(() => {
+    const controls = graphRef.current?.controls() as GraphControls | undefined;
+    if (!controls) return;
+    if (typeof controls.enableDamping !== 'undefined') {
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.08;
+    }
+    if (typeof controls.autoRotate !== 'undefined') {
+      controls.autoRotate = isAutoRotateEnabled;
+      controls.autoRotateSpeed = 0.6;
+    }
+  }, [isAutoRotateEnabled]);
+
+  useEffect(() => {
+    updateControls();
+  }, [updateControls, dimensions]);
 
   // Effect for dimensions using ResizeObserver
   useEffect(() => {
@@ -271,6 +235,31 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
       resizeObserver.disconnect();
     };
   }, []); // Dependencies remain empty
+
+  const handleZoomToFit = useCallback(() => {
+    if (graphRef.current?.zoomToFit) {
+      graphRef.current.zoomToFit(600, 80);
+    }
+  }, []);
+
+  const graphSignature = React.useMemo(() => {
+    if (!visibleData) return '';
+    return `${visibleData.nodes.length}:${visibleData.links.length}`;
+  }, [visibleData]);
+
+  const lastAutoFitSignatureRef = useRef<string>('');
+
+  useEffect(() => {
+    if (!graphRef.current?.zoomToFit) return;
+    if (!visibleData || visibleData.nodes.length === 0) return;
+    if (selectedNodeId || focusedNodeId) return;
+    if (graphSignature === lastAutoFitSignatureRef.current) return;
+    lastAutoFitSignatureRef.current = graphSignature;
+    const timeout = setTimeout(() => {
+      graphRef.current?.zoomToFit?.(600, 80);
+    }, 150);
+    return () => clearTimeout(timeout);
+  }, [graphSignature, visibleData, selectedNodeId, focusedNodeId]);
 
   // Effect for Camera Focus (remains the same, but uses graphRef type)
   useEffect(() => {
@@ -374,7 +363,6 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
             width={dimensions.width}
             height={dimensions.height}
             backgroundColor={themeColors.background}
-            cooldownTime={1000}
             // --- Node Styling ---
             nodeRelSize={6}
             nodeVal={getNodeVal}
@@ -384,24 +372,38 @@ const VisualizationComponent = React.forwardRef<ForceGraphMethods | undefined, V
             nodeThreeObjectExtend={true}
             nodeThreeObject={getNodeThreeObject}
             // --- Link Styling ---
-            linkColor={() => themeColors.link}
-            linkWidth={0.5}
-            linkDirectionalParticles={1}
-            linkDirectionalParticleWidth={1.5}
-            linkDirectionalParticleSpeed={0.006}
+            linkColor={getLinkColor}
+            linkWidth={getLinkWidth}
+            linkDirectionalParticles={getLinkDirectionalParticles}
+            linkDirectionalParticleWidth={1.8}
+            linkDirectionalParticleSpeed={0.007}
             // --- Interaction ---
             onNodeClick={handleNodeClick}
             onNodeHover={handleNodeHover}
             onNodeRightClick={handleNodeRightClick}
+            onBackgroundClick={handleBackgroundClick}
             enableNodeDrag={false}
             // --- Forces & Camera ---
             controlType="orbit"
             // Node Configuration
             nodeResolution={16}
             // Performance / Simulation
-            d3AlphaDecay={0.02}
+            d3AlphaDecay={0.03}
+            d3VelocityDecay={0.3}
+            warmupTicks={40}
+            cooldownTicks={120}
+            cooldownTime={1200}
           />
         </div>
+        <GraphControlsOverlay
+          isAutoRotateEnabled={isAutoRotateEnabled}
+          areAllLabelsVisible={areAllLabelsVisible}
+          isClusterColorEnabled={colorByCluster}
+          onToggleAutoRotate={() => setIsAutoRotateEnabled((prev) => !prev)}
+          onToggleLabels={() => setAreAllLabelsVisible((prev) => !prev)}
+          onToggleClusterColor={() => setColorByCluster(!colorByCluster)}
+          onZoomToFit={handleZoomToFit}
+        />
       </div>
       
       {/* Custom Context Menu */}
