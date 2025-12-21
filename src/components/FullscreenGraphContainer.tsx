@@ -4,13 +4,17 @@
  * Exports: FullscreenGraphContainer
  */
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
-import { useAppStore, GraphData } from '@/store/useAppStore';
-import VisualizationComponent from './VisualizationComponent';
+import { useAppStore } from '@/store/useAppStore';
+import { GraphResponseRenderer } from '@intellea/graph-renderer';
 import { Button } from '@/components/ui/button';
-import { ForceGraphMethods } from 'react-force-graph-3d';
+import type { GraphRendererHandle } from '@intellea/graph-renderer';
+import { intelleaToGraphResponse } from '@/lib/adapters/intelleaToGraphResponse';
+import { applyGraphModeOverride } from '@/lib/graphModes';
+import { isIntelleaResponse } from '@/store/utils';
+import { useStoreGraphController } from '@/components/hooks/useStoreGraphController';
 
 // Define props for the container
 interface FullscreenGraphContainerProps {
@@ -26,8 +30,10 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
     const toggleGraphFullscreen = useAppStore((state) => state.toggleGraphFullscreen);
     const output = useAppStore((state) => state.output);
     const zoomToFitCount = useAppStore((state) => state.zoomToFitCount);
+    const graphModeOverride = useAppStore((state) => state.graphModeOverride);
+    const graphController = useStoreGraphController();
     const containerRef = useRef<HTMLDivElement>(null);
-    const graphRef = useRef<ForceGraphMethods | undefined>(undefined);
+    const graphRef = useRef<GraphRendererHandle | null>(null);
     const graphContainerRef = useRef<HTMLDivElement>(null);
 
 
@@ -62,18 +68,14 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
 
 
     // Extract visualization data, ensuring it conforms to GraphData
-    let vizData: GraphData | null = null;
-    if (typeof output === 'object' && output !== null && 'visualizationData' in output && output.visualizationData) {
-        // Basic structural check
-        if (output.visualizationData.nodes && output.visualizationData.links) {
-            vizData = output.visualizationData as GraphData;
-            if (process.env.NEXT_PUBLIC_DEBUG === "true") console.log('FullscreenGraphContainer: Extracted vizData', {
-                nodes: vizData.nodes.length,
-                links: vizData.links.length,
-                sampleNode: vizData.nodes[0]
-            });
-        }
-    }
+    const graphResponse = useMemo(() => {
+        if (!isIntelleaResponse(output)) return null;
+        return intelleaToGraphResponse(output);
+    }, [output]);
+    const graphResponseForMode = useMemo(
+        () => (graphResponse ? applyGraphModeOverride(graphResponse, graphModeOverride) : null),
+        [graphResponse, graphModeOverride]
+    );
 
 
 
@@ -87,21 +89,22 @@ const FullscreenGraphContainer: React.FC<FullscreenGraphContainerProps> = ({
             ref={containerRef}
             variants={variants}
             initial="hidden"
-            animate={isGraphFullscreen && vizData ? "visible" : "hidden"}
+            animate={isGraphFullscreen && graphResponse ? "visible" : "hidden"}
             transition={{ duration: 0.2, ease: "easeInOut" }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
             aria-modal={isGraphFullscreen}
             role="dialog"
             aria-hidden={!isGraphFullscreen}
         >
-            {vizData && (
+            {graphResponseForMode && (
                 <div ref={graphContainerRef} className="relative h-[95vh] w-[95vw] rounded-lg border bg-card shadow-xl overflow-hidden">
                     
-                    <VisualizationComponent
-                        ref={graphRef}
-                        visualizationData={vizData}
+                    <GraphResponseRenderer
+                        graphResponse={graphResponseForMode}
                         onNodeExpand={onNodeExpand}
                         expandingNodeId={expandingNodeId}
+                        controller={graphController}
+                        graphRef={graphRef}
                     />
 
                     <Button

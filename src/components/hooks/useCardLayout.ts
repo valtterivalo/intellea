@@ -4,7 +4,7 @@
 
 import { useMemo } from 'react';
 import type { KnowledgeCard as KnowledgeCardType, NodeObject, LinkObject } from '@/store/useAppStore';
-import type { GraphData } from '@/types/intellea';
+import type { GraphData } from '@intellea/graph-schema';
 
 export interface CardLayout {
   rootCard: KnowledgeCardType | undefined;

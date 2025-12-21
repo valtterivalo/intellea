@@ -24,10 +24,10 @@ describe('StickyKnowledgeCard', () => {
     useAppStore.setState({ activeClickedNodeId: '1', output });
   });
 
-  it('minimizes and restores the card', () => {
+  it('minimizes and restores the card', async () => {
     render(<StickyKnowledgeCard knowledgeCardsRef={knowledgeRef} scrollContainerRef={scrollRef} />);
 
-    const minimize = screen.getByLabelText('Minimize');
+    const minimize = await screen.findByLabelText('Minimize');
     fireEvent.click(minimize);
 
     expect(screen.queryByLabelText('Minimize')).toBeNull();
@@ -39,12 +39,12 @@ describe('StickyKnowledgeCard', () => {
     expect(screen.getByText('Title')).toBeInTheDocument();
   });
 
-  it('resets when sticky state is lost', () => {
+  it('resets when sticky state is lost', async () => {
     const { rerender } = render(
       <StickyKnowledgeCard knowledgeCardsRef={knowledgeRef} scrollContainerRef={scrollRef} />
     );
 
-    fireEvent.click(screen.getByLabelText('Minimize'));
+    fireEvent.click(await screen.findByLabelText('Minimize'));
     expect(screen.queryByText('Title')).toBeNull();
 
     // make element visible again so sticky becomes false
@@ -64,6 +64,6 @@ describe('StickyKnowledgeCard', () => {
     });
     rerender(<StickyKnowledgeCard knowledgeCardsRef={knowledgeRef} scrollContainerRef={scrollRef} />);
 
-    expect(screen.getByLabelText('Minimize')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Minimize')).toBeInTheDocument();
   });
 });

@@ -4,7 +4,7 @@
  */
 import { useState, useCallback, useRef } from 'react';
 import type { StreamingEvent } from '@/types/streaming';
-import type { IntelleaResponse } from '@/types/intellea';
+import type { IntelleaResponse } from '@intellea/graph-schema';
 
 export interface StreamingState {
   isLoading: boolean;

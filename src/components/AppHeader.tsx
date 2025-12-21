@@ -91,7 +91,7 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
       if (session?.user?.id) {
         fetchSessions(supabase, session.user.id);
         fetchSubscriptionStatus(supabase, session.user.id);
-      } else {
+      } else if (useAppStore.getState().currentSessionId !== 'demo-session') {
         resetActiveSessionState();
       }
     };
@@ -100,6 +100,7 @@ export default function AppHeader({ onShowOnboarding, onSubscribe, isCheckoutLoa
 
   useEffect(() => {
     const persistedSessionId = useAppStore.getState().currentSessionId;
+    if (persistedSessionId === 'demo-session') return;
     if (persistedSessionId) {
       const alreadyLoaded =
         useAppStore.getState().output !== null &&

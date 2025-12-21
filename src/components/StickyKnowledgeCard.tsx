@@ -85,6 +85,14 @@ const StickyKnowledgeCard: React.FC<StickyKnowledgeCardProps> = ({
     const actualScrollElement = viewport || scrollContainer;
 
     actualScrollElement.addEventListener('scroll', handleScroll);
+    const scheduleInitial = () => {
+      if (typeof queueMicrotask === 'function') {
+        queueMicrotask(handleScroll);
+        return;
+      }
+      Promise.resolve().then(handleScroll);
+    };
+    scheduleInitial();
     
     return () => {
       actualScrollElement.removeEventListener('scroll', handleScroll);

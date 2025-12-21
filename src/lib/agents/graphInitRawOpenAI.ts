@@ -6,7 +6,7 @@
 
 import type { StreamEmitter } from '@/types/streaming';
 import { StatusMessages } from '@/types/streaming';
-import type { IntelleaResponse } from '@/types/intellea';
+import type { IntelleaResponse } from '@intellea/graph-schema';
 import { getOpenAIClient } from '@/lib/openaiClient';
 
 const SYSTEM_PROMPT = `You are Intellea, an expert AI assistant generating structured multi-parent hierarchical learning data for an interactive 3D graph visualization. Respond ONLY with a single, valid JSON object.

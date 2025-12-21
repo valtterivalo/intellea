@@ -5,7 +5,7 @@
 
 import { StateCreator } from 'zustand';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { computeClusters } from '@/lib/graphCluster';
+import { computeClusters } from '@intellea/graph-renderer';
 import type { AppState, IntelleaResponse, NodeObject, SessionSummary, LoadedSessionData } from './useAppStore';
 import { isLoadedSessionData } from './utils';
 

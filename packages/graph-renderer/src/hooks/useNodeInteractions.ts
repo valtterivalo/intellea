@@ -2,10 +2,11 @@
  * @fileoverview React component.
  * Exports: useNodeInteractions
  */
-import { useState, useCallback, useEffect } from 'react';
-import { ForceGraphMethods, NodeObject } from 'react-force-graph-3d';
-import { useGraphState, GraphData, AppGraphNode } from './useGraphState';
-import { useAppStore } from '@/store/useAppStore';
+import { useState, useCallback, useEffect, useMemo, useRef } from 'react';
+import type { NodeObject, GraphData } from '@intellea/graph-schema';
+import { useGraphState, AppGraphNode } from './useGraphState';
+import type { GraphRendererHandle } from '../components/graph/GraphRendererHandle';
+import type { GraphController } from './graphController';
 
 /**
  * @description Provide event handlers and state for graph node interactions.
@@ -14,9 +15,10 @@ import { useAppStore } from '@/store/useAppStore';
  * @param onNodeExpand - Optional callback when a node should expand.
  */
 export function useNodeInteractions(
-  graphRef: React.RefObject<ForceGraphMethods | undefined>,
+  graphRef: React.RefObject<GraphRendererHandle | null>,
   visualizationData: GraphData | undefined,
-  onNodeExpand?: (nodeId: string, nodeLabel: string) => void
+  onNodeExpand?: (nodeId: string, nodeLabel: string) => void,
+  controller?: GraphController
 ) {
   const {
     selectedNodeId,
@@ -25,10 +27,11 @@ export function useNodeInteractions(
     setActiveFocusPath,
     pinNode,
     unpinNode,
-    // collapseNode, // Available for future use
     expandNodeInStore,
     setFocusedNodeId,
-  } = useGraphState();
+    collapsedNodes,
+    isPerfModeEnabled,
+  } = useGraphState(visualizationData, controller);
 
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<{
@@ -36,20 +39,23 @@ export function useNodeInteractions(
     x: number;
     y: number;
   } | null>(null);
+  const hoverRafRef = useRef<number | null>(null);
+  const lastHoverTimeRef = useRef(0);
+  const pendingHoverIdRef = useRef<string | null>(null);
+  const nodeCount = visualizationData?.nodes.length ?? 0;
+  const shouldThrottleHover = isPerfModeEnabled && nodeCount >= 1200;
+  const hoverThrottleMs = useMemo(() => (nodeCount >= 4000 ? 90 : 60), [nodeCount]);
 
   const handleExpandNode = useCallback(
     (nodeId: string) => {
-      const state = useAppStore.getState();
-      const output = state.output;
-      const fullVisualizationData =
-        output && typeof output === 'object' ? output.visualizationData : null;
+      const fullVisualizationData = visualizationData ?? null;
 
       if (!fullVisualizationData) {
-        console.warn('handleExpandNode: No full visualization data available in store.');
+        console.warn('handleExpandNode: No full visualization data available.');
         return;
       }
 
-      if (state.collapsedNodes[nodeId]) {
+      if (collapsedNodes[nodeId]) {
         expandNodeInStore(nodeId);
         return;
       }
@@ -70,9 +76,7 @@ export function useNodeInteractions(
           return targetId;
         });
 
-      const collapsedChildrenIds = childrenIds.filter(
-        (id) => id && state.collapsedNodes[id]
-      );
+      const collapsedChildrenIds = childrenIds.filter((id) => id && collapsedNodes[id]);
 
       if (collapsedChildrenIds.length > 0) {
         if (process.env.NEXT_PUBLIC_DEBUG === 'true')
@@ -85,11 +89,14 @@ export function useNodeInteractions(
         return;
       }
       
-      const hasVisibleChildren = childrenIds.some(id => id && !state.collapsedNodes[id]);
+      const hasVisibleChildren = childrenIds.some((id) => id && !collapsedNodes[id]);
 
       if (hasVisibleChildren) {
-          state.setForceExpandRequest({ nodeId });
-          return;
+        const node = fullVisualizationData.nodes.find((n) => n.id === nodeId);
+        if (onNodeExpand && node) {
+          onNodeExpand(nodeId, node.label || '');
+        }
+        return;
       }
 
       if (process.env.NEXT_PUBLIC_DEBUG === 'true')
@@ -101,7 +108,7 @@ export function useNodeInteractions(
         onNodeExpand(nodeId, node.label || '');
       }
     },
-    [onNodeExpand, expandNodeInStore]
+    [onNodeExpand, expandNodeInStore, collapsedNodes, visualizationData]
   );
 
   const handleNodeClick = useCallback(
@@ -111,11 +118,7 @@ export function useNodeInteractions(
 
       setSelectedNodeId(appNode.id);
 
-      const currentOutput = useAppStore.getState().output;
-      const vizData =
-        typeof currentOutput === 'object' && currentOutput?.visualizationData
-          ? currentOutput.visualizationData
-          : null;
+      const vizData = visualizationData ?? null;
 
       const isRootNode = vizData?.nodes.find((n) => n.id === appNode.id && n.isRoot);
       if (!isRootNode) {
@@ -143,12 +146,36 @@ export function useNodeInteractions(
         graphRef.current.cameraPosition(newCameraPosition, lookAtPosition, 1000);
       }
     },
-    [setSelectedNodeId, setActiveFocusPath, handleExpandNode, graphRef]
+    [setSelectedNodeId, setActiveFocusPath, handleExpandNode, graphRef, visualizationData]
   );
 
-  const handleNodeHover = useCallback((node: NodeObject | null) => {
-    setHoveredNodeId(node ? (node as AppGraphNode).id : null);
-  }, []);
+  const handleNodeHover = useCallback(
+    (node: NodeObject | null) => {
+      const nextId = node ? (node as AppGraphNode).id : null;
+      if (!shouldThrottleHover) {
+        setHoveredNodeId(nextId);
+        return;
+      }
+      pendingHoverIdRef.current = nextId;
+      const now = performance.now();
+      if (now - lastHoverTimeRef.current >= hoverThrottleMs && hoverRafRef.current === null) {
+        lastHoverTimeRef.current = now;
+        const pending = pendingHoverIdRef.current;
+        pendingHoverIdRef.current = null;
+        setHoveredNodeId(pending ?? null);
+        return;
+      }
+      if (hoverRafRef.current !== null) return;
+      hoverRafRef.current = window.requestAnimationFrame(() => {
+        hoverRafRef.current = null;
+        lastHoverTimeRef.current = performance.now();
+        const pending = pendingHoverIdRef.current;
+        pendingHoverIdRef.current = null;
+        setHoveredNodeId(pending ?? null);
+      });
+    },
+    [shouldThrottleHover, hoverThrottleMs]
+  );
 
   const handleNodeRightClick = useCallback(
     (node: NodeObject, event: MouseEvent) => {
@@ -173,8 +200,17 @@ export function useNodeInteractions(
   }, []);
 
   useEffect(() => {
+    return () => {
+      if (hoverRafRef.current !== null) {
+        window.cancelAnimationFrame(hoverRafRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (!selectedNodeId) return;
+      const vizData = visualizationData ?? null;
       const key = event.key.toLowerCase();
       if (key === 'p') {
         if (pinnedNodes[selectedNodeId]) {
@@ -183,11 +219,6 @@ export function useNodeInteractions(
           pinNode(selectedNodeId);
         }
       } else if (key === 'f') {
-        const currentOutput = useAppStore.getState().output;
-        const vizData =
-          typeof currentOutput === 'object' && currentOutput?.visualizationData
-            ? currentOutput.visualizationData
-            : null;
         setFocusedNodeId(selectedNodeId);
         setActiveFocusPath(selectedNodeId, vizData);
       } else if (key === 'e') {

@@ -5,7 +5,7 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { computeClusters } from '@/lib/graphCluster';
+import { computeClusters } from '@intellea/graph-renderer';
 import type { GraphSlice } from './graphSlice';
 import { createGraphSlice } from './graphSlice';
 import type { SessionSlice } from './sessionSlice';
@@ -23,7 +23,7 @@ import type {
   ExpansionResponse,
   ExpandedConceptData,
   LoadedSessionData
-} from '@/types/intellea';
+} from '@intellea/graph-schema';
 export type {
   NodeObject,
   LinkObject,
@@ -36,7 +36,7 @@ export type {
 };
 import type { ConceptSlice } from './conceptSlice';
 import { createConceptSlice } from './conceptSlice';
-import { calculateFocusPath } from '@/lib/focusPath';
+import { calculateFocusPath } from '@intellea/graph-renderer';
 
 // Define SessionSummary if not already globally available or imported
 export interface SessionSummary {
@@ -129,9 +129,18 @@ export const setAppStoreStorage = (storage?: StateStorage) => {
   });
 };
 
+const isStorageCompatible = (storage: StateStorage | Storage | undefined): storage is StateStorage => {
+  return (
+    !!storage &&
+    typeof storage.getItem === 'function' &&
+    typeof storage.setItem === 'function' &&
+    typeof storage.removeItem === 'function'
+  );
+};
+
 const getStorage = (): StateStorage => {
-  if (externalStorage) return externalStorage;
-  if (typeof window !== 'undefined' && window.localStorage) {
+  if (isStorageCompatible(externalStorage)) return externalStorage;
+  if (typeof window !== 'undefined' && isStorageCompatible(window.localStorage)) {
     return window.localStorage;
   }
   return inMemoryStorage;
@@ -176,7 +185,16 @@ export const useAppStore = create<AppState>()(
           output && typeof output !== 'string'
             ? computeClusters(output.visualizationData)
             : {};
-        set({ output, clusters });
+        const graphRenderPhase =
+          output && typeof output !== 'string' ? 'core' : 'full';
+        set({
+          output,
+          clusters,
+          graphRenderPhase,
+          collapsedClusterIds: {},
+          expandedClusterIds: {},
+          isClusterCollapseEnabled: true,
+        });
       },
       setLoading: (isLoading) => set({ isLoading }),
       setActivePrompt: (prompt) => set({ activePrompt: prompt }),
@@ -244,6 +262,8 @@ export const useAppStore = create<AppState>()(
             activeClickedNodeId: newActiveClickedNodeId,
             focusedNodeId: clickedNodeId,
             error: null,
+            collapsedClusterIds: {},
+            expandedClusterIds: {},
           };
         });
         get().saveSession(supabase);

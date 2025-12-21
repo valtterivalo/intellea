@@ -10,6 +10,7 @@ import StickyKnowledgeCard from '@/components/StickyKnowledgeCard';
 import OnboardingModal from '@/components/OnboardingModal';
 import NewSessionPrompt from '@/components/NewSessionPrompt';
 import SessionActions from '@/components/SessionActions';
+import { buildDebugIntelleaResponse } from '@/lib/debugGraph';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -68,6 +69,10 @@ const GraphView: React.FC<GraphViewProps> = ({
     removeUnpinnedChildren,
     setKnowledgeCardsRef,
     setGraphRef,
+    setOutput,
+    setPrompt,
+    setActivePrompt,
+    updateSessionTitleLocally,
   } = useAppStore.getState();
 
   const { handleNodeExpand, localExpandingNodeId } = useNodeExpansion();
@@ -97,6 +102,20 @@ const GraphView: React.FC<GraphViewProps> = ({
     }
   };
 
+  const handleDebugGraphLoad = useCallback(
+    (nodeCount: number) => {
+      const response = buildDebugIntelleaResponse(nodeCount);
+      const title = response.sessionTitle ?? `Debug Graph (${nodeCount} nodes)`;
+      setOutput(response);
+      setPrompt(title);
+      setActivePrompt(title);
+      updateSessionTitleLocally(title);
+    },
+    [setOutput, setPrompt, setActivePrompt, updateSessionTitleLocally]
+  );
+
+  const shouldShowDebug = process.env.NEXT_PUBLIC_DEBUG === 'true';
+
   const getSessionTitle = (): string => {
     return currentSessionTitle || 'Untitled Session';
   };
@@ -104,6 +123,22 @@ const GraphView: React.FC<GraphViewProps> = ({
   return (
     <main className="flex-1 overflow-hidden flex flex-col min-h-0">
       <div className="flex-1 overflow-hidden flex flex-col max-w-6xl mx-auto w-full min-h-0">
+        {shouldShowDebug && (
+          <div className="px-4 pt-4">
+            <div className="flex flex-wrap items-center gap-2 rounded-md border border-dashed border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">debug graph</span>
+              <Button variant="outline" size="sm" onClick={() => handleDebugGraphLoad(1000)}>
+                load 1k
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleDebugGraphLoad(5000)}>
+                load 5k
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => handleDebugGraphLoad(8000)}>
+                load 8k
+              </Button>
+            </div>
+          </div>
+        )}
         {output && typeof output === 'object' ? (
           <Card className="m-4 flex-1 flex flex-col overflow-hidden min-h-0">
             <CardHeader className="flex-shrink-0 flex flex-row items-center justify-between gap-3">

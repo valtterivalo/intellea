@@ -3,7 +3,7 @@
  * Exports: StreamingEvent, StreamEmitter
  */
 
-import type { IntelleaResponse } from './intellea';
+import type { IntelleaResponse } from '@intellea/graph-schema';
 
 export type StreamingEvent = 
   | { type: 'status', message: string, progress?: number, stage?: string }

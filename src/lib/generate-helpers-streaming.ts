@@ -3,7 +3,7 @@
  * Exports: getNodeEmbeddingsStreaming, calculateNodePositionsStreaming
  */
 import { UMAP } from 'umap-js';
-import type { NodeObject as GraphNode } from '@/types/intellea';
+import type { NodeObject as GraphNode } from '@intellea/graph-schema';
 import type { StreamEmitter } from '@/types/streaming';
 import { getOpenAIClient } from '@/lib/openaiClient';
 

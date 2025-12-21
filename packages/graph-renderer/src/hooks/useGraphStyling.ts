@@ -3,11 +3,12 @@
  * Exports: useGraphStyling
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import SpriteText from 'three-spritetext';
-import { NodeObject } from 'react-force-graph-3d';
-import { getNodeColor as depthColor, getClusterColor } from '@/lib/graphColors';
-import type { AppGraphNode, GraphData } from './useGraphState';
+import type { NodeObject, GraphData } from '@intellea/graph-schema';
+import { getNodeColor as depthColor, getClusterColor } from '../lib/graphColors';
+import type { AppGraphNode } from './useGraphState';
+import type { GraphEdgeTypeV0 } from '@intellea/graph-schema';
 
 export type GraphThemeColors = {
   nodeExpanding: string;
@@ -28,6 +29,14 @@ interface GraphStylingInput {
   expandingNodeId?: string | null;
   hoveredNodeId: string | null;
   areAllLabelsVisible: boolean;
+  emphasisNodeIds?: string[];
+  emphasisEdgeTypes?: GraphEdgeTypeV0[];
+  labelCulling?: {
+    maxLabelCount: number | null;
+    priorityNodeIds: Set<string>;
+  };
+  linkWidthScale?: number;
+  linkParticleScale?: number;
   themeColors: GraphThemeColors;
 }
 
@@ -45,14 +54,20 @@ export const useGraphStyling = ({
   expandingNodeId,
   hoveredNodeId,
   areAllLabelsVisible,
+  emphasisNodeIds,
+  emphasisEdgeTypes,
+  labelCulling,
+  linkWidthScale = 1,
+  linkParticleScale = 1,
   themeColors,
 }: GraphStylingInput) => {
   const nodeDepths = useMemo(() => {
-    if (!visibleData) return {} as Record<string, number>;
-    const depths: Record<string, number> = {};
+    if (!visibleData) return {} as Record<string, number | undefined>;
+    const depths: Record<string, number | undefined> = {};
     const adjacency: Record<string, string[]> = {};
     visibleData.nodes.forEach((node) => {
-      depths[node.id] = (node as AppGraphNode).depth ?? undefined;
+      const rawDepth = (node as AppGraphNode).depth;
+      depths[node.id] = typeof rawDepth === 'number' ? rawDepth : undefined;
       adjacency[node.id] = [];
     });
     visibleData.links.forEach((link) => {
@@ -108,14 +123,71 @@ export const useGraphStyling = ({
     return result;
   }, [activeHighlightId, adjacencyMap]);
 
+  const emphasisNodeSet = useMemo(
+    () => new Set(emphasisNodeIds ?? []),
+    [emphasisNodeIds]
+  );
+
+  const emphasisEdgeTypeSet = useMemo(
+    () => new Set<GraphEdgeTypeV0>(emphasisEdgeTypes ?? []),
+    [emphasisEdgeTypes]
+  );
+
+  const spriteCacheRef = useRef<Map<string, SpriteText>>(new Map());
+
+  useEffect(() => {
+    if (!visibleData) return;
+    const visibleIds = new Set(visibleData.nodes.map((node) => node.id));
+    spriteCacheRef.current.forEach((_, nodeId) => {
+      if (!visibleIds.has(nodeId)) {
+        spriteCacheRef.current.delete(nodeId);
+      }
+    });
+  }, [visibleData]);
+
+  const labelAllowSet = useMemo(() => {
+    if (!visibleData || !labelCulling || labelCulling.maxLabelCount === null) {
+      return null;
+    }
+    const maxLabels = Math.max(labelCulling.maxLabelCount, labelCulling.priorityNodeIds.size);
+    const degrees = new Map<string, number>();
+    adjacencyMap.forEach((neighbors, id) => {
+      degrees.set(id, neighbors.size);
+    });
+    const sorted = Array.from(degrees.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([id]) => id);
+    const selected = new Set(labelCulling.priorityNodeIds);
+    for (const id of sorted) {
+      if (selected.size >= maxLabels) break;
+      selected.add(id);
+    }
+    return selected;
+  }, [visibleData, labelCulling, adjacencyMap]);
+
+  const combinedHighlightIds = useMemo(() => {
+    if (!highlightedNodeIds && emphasisNodeSet.size === 0) return null;
+    const combined = new Set<string>();
+    highlightedNodeIds?.forEach((id) => combined.add(id));
+    emphasisNodeSet.forEach((id) => combined.add(id));
+    return combined;
+  }, [highlightedNodeIds, emphasisNodeSet]);
+
   const getNodeColor = useCallback(
     (node: NodeObject) => {
       const appNode = asAppNode(node);
-      const depth = nodeDepths[appNode.id] ?? (appNode as AppGraphNode).depth ?? 0;
+      const cachedDepth = nodeDepths[appNode.id];
+      const nodeDepth = (appNode as AppGraphNode).depth;
+      const depth =
+        typeof cachedDepth === 'number'
+          ? cachedDepth
+          : typeof nodeDepth === 'number'
+            ? nodeDepth
+            : 0;
       if (expandingNodeId && appNode.id === expandingNodeId) {
         return themeColors.nodeExpanding;
       }
-      if (highlightedNodeIds && !highlightedNodeIds.has(appNode.id)) {
+      if (combinedHighlightIds && !combinedHighlightIds.has(appNode.id)) {
         return themeColors.nodeMuted;
       }
       if (selectedNodeId === appNode.id) {
@@ -142,7 +214,7 @@ export const useGraphStyling = ({
       nodeDepths,
       colorByCluster,
       clusters,
-      highlightedNodeIds,
+      combinedHighlightIds,
       expandingNodeId,
       themeColors,
     ]
@@ -154,7 +226,7 @@ export const useGraphStyling = ({
       if (expandingNodeId && appNode.id === expandingNodeId) {
         return 18;
       }
-      if (highlightedNodeIds && !highlightedNodeIds.has(appNode.id)) {
+      if (combinedHighlightIds && !combinedHighlightIds.has(appNode.id)) {
         return 4;
       }
       if (activeFocusPathIds) {
@@ -162,21 +234,39 @@ export const useGraphStyling = ({
       }
       return 8;
     },
-    [activeFocusPathIds, highlightedNodeIds, expandingNodeId]
+    [activeFocusPathIds, combinedHighlightIds, expandingNodeId]
   );
 
   const getNodeThreeObject = useCallback(
     (node: NodeObject) => {
       const appNode = asAppNode(node);
-      const shouldShowLabel =
-        areAllLabelsVisible ||
-        highlightedNodeIds?.has(appNode.id) ||
+      const isPriority =
+        combinedHighlightIds?.has(appNode.id) ||
         activeFocusPathIds?.has(appNode.id) ||
+        emphasisNodeSet.has(appNode.id) ||
         appNode.isRoot;
-      const sprite = new SpriteText(shouldShowLabel ? appNode.label || '' : '');
-      sprite.material.depthWrite = false;
+      const isCulledIn = labelAllowSet ? labelAllowSet.has(appNode.id) : false;
+      const shouldShowLabel = areAllLabelsVisible
+        ? !labelAllowSet || isCulledIn
+        : isPriority || isCulledIn;
+      const cached = spriteCacheRef.current.get(appNode.id);
+      if (!shouldShowLabel) {
+        if (cached) {
+          cached.visible = false;
+        }
+        return null;
+      }
+      const label = appNode.label || '';
+      const sprite = cached ?? new SpriteText(label);
+      if (!cached) {
+        sprite.material.depthWrite = false;
+        spriteCacheRef.current.set(appNode.id, sprite);
+      }
+      if (sprite.text !== label) {
+        sprite.text = label;
+      }
       sprite.color = themeColors.label;
-      sprite.visible = shouldShowLabel;
+      sprite.visible = true;
       const isInFocusPath = activeFocusPathIds?.has(appNode.id) ?? false;
       sprite.textHeight = isInFocusPath ? 6 : 4;
       const nodeVal = activeFocusPathIds ? (isInFocusPath ? 15 : 6) : 8;
@@ -184,73 +274,110 @@ export const useGraphStyling = ({
       sprite.position.set(0, yOffset, 0);
       return sprite;
     },
-    [activeFocusPathIds, highlightedNodeIds, areAllLabelsVisible, themeColors]
+    [
+      activeFocusPathIds,
+      combinedHighlightIds,
+      areAllLabelsVisible,
+      themeColors,
+      emphasisNodeSet,
+      labelAllowSet,
+    ]
   );
 
   const getLinkColor = useCallback(
-    (link: { source: string | AppGraphNode; target: string | AppGraphNode }) => {
+    (link: {
+      source: string | AppGraphNode;
+      target: string | AppGraphNode;
+      edgeType?: GraphEdgeTypeV0;
+      type?: GraphEdgeTypeV0;
+    }) => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      const edgeType = link.edgeType ?? link.type;
       const isFocusLink =
         activeFocusPathIds?.has(sourceId) && activeFocusPathIds?.has(targetId);
       const isHighlighted =
-        highlightedNodeIds?.has(sourceId) && highlightedNodeIds?.has(targetId);
+        combinedHighlightIds?.has(sourceId) && combinedHighlightIds?.has(targetId);
+      const isEmphasisEdge = edgeType ? emphasisEdgeTypeSet.has(edgeType) : false;
       if (isFocusLink) {
         return 'rgba(139, 125, 107, 0.8)';
+      }
+      if (isEmphasisEdge) {
+        return 'rgba(139, 125, 107, 0.7)';
       }
       if (isHighlighted) {
         return 'rgba(139, 125, 107, 0.55)';
       }
-      if (highlightedNodeIds) {
+      if (combinedHighlightIds) {
         return 'rgba(139, 125, 107, 0.1)';
       }
       return themeColors.link;
     },
-    [activeFocusPathIds, highlightedNodeIds, themeColors]
+    [activeFocusPathIds, combinedHighlightIds, emphasisEdgeTypeSet, themeColors]
   );
 
   const getLinkWidth = useCallback(
-    (link: { source: string | AppGraphNode; target: string | AppGraphNode }) => {
+    (link: {
+      source: string | AppGraphNode;
+      target: string | AppGraphNode;
+      edgeType?: GraphEdgeTypeV0;
+      type?: GraphEdgeTypeV0;
+    }) => {
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      const edgeType = link.edgeType ?? link.type;
       const isFocusLink =
         activeFocusPathIds?.has(sourceId) && activeFocusPathIds?.has(targetId);
       const isHighlighted =
-        highlightedNodeIds?.has(sourceId) && highlightedNodeIds?.has(targetId);
+        combinedHighlightIds?.has(sourceId) && combinedHighlightIds?.has(targetId);
+      const isEmphasisEdge = edgeType ? emphasisEdgeTypeSet.has(edgeType) : false;
       if (isFocusLink) {
-        return 1.1;
+        return 1.1 * linkWidthScale;
+      }
+      if (isEmphasisEdge) {
+        return 0.9 * linkWidthScale;
       }
       if (isHighlighted) {
-        return 0.8;
+        return 0.8 * linkWidthScale;
       }
-      if (highlightedNodeIds) {
-        return 0.15;
+      if (combinedHighlightIds) {
+        return 0.15 * linkWidthScale;
       }
-      return 0.5;
+      return 0.5 * linkWidthScale;
     },
-    [activeFocusPathIds, highlightedNodeIds]
+    [activeFocusPathIds, combinedHighlightIds, emphasisEdgeTypeSet, linkWidthScale]
   );
 
   const getLinkDirectionalParticles = useCallback(
-    (link: { source: string | AppGraphNode; target: string | AppGraphNode }) => {
-      if (!activeFocusPathIds && !highlightedNodeIds) {
+    (link: {
+      source: string | AppGraphNode;
+      target: string | AppGraphNode;
+      edgeType?: GraphEdgeTypeV0;
+      type?: GraphEdgeTypeV0;
+    }) => {
+      if (!activeFocusPathIds && !combinedHighlightIds && emphasisEdgeTypeSet.size === 0) {
         return 0;
       }
       const sourceId = typeof link.source === 'string' ? link.source : link.source.id;
       const targetId = typeof link.target === 'string' ? link.target : link.target.id;
+      const edgeType = link.edgeType ?? link.type;
       const isFocusLink =
         activeFocusPathIds?.has(sourceId) && activeFocusPathIds?.has(targetId);
       const isHighlighted =
-        highlightedNodeIds?.has(sourceId) && highlightedNodeIds?.has(targetId);
+        combinedHighlightIds?.has(sourceId) && combinedHighlightIds?.has(targetId);
+      const isEmphasisEdge = edgeType ? emphasisEdgeTypeSet.has(edgeType) : false;
+      let base = 0;
       if (isFocusLink) {
-        return 2;
+        base = 2;
+      } else if (isEmphasisEdge) {
+        base = 1;
+      } else if (isHighlighted) {
+        base = 1;
       }
-      if (isHighlighted) {
-        return 1;
-      }
-      return 0;
+      if (base === 0) return 0;
+      return Math.floor(base * linkParticleScale);
     },
-    [activeFocusPathIds, highlightedNodeIds]
+    [activeFocusPathIds, combinedHighlightIds, emphasisEdgeTypeSet, linkParticleScale]
   );
 
   return {

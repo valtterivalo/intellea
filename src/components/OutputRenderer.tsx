@@ -4,13 +4,18 @@
  * Exports: OutputRenderer
  */
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { useAppStore } from '@/store/useAppStore';
 import { isIntelleaResponse } from '@/store/utils';
-import VisualizationComponent from './VisualizationComponent';
+import { GraphResponseRenderer } from '@intellea/graph-renderer';
+import { intelleaToGraphResponse } from '@/lib/adapters/intelleaToGraphResponse';
+import { applyGraphModeOverride } from '@/lib/graphModes';
 import { Button } from '@/components/ui/button';
 import { Maximize } from 'lucide-react';
+import { useStoreGraphController } from '@/components/hooks/useStoreGraphController';
+import GraphModeSwitcher from '@/components/GraphModeSwitcher';
+import GraphModeGallery from '@/components/GraphModeGallery';
 
 // Import the new section components
 import ExplanationSection from './ExplanationSection';
@@ -38,6 +43,17 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
   const output = useAppStore((state) => state.output);
   const toggleGraphFullscreen = useAppStore((state) => state.toggleGraphFullscreen);
   const isGraphFullscreen = useAppStore((state) => state.isGraphFullscreen);
+  const graphModeOverride = useAppStore((state) => state.graphModeOverride);
+  const setGraphModeOverride = useAppStore((state) => state.setGraphModeOverride);
+  const graphController = useStoreGraphController();
+  const graphResponse = useMemo(
+    () => (isIntelleaResponse(output) ? intelleaToGraphResponse(output) : null),
+    [output]
+  );
+  const graphResponseForMode = useMemo(
+    () => (graphResponse ? applyGraphModeOverride(graphResponse, graphModeOverride) : null),
+    [graphResponse, graphModeOverride]
+  );
 
   // Initial state
   if (!output) {
@@ -59,7 +75,7 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
 
   // Valid response state: Render the section components
   // Each section component will fetch its own data from the store and render conditionally
-  if (isIntelleaResponse(output)) {
+  if (isIntelleaResponse(output) && graphResponse && graphResponseForMode) {
     // Define variants for visibility
     const graphContainerVariants = {
       visible: { opacity: 1, transition: { duration: 0.2 }, pointerEvents: 'auto' as const },
@@ -85,10 +101,18 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
             <section aria-labelledby="visualization-heading">
               <h2 id="visualization-heading" className="text-xl font-semibold mb-3 text-center">Knowledge Graph</h2>
               <div className="relative w-4/5 mx-auto">
-                <VisualizationComponent
-                  visualizationData={output.visualizationData}
+                <div className="mb-3 flex justify-center">
+                  <GraphModeSwitcher
+                    currentMode={graphResponse.mode}
+                    modeOverride={graphModeOverride}
+                    onModeChange={setGraphModeOverride}
+                  />
+                </div>
+                <GraphResponseRenderer
+                  graphResponse={graphResponseForMode}
                   onNodeExpand={onNodeExpand}
                   expandingNodeId={expandingNodeId}
+                  controller={graphController}
                 />
                 <Button
                   variant="ghost"
@@ -104,6 +128,13 @@ const OutputRenderer: React.FC<OutputRendererProps> = ({
             </section>
           )}
         </motion.div>
+        {graphResponseForMode && (
+          <GraphModeGallery
+            graphResponse={graphResponse}
+            activeMode={graphModeOverride ?? graphResponse.mode}
+            onSelectMode={(mode) => setGraphModeOverride(mode)}
+          />
+        )}
       </div>
     );
   }

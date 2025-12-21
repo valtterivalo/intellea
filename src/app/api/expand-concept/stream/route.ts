@@ -5,7 +5,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import * as apiCache from '@/lib/apiCache';
-import type { ExpandedConceptData } from '@/types/intellea';
+import type { ExpandedConceptData } from '@intellea/graph-schema';
 import { verifyUserAccess } from '@/lib/api-helpers';
 import { expandConcept } from '@/lib/agents/conceptExpandV6';
 import { getSessionVectorStore } from '@/lib/services/documentManager';

@@ -2,7 +2,7 @@
  * @fileoverview Library utilities.
  * Exports: calculateFocusPath
  */
-import type { GraphData } from '@/store/useAppStore';
+import type { GraphData } from '@intellea/graph-schema';
 
 /**
  * @description Calculate a set of node IDs representing the focus path.

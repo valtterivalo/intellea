@@ -1,0 +1,25 @@
+name: bug report
+description: report a defect or regression
+labels: [bug]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: summary
+      description: what happened and what you expected
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: steps to reproduce
+      description: minimal steps and data
+    validations:
+      required: true
+  - type: textarea
+    id: env
+    attributes:
+      label: environment
+      description: browser, os, node version
+    validations:
+      required: false

@@ -36,6 +36,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
     setShowDemo(true);
   };
 
+  const handleDocs = () => {
+    router.push('/docs');
+  };
+
   // If demo session has been created successfully, show the main app
   if (currentSessionId === 'demo-session' && output) {
     return <MainAppClient />;
@@ -106,6 +110,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ allowDemo = false }) => {
             />
           </div>
           <div className="flex items-center gap-4">
+            <Button variant="ghost" onClick={handleDocs}>
+              Docs
+            </Button>
             <Button variant="ghost" onClick={handleAuth}>
               Sign In
             </Button>

@@ -3,6 +3,16 @@ import { vi } from 'vitest';
 import { createClient as _createRedisClient } from '@/lib/redis';
 import { afterAll } from 'vitest';
 
+const originalEmitWarning = process.emitWarning.bind(process);
+type EmitWarningArgs = Parameters<typeof process.emitWarning>;
+process.emitWarning = ((...args: EmitWarningArgs) => {
+  const [warning] = args;
+  if (typeof warning === 'string' && warning.includes('--localstorage-file')) {
+    return;
+  }
+  return originalEmitWarning(...args);
+}) as typeof process.emitWarning;
+
 // Add polyfill for ResizeObserver used by components relying on it in browser environments.
 // jsdom doesn't implement this API, so we stub minimal methods for tests.
 
@@ -29,14 +39,16 @@ if (typeof HTMLCanvasElement !== 'undefined' && !HTMLCanvasElement.prototype.get
 
 // Provide stub for three-spritetext that avoids WebGL / canvas usage
 // This must be defined before components import it.
-vi.mock('three-spritetext', () => {
-  const THREE = require('three');
+vi.mock('three-spritetext', async () => {
+  const THREE = await import('three');
   class FakeSprite extends THREE.Object3D {
+    material: { depthWrite: boolean };
+    textHeight: number;
+
     constructor() {
       super();
       // minimal stubbed properties used in code
       this.material = { depthWrite: false };
-      this.position = { set: () => {} } as any;
       this.textHeight = 0;
     }
   }

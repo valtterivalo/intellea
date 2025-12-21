@@ -23,6 +23,26 @@ intellea is a graph-first interface that turns prompts and documents into intera
 - redis (local or upstash) for caching and demo rate limiting
 - stripe subscriptions
 - openai realtime agents for voice navigation
+- workspace packages: `@intellea/graph-renderer` + `@intellea/graph-schema`
+
+## docs
+
+- `docs/graph-platform-notes.md` current graph flow, interactions, and layout inventory
+- `docs/graph-response-schema.md` schema reference and versioning notes
+- `docs/graph-response-adapters.md` adapter overview and usage
+- `docs/graph-response-benchmarks.md` adapter benchmark notes
+- `docs/graph-embedding.md` minimal embed examples
+- `docs/graph-modes.md` mode semantics and intent
+- `docs/mcp.md` mcp tool usage
+- `docs/versioning.md` schema + renderer versioning policy
+- `docs/release-checklist.md` release steps
+- `docs/compatibility.md` runtime compatibility matrix
+
+## embedding
+
+- web component: `defineGraphResponseElement()` then render `<intellea-graph data='...'>` or set `element.graphResponse = payload`
+- iframe: `/embed/graph` accepts `postMessage` with `{ type: 'intellea:graph-response', payload }`
+- docs site: `/docs`
 
 ## development
 
@@ -82,6 +102,11 @@ pnpm e2e
 pnpm debug:subscription user@example.com
 ```
 
+## contributing
+
+- see `CONTRIBUTING.md` for dev expectations
+- see `CODE_OF_CONDUCT.md` for conduct
+
 ## graph controls
 
 - click to focus a node
@@ -93,3 +118,4 @@ pnpm debug:subscription user@example.com
 
 - admin api: `/api/admin/user` (bearer `ADMIN_SECRET_KEY`)
 - subscription debug script: `node debug-subscription.js user@example.com`
+- set `NEXT_PUBLIC_DEBUG=true` to show the graph perf overlay and debug graph loader

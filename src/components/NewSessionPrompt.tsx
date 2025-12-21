@@ -15,7 +15,8 @@ import { createClient } from '@/lib/supabase/client';
 import { useStreamingGeneration } from '@/hooks/useStreamingGeneration';
 import FileUpload from './FileUpload';
 import StreamingProgress from './StreamingProgress';
-import type { IntelleaResponse } from '@/types/intellea';
+import type { IntelleaResponse } from '@intellea/graph-schema';
+import { buildDebugIntelleaResponse } from '@/lib/debugGraph';
 
 interface NewSessionPromptProps {
   isDemo?: boolean;
@@ -113,9 +114,10 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
     setActivePrompt(lastPromptRef.current);
 
     if (isDemo) {
-      const store = useAppStore.getState();
-      store.currentSessionId = 'demo-session';
-      store.currentSessionTitle = `${finalData.sessionTitle} (Demo)`;
+      useAppStore.setState({
+        currentSessionId: 'demo-session',
+        currentSessionTitle: `${finalData.sessionTitle} (Demo)`,
+      });
       setPrompt('');
       return;
     }
@@ -147,10 +149,25 @@ const NewSessionPrompt: React.FC<NewSessionPromptProps> = ({ isDemo = false }) =
       return;
     }
 
-    const currentPrompt = prompt;
+    const currentPrompt = prompt.trim() ? prompt : 'Demo graph';
     lastPromptRef.current = currentPrompt;
     lastHasDocumentsRef.current = uploadedFiles.length > 0;
     const activeSessionId = useAppStore.getState().currentSessionId;
+
+    if (isDemo && process.env.NEXT_PUBLIC_DEBUG === 'true') {
+      const nodeCount = uploadedFiles.length > 0 ? 1500 : 400;
+      const debugResponse = buildDebugIntelleaResponse(nodeCount);
+      debugResponse.sessionTitle = currentPrompt;
+      debugResponse.explanationMarkdown = `Local demo graph (${nodeCount} nodes).`;
+      setOutput(debugResponse);
+      setActivePrompt(currentPrompt);
+      useAppStore.setState({
+        currentSessionId: 'demo-session',
+        currentSessionTitle: `${currentPrompt} (Demo)`,
+      });
+      setPrompt('');
+      return;
+    }
 
     if (activeSessionId !== null) {
       console.log('Expansion not yet supported in streaming mode');

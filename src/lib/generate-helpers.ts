@@ -3,7 +3,7 @@
  * Exports: calculateNodePositions, getNodeEmbeddings, getNodeTextForEmbedding
  */
 import { UMAP } from 'umap-js';
-import type { NodeObject as GraphNode, KnowledgeCard } from '@/types/intellea';
+import type { NodeObject as GraphNode, KnowledgeCard } from '@intellea/graph-schema';
 import { getOpenAIClient } from '@/lib/openaiClient';
 
 /**

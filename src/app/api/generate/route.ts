@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateInitialGraph } from '@/lib/agents/graphInitV5';
 import { expandGraphFromNode } from '@/lib/agents/graphExpansionV5';
 import { getNodeTextForEmbedding, getNodeEmbeddings, calculateNodePositions } from '@/lib/generate-helpers';
-import type { IntelleaResponse, ExpansionResponse, NodeObject, LinkObject, KnowledgeCard } from '@/types/intellea';
+import { applyStableExpansionLayout, shouldUseStableExpansionLayout } from '@/lib/expansionLayout';
+import type { IntelleaResponse, ExpansionResponse, NodeObject, LinkObject, KnowledgeCard } from '@intellea/graph-schema';
 import { verifyUserAccessWithDemo } from '@/lib/api-helpers';
 import { processAndStoreDocuments } from '@/lib/services/documentManager';
 import { createClient } from '@/lib/supabase/server';
@@ -87,23 +88,44 @@ async function handleExpansion(
         contextGraph
     );
 
-    const combinedNodesRaw = [...currentVisualizationData.nodes, ...llmExpansionResponse.nodes];
+    const newNodes: NodeObject[] = llmExpansionResponse.nodes.map((node) => ({ ...node }));
+    const combinedNodesRaw = [...currentVisualizationData.nodes, ...newNodes];
     const combinedLinks = [...currentVisualizationData.links, ...llmExpansionResponse.links];
     const combinedKnowledgeCards = [...currentKnowledgeCards, ...llmExpansionResponse.knowledgeCards];
+
+    if (shouldUseStableExpansionLayout(currentVisualizationData.nodes, newNodes)) {
+        const finalNodes = applyStableExpansionLayout(
+            currentVisualizationData.nodes,
+            newNodes,
+            nodeId
+        );
+        return {
+            updatedVisualizationData: { nodes: finalNodes, links: combinedLinks },
+            newKnowledgeCards: llmExpansionResponse.knowledgeCards,
+        };
+    }
 
     const textsToEmbed = combinedNodesRaw.map(node => getNodeTextForEmbedding(node, combinedKnowledgeCards));
     const allEmbeddings = await getNodeEmbeddings(textsToEmbed);
     const allPositions = await calculateNodePositions(allEmbeddings, combinedNodesRaw);
 
-    const finalNodes = combinedNodesRaw.map((node, index) => ({
-        ...node,
-        fx: allPositions[index]?.fx ?? ('fx' in node ? node.fx as number : 0) ?? 0,
-        fy: allPositions[index]?.fy ?? ('fy' in node ? node.fy as number : 0) ?? 0,
-        fz: allPositions[index]?.fz ?? ('fz' in node ? node.fz as number : 0) ?? 0,
-        x: ('x' in node ? node.x as number : 0) ?? 0,
-        y: ('y' in node ? node.y as number : 0) ?? 0,
-        z: ('z' in node ? node.z as number : 0) ?? 0,
-    }));
+    const finalNodes = combinedNodesRaw.map((node, index) => {
+        const fallbackX = 'fx' in node ? (node.fx as number | undefined) : node.x;
+        const fallbackY = 'fy' in node ? (node.fy as number | undefined) : node.y;
+        const fallbackZ = 'fz' in node ? (node.fz as number | undefined) : node.z;
+        const fx = allPositions[index]?.fx ?? fallbackX ?? 0;
+        const fy = allPositions[index]?.fy ?? fallbackY ?? 0;
+        const fz = allPositions[index]?.fz ?? fallbackZ ?? 0;
+        return {
+            ...node,
+            fx,
+            fy,
+            fz,
+            x: fx,
+            y: fy,
+            z: fz,
+        };
+    });
 
     return {
         updatedVisualizationData: { nodes: finalNodes, links: combinedLinks },

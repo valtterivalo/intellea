@@ -14,7 +14,7 @@ interface ExpandedConceptData {
 
 import type { StateCreator } from 'zustand';
 import { AppState } from './useAppStore';
-import type { NodeObject } from '@/types/intellea';
+import type { NodeObject } from '@intellea/graph-schema';
 
 export interface ConceptSlice {
   expandedConceptData: ExpandedConceptData | null;

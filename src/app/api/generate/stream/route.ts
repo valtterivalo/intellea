@@ -11,7 +11,7 @@ import { processAndStoreDocumentsWithProgress } from '@/lib/services/documentMan
 import { createClient } from '@/lib/supabase/server';
 import { createStreamEmitter } from '@/types/streaming';
 import { StatusMessages } from '@/types/streaming';
-import type { IntelleaResponse, NodeObject, LinkObject, KnowledgeCard } from '@/types/intellea';
+import type { IntelleaResponse, NodeObject, LinkObject, KnowledgeCard } from '@intellea/graph-schema';
 
 async function handleInitialGenerationStreaming(
   prompt: string,

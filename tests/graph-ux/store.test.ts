@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useAppStore, setAppStoreStorage } from '@/store/useAppStore';
-import { computeClusters } from '@/lib/graphCluster';
+import { computeClusters } from '@intellea/graph-renderer';
 
 describe('Graph UX Zustand Store', () => {
   beforeEach(() => {

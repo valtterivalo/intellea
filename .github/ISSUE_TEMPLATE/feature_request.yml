@@ -1,0 +1,25 @@
+name: feature request
+description: propose a change or new capability
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: problem
+      description: what problem are we solving
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: proposal
+      description: outline the solution or direction
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: context
+      description: relevant examples or references
+    validations:
+      required: false

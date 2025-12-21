@@ -3,6 +3,7 @@
  * Exports: createGraphSlice, interface
  */
 import { StateCreator } from 'zustand';
+import type { GraphModeV0 } from '@intellea/graph-schema';
 
 export interface GraphSlice {
   selectedNodeId: string | null;
@@ -21,10 +22,34 @@ export interface GraphSlice {
    */
   visibleNodeIds: Set<string>;
   /**
+   * Cluster-level collapse state (manual mode).
+   */
+  collapsedClusterIds: Record<string, boolean>;
+  /**
+   * Cluster-level expansion state (auto mode).
+   */
+  expandedClusterIds: Record<string, boolean>;
+  /**
+   * Enables cluster collapse behavior.
+   */
+  isClusterCollapseEnabled: boolean;
+  /**
    * Incrementing counter used to trigger a zoom-to-fit action
    * in graph components via store subscription.
    */
   zoomToFitCount: number;
+  /**
+   * Render phase used for progressive graph reveal.
+   */
+  graphRenderPhase: 'core' | 'full';
+  /**
+   * Enables performance-oriented rendering heuristics.
+   */
+  isPerfModeEnabled: boolean;
+  /**
+   * Overrides the graph mode in the renderer.
+   */
+  graphModeOverride: GraphModeV0 | null;
 
   setSelectedNodeId: (nodeId: string | null) => void;
   pinNode: (nodeId: string) => void;
@@ -41,6 +66,13 @@ export interface GraphSlice {
   /** Trigger the graph to zoom/pan so all nodes fit in view */
   zoomGraphToFit: () => void;
   setColorByCluster: (value: boolean) => void;
+  setGraphRenderPhase: (phase: 'core' | 'full') => void;
+  setPerfModeEnabled: (enabled: boolean) => void;
+  setGraphModeOverride: (mode: GraphModeV0 | null) => void;
+  collapseCluster: (clusterId: string) => void;
+  expandCluster: (clusterId: string) => void;
+  resetClusterCollapseState: () => void;
+  setClusterCollapseEnabled: (enabled: boolean) => void;
 }
 
 /**
@@ -58,6 +90,12 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
   collapsedNodes: {},
   visibleNodeIds: new Set(),
   zoomToFitCount: 0,
+  graphRenderPhase: 'full',
+  isPerfModeEnabled: true,
+  graphModeOverride: null,
+  collapsedClusterIds: {},
+  expandedClusterIds: {},
+  isClusterCollapseEnabled: true,
 
   setSelectedNodeId: (nodeId) =>
     set((state) => {
@@ -115,4 +153,24 @@ export const createGraphSlice: StateCreator<GraphSlice, [], [], GraphSlice> = (s
   setColorByCluster: (value) => set({ colorByCluster: value }),
   zoomGraphToFit: () =>
     set((state) => ({ zoomToFitCount: state.zoomToFitCount + 1 })),
+  setGraphRenderPhase: (phase) => set({ graphRenderPhase: phase }),
+  setPerfModeEnabled: (enabled) => set({ isPerfModeEnabled: enabled }),
+  setGraphModeOverride: (mode) => set({ graphModeOverride: mode }),
+  collapseCluster: (clusterId) =>
+    set((state) => ({
+      collapsedClusterIds: { ...state.collapsedClusterIds, [clusterId]: true },
+      expandedClusterIds: Object.fromEntries(
+        Object.entries(state.expandedClusterIds).filter(([id]) => id !== clusterId)
+      ),
+    })),
+  expandCluster: (clusterId) =>
+    set((state) => ({
+      expandedClusterIds: { ...state.expandedClusterIds, [clusterId]: true },
+      collapsedClusterIds: Object.fromEntries(
+        Object.entries(state.collapsedClusterIds).filter(([id]) => id !== clusterId)
+      ),
+    })),
+  resetClusterCollapseState: () =>
+    set({ collapsedClusterIds: {}, expandedClusterIds: {} }),
+  setClusterCollapseEnabled: (enabled) => set({ isClusterCollapseEnabled: enabled }),
 });
