@@ -14,7 +14,7 @@ const ExamplesPage = () => {
           <h1 className="text-3xl sm:text-4xl font-semibold">examples</h1>
           <p className="text-muted-foreground max-w-2xl">
             these pages mirror the code in <code className="rounded bg-muted px-1">examples/</code>.
-            pick your stack and copy the snippet.
+            pick your stack, preview the output, and copy the snippet.
           </p>
         </header>
 

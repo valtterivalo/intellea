@@ -4,6 +4,14 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { markdownToGraphResponse } from '@intellea/graph-adapters';
+import GraphRendererPreview from '../components/GraphRendererPreview';
+
+const sampleMarkdown = `# launch plan
+- research
+- build
+- ship`;
+const sampleGraphResponse = markdownToGraphResponse(sampleMarkdown, { mode: 'plan', maxNodes: 200 });
 
 const McpExamplePage = () => {
   return (
@@ -15,6 +23,10 @@ const McpExamplePage = () => {
           <p className="text-muted-foreground">convert markdown into GraphResponseV0.</p>
         </header>
 
+        <section className="rounded-lg border bg-card p-4 space-y-3">
+          <h2 className="text-lg font-semibold">live preview</h2>
+          <GraphRendererPreview graphResponse={sampleGraphResponse} />
+        </section>
         <section className="rounded-lg border bg-card p-4 space-y-3">
           <div className="rounded-md bg-muted p-3 text-xs font-mono whitespace-pre-wrap">
             {`pnpm mcp:graph-response`}
