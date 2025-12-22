@@ -6,6 +6,7 @@
 import React, { useEffect, useState } from 'react';
 import { GraphResponseRenderer } from '@intellea/graph-renderer';
 import type { GraphResponseV0 } from '@intellea/graph-schema';
+import { sampleGraphResponse } from './samplePayload';
 
 const parseGraphResponseParam = (rawValue: string | null): GraphResponseV0 | null => {
   if (!rawValue) return null;
@@ -22,10 +23,15 @@ type GraphEmbedMessage = {
 };
 
 const GraphEmbedPage: React.FC = () => {
-  const [graphResponse, setGraphResponse] = useState<GraphResponseV0 | null>(() => {
-    if (typeof window === 'undefined') return null;
+  const [graphResponse, setGraphResponse] = useState<GraphResponseV0>(() => {
+    if (typeof window === 'undefined') return sampleGraphResponse;
     const params = new URLSearchParams(window.location.search);
-    return parseGraphResponseParam(params.get('data'));
+    return parseGraphResponseParam(params.get('data')) ?? sampleGraphResponse;
+  });
+  const [isDemo, setIsDemo] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true;
+    const params = new URLSearchParams(window.location.search);
+    return !params.get('data');
   });
 
   useEffect(() => {
@@ -36,6 +42,7 @@ const GraphEmbedPage: React.FC = () => {
         throw new Error(`Unsupported graph response version: ${data.payload.version}`);
       }
       setGraphResponse(data.payload);
+      setIsDemo(false);
     };
 
     window.addEventListener('message', handleMessage);
@@ -43,22 +50,23 @@ const GraphEmbedPage: React.FC = () => {
   }, []);
 
   return (
-    <div style={{ width: '100vw', height: '100vh', margin: 0 }}>
-      {graphResponse ? (
-        <GraphResponseRenderer graphResponse={graphResponse} />
-      ) : (
+    <div style={{ width: '100vw', height: '100vh', margin: 0, position: 'relative' }}>
+      <GraphResponseRenderer graphResponse={graphResponse} />
+      {isDemo && (
         <div
           style={{
-            width: '100%',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--muted-foreground, #94a3b8)',
-            fontSize: '0.9rem',
+            position: 'absolute',
+            right: 16,
+            top: 16,
+            background: 'rgba(255,255,255,0.75)',
+            border: '1px solid rgba(100,116,139,0.3)',
+            borderRadius: 8,
+            padding: '6px 10px',
+            fontSize: '0.75rem',
+            color: '#475569',
           }}
         >
-          waiting for graph data...
+          demo payload loaded
         </div>
       )}
     </div>

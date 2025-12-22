@@ -30,6 +30,13 @@ const EmbeddingDocsPage = () => {
             {`const iframe = document.querySelector('iframe');\nif (!iframe?.contentWindow) throw new Error('missing iframe');\n\niframe.contentWindow.postMessage(\n  { type: 'intellea:graph-response', payload },\n  '*'\n);`}
           </div>
         </section>
+
+        <section className="rounded-lg border bg-card p-4 space-y-2 text-sm text-muted-foreground">
+          <p>
+            the embed shell loads a demo payload by default. send a postMessage payload to replace
+            it.
+          </p>
+        </section>
       </div>
     </main>
   );

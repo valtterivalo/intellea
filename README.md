@@ -61,3 +61,7 @@ pnpm mcp:graph-response
 ## debug
 
 set `NEXT_PUBLIC_DEBUG=true` to show the graph perf overlay in the embed shell.
+
+## demo payload
+
+the embed shell loads a sample GraphResponseV0 payload by default. send a postMessage payload to override it.

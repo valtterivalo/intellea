@@ -26,6 +26,9 @@ iframe.contentWindow.postMessage(
 );
 ```
 
+## demo
+`/embed/graph` loads a sample payload by default. send a postMessage payload to replace it.
+
 ## examples
 - `examples/web-component`
 - `examples/iframe`

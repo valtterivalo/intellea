@@ -1,0 +1,56 @@
+/**
+ * @fileoverview Sample GraphResponseV0 payload for the embed demo.
+ * Exports: sampleGraphResponse
+ */
+
+import type { GraphResponseV0 } from '@intellea/graph-schema';
+
+export const sampleGraphResponse: GraphResponseV0 = {
+  version: 'v0',
+  mode: 'map',
+  nodes: [
+    {
+      id: 'root',
+      label: 'graph platform surface',
+      type: 'claim',
+      position: { x: 0, y: 0, z: 0, isFixed: true },
+    },
+    {
+      id: 'renderer',
+      label: 'react renderer',
+      type: 'entity',
+      position: { x: 120, y: 40, z: -30 },
+    },
+    {
+      id: 'web-component',
+      label: 'web component',
+      type: 'entity',
+      position: { x: -110, y: -20, z: 45 },
+    },
+    {
+      id: 'iframe',
+      label: 'iframe embed',
+      type: 'entity',
+      position: { x: 40, y: 90, z: 60 },
+    },
+    {
+      id: 'mcp',
+      label: 'mcp tool',
+      type: 'entity',
+      position: { x: -60, y: 80, z: -40 },
+    },
+  ],
+  edges: [
+    { source: 'root', target: 'renderer', type: 'relates_to' },
+    { source: 'root', target: 'web-component', type: 'relates_to' },
+    { source: 'root', target: 'iframe', type: 'relates_to' },
+    { source: 'root', target: 'mcp', type: 'relates_to' },
+  ],
+  layout: { algorithm: 'force', dimensions: 3 },
+  view: {
+    labelDensity: 'medium',
+    defaultFocusNodeId: 'root',
+    emphasisNodeIds: ['root'],
+  },
+  meta: { source: 'embed-demo' },
+};
