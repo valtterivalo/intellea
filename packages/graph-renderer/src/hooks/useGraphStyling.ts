@@ -11,6 +11,7 @@ import type { AppGraphNode } from './useGraphState';
 import type { GraphEdgeTypeV0 } from '@intellea/graph-schema';
 
 export type GraphThemeColors = {
+  nodeHover: string;
   nodeExpanding: string;
   nodeMuted: string;
   link: string;
@@ -187,9 +188,6 @@ export const useGraphStyling = ({
       if (expandingNodeId && appNode.id === expandingNodeId) {
         return themeColors.nodeExpanding;
       }
-      if (combinedHighlightIds && !combinedHighlightIds.has(appNode.id)) {
-        return themeColors.nodeMuted;
-      }
       if (selectedNodeId === appNode.id) {
         return '#eab308';
       }
@@ -198,6 +196,12 @@ export const useGraphStyling = ({
       }
       if (completedNodeIds.has(appNode.id)) {
         return '#38bdf8';
+      }
+      if (hoveredNodeId === appNode.id) {
+        return themeColors.nodeHover;
+      }
+      if (combinedHighlightIds && !combinedHighlightIds.has(appNode.id)) {
+        return themeColors.nodeMuted;
       }
       if (colorByCluster) {
         const clusterIndex = clusters[appNode.id];
@@ -211,6 +215,7 @@ export const useGraphStyling = ({
       selectedNodeId,
       pinnedNodes,
       completedNodeIds,
+      hoveredNodeId,
       nodeDepths,
       colorByCluster,
       clusters,
@@ -223,18 +228,20 @@ export const useGraphStyling = ({
   const getNodeVal = useCallback(
     (node: NodeObject) => {
       const appNode = asAppNode(node);
+      let base = 8;
       if (expandingNodeId && appNode.id === expandingNodeId) {
-        return 18;
+        base = 18;
+      } else if (activeFocusPathIds) {
+        base = activeFocusPathIds.has(appNode.id) ? 15 : 6;
+      } else if (combinedHighlightIds && !combinedHighlightIds.has(appNode.id)) {
+        base = 4;
       }
-      if (combinedHighlightIds && !combinedHighlightIds.has(appNode.id)) {
-        return 4;
+      if (hoveredNodeId === appNode.id) {
+        return Math.max(base, 12);
       }
-      if (activeFocusPathIds) {
-        return activeFocusPathIds.has(appNode.id) ? 15 : 6;
-      }
-      return 8;
+      return base;
     },
-    [activeFocusPathIds, combinedHighlightIds, expandingNodeId]
+    [activeFocusPathIds, combinedHighlightIds, expandingNodeId, hoveredNodeId]
   );
 
   const getNodeThreeObject = useCallback(

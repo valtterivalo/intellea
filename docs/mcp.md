@@ -18,3 +18,6 @@ input:
 
 output:
 - json string containing GraphResponseV0
+
+## implementation note
+- the tool uses `@intellea/graph-adapters` to convert markdown into GraphResponseV0

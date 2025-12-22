@@ -25,3 +25,7 @@ iframe.contentWindow.postMessage(
   '*'
 );
 ```
+
+## examples
+- `examples/web-component`
+- `examples/iframe`

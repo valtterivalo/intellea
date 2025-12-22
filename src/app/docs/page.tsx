@@ -37,6 +37,15 @@ const DocsPage = () => {
             </Link>
           </div>
           <div className="rounded-lg border bg-card p-4 space-y-2">
+            <h2 className="text-lg font-semibold">adapters</h2>
+            <p className="text-sm text-muted-foreground">
+              markdown and custom adapters for GraphResponseV0.
+            </p>
+            <Link className="text-sm text-primary" href="/docs/adapters">
+              view adapter notes
+            </Link>
+          </div>
+          <div className="rounded-lg border bg-card p-4 space-y-2">
             <h2 className="text-lg font-semibold">mcp tool</h2>
             <p className="text-sm text-muted-foreground">
               stdio mcp server that emits GraphResponseV0 payloads.
@@ -52,6 +61,15 @@ const DocsPage = () => {
             </p>
             <Link className="text-sm text-primary" href="/docs/skills">
               view skill details
+            </Link>
+          </div>
+          <div className="rounded-lg border bg-card p-4 space-y-2">
+            <h2 className="text-lg font-semibold">examples</h2>
+            <p className="text-sm text-muted-foreground">
+              minimal integrations for react, web components, iframe, and mcp.
+            </p>
+            <Link className="text-sm text-primary" href="/docs/examples">
+              view example list
             </Link>
           </div>
         </section>

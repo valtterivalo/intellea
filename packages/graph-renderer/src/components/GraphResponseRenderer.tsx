@@ -4,7 +4,7 @@
  * Exports: GraphResponseRenderer
  */
 
-import React, { useEffect, useMemo } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import type { GraphRendererHandle } from './graph/GraphRendererHandle';
 import type {
   GraphResponseV0,
@@ -76,6 +76,9 @@ const GraphResponseRenderer: React.FC<GraphResponseRendererProps> = ({
     setFocusedNodeId,
     setActiveFocusPath,
   } = activeController;
+  const hasAppliedDefaultFocusRef = useRef(false);
+  const prevNodesRef = useRef<GraphResponseV0['nodes'] | null>(null);
+  const prevEdgesRef = useRef<GraphResponseV0['edges'] | null>(null);
 
   const viewHints = graphResponse.view;
   const defaults = modeDefaults[graphResponse.mode];
@@ -103,11 +106,23 @@ const GraphResponseRenderer: React.FC<GraphResponseRendererProps> = ({
   const defaultFocusNodeId = viewHints?.defaultFocusNodeId;
 
   useEffect(() => {
+    const isNewGraph =
+      prevNodesRef.current !== graphResponse.nodes ||
+      prevEdgesRef.current !== graphResponse.edges;
+    if (!isNewGraph) return;
+    hasAppliedDefaultFocusRef.current = false;
+    prevNodesRef.current = graphResponse.nodes;
+    prevEdgesRef.current = graphResponse.edges;
+  }, [graphResponse.nodes, graphResponse.edges]);
+
+  useEffect(() => {
     if (disableFocusEffects) return;
     if (!defaultFocusNodeId) return;
+    if (hasAppliedDefaultFocusRef.current) return;
     if (focusedNodeId || selectedNodeId) return;
     setFocusedNodeId(defaultFocusNodeId);
     setActiveFocusPath(defaultFocusNodeId, graphData);
+    hasAppliedDefaultFocusRef.current = true;
   }, [
     disableFocusEffects,
     defaultFocusNodeId,

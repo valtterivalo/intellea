@@ -13,7 +13,7 @@ const EmbeddingDocsPage = () => {
           <Link href="/docs" className="text-sm text-muted-foreground">back to docs</Link>
           <h1 className="text-3xl font-semibold">embedding</h1>
           <p className="text-muted-foreground">
-            use the web component or iframe embed to render graphs outside the app.
+            use the web component or iframe embed to render graphs outside your app.
           </p>
         </header>
 

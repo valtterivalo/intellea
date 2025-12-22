@@ -4,4 +4,5 @@
 
 export * from './graph-response';
 export * from './graphResponseSchema';
-export * from './intellea';
+export * from './graph-data';
+export * from './graph-modes';

@@ -9,9 +9,8 @@ pnpm benchmark:graph-response
 ```
 
 ## output
-- `intellea adapter`: time to map `IntelleaResponse` into `GraphResponseV0`
 - `markdown adapter`: time to build a graph from 5k list items
-- memory snapshot after each adapter run
+- memory snapshot after adapter run
 
 ## notes
 - baseline target is 5k nodes
@@ -25,6 +24,6 @@ pnpm benchmark:graph-perf
 ```
 
 notes:
-- measures core-node selection, label allow list, and stable expansion layout
+- measures core-node selection and label allow list
 - defaults to 5k nodes / 20k links
 - optional args: `pnpm benchmark:graph-perf -- 8000 32000`

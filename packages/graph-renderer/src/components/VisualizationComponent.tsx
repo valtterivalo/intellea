@@ -39,8 +39,8 @@ const themeColors = {
   nodeBase: '#8B7D6B',
   nodeHover: '#D8C0A3',
   nodeExpanding: '#FBBF24', // Used for active focus and expansion
-  nodeMuted: 'rgba(139, 125, 107, 0.3)',
-  link: 'rgba(139, 125, 107, 0.3)',
+  nodeMuted: 'rgba(139, 125, 107, 0.12)',
+  link: 'rgba(139, 125, 107, 0.18)',
   label: '#5D4037'
 };
 
@@ -261,6 +261,7 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
     linkWidthScale: perfProfile.linkWidthScale,
     linkParticleScale: perfProfile.linkParticleScale,
     themeColors: {
+      nodeHover: themeColors.nodeHover,
       nodeExpanding: themeColors.nodeExpanding,
       nodeMuted: themeColors.nodeMuted,
       link: themeColors.link,

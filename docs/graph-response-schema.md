@@ -62,6 +62,24 @@ GraphViewHintV0
   - showLegend?: boolean
 ```
 
+## renderer input
+```
+GraphData
+  - nodes: NodeObject[]
+  - links: LinkObject[]
+
+NodeObject
+  - id: string
+  - label: string
+  - isRoot?: boolean
+  - fx/fy/fz?: number (fixed positions)
+  - x/y/z?: number (positions)
+
+LinkObject
+  - source: string | NodeObject
+  - target: string | NodeObject
+```
+
 ## notes
 - positions are optional; when present, the renderer should respect them and skip expensive layout work when possible.
 - `meta` fields allow host apps to carry extra data without schema churn.

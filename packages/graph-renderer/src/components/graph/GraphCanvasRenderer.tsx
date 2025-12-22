@@ -75,14 +75,29 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
     const nodeIdToIndexRef = useRef<Map<string, number>>(new Map());
     const nodeByIdRef = useRef<Map<string, NodeObject>>(new Map());
     const nodePositionsRef = useRef<Float32Array | null>(null);
+    const nodeRadiiRef = useRef<Float32Array | null>(null);
     const animationFrameRef = useRef<number | null>(null);
     const hoverRafRef = useRef<number | null>(null);
     const pendingPointerRef = useRef<{ x: number; y: number } | null>(null);
     const isAnimatingRef = useRef(false);
+    const lastDragAtRef = useRef<number | null>(null);
+    const pointerDownRef = useRef<{ x: number; y: number } | null>(null);
+    const pointerMovedRef = useRef(false);
     const hoverStateRef = useRef<{ current: NodeObject | null; previous: NodeObject | null }>({
       current: null,
       previous: null,
     });
+    const lastHoverHitRef = useRef<{
+      node: NodeObject;
+      x: number;
+      y: number;
+      time: number;
+    } | null>(null);
+    const dragSuppressMs = 240;
+    const dragThresholdSq = 16;
+    const pickPadding = 1.1;
+    const hoverGraceMs = 120;
+    const hoverStickPx = 6;
 
     const geometryKey = useMemo(() => {
       if (!data) return '0:0';
@@ -319,6 +334,7 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
       const nodeIndexToId: string[] = [];
       const nodeById = new Map<string, NodeObject>();
       const nodePositions = new Float32Array(nodes.length * 3);
+      const nodeRadii = new Float32Array(nodes.length);
       nodes.forEach((node, index) => {
         const pos = getNodePosition(node);
         nodeIdToIndex.set(node.id, index);
@@ -327,11 +343,13 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
         nodePositions[index * 3] = pos.x;
         nodePositions[index * 3 + 1] = pos.y;
         nodePositions[index * 3 + 2] = pos.z;
+        nodeRadii[index] = 0;
       });
       nodeIdToIndexRef.current = nodeIdToIndex;
       nodeIndexToIdRef.current = nodeIndexToId;
       nodeByIdRef.current = nodeById;
       nodePositionsRef.current = nodePositions;
+      nodeRadiiRef.current = nodeRadii;
 
       if (!nodeMeshRef.current || nodeMeshRef.current.count !== nodes.length) {
         if (nodeMeshRef.current) {
@@ -380,6 +398,7 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
       const links = data.links;
       const nodeIdToIndex = nodeIdToIndexRef.current;
       const nodePositions = nodePositionsRef.current;
+      const nodeRadii = nodeRadiiRef.current;
       if (!nodePositions) return;
 
       const tempObject = new THREE.Object3D();
@@ -398,6 +417,9 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
         nodeMesh.setMatrixAt(index, tempObject.matrix);
         const color = parseColorStyle(getNodeColor(node), tempColor);
         nodeMesh.setColorAt(index, color);
+        if (nodeRadii) {
+          nodeRadii[index] = nodeScale * pickPadding;
+        }
       });
       nodeMesh.instanceMatrix.needsUpdate = true;
       if (nodeMesh.instanceColor) nodeMesh.instanceColor.needsUpdate = true;
@@ -459,8 +481,49 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
       const renderer = rendererRef.current;
       if (!renderer) return;
       const domElement = renderer.domElement;
-      const raycaster = new THREE.Raycaster();
-      const pointer = new THREE.Vector2();
+      const tmpVec = new THREE.Vector3();
+      const tmpProjected = new THREE.Vector3();
+      const cameraPos = new THREE.Vector3();
+
+      const pickNodeAt = (clientX: number, clientY: number): NodeObject | null => {
+        const camera = cameraRef.current;
+        const positions = nodePositionsRef.current;
+        const radii = nodeRadiiRef.current;
+        if (!camera || !positions || !radii) return null;
+        const bounds = domElement.getBoundingClientRect();
+        if (bounds.width === 0 || bounds.height === 0) return null;
+        const pointerX = clientX - bounds.left;
+        const pointerY = clientY - bounds.top;
+        cameraPos.copy(camera.position);
+        const fov = (camera.fov * Math.PI) / 180;
+        const focal = (bounds.height / 2) / Math.tan(fov / 2);
+        let closestIndex = -1;
+        let closestDistSq = Number.POSITIVE_INFINITY;
+        for (let index = 0; index < radii.length; index += 1) {
+          const posIndex = index * 3;
+          const nodeX = positions[posIndex];
+          const nodeY = positions[posIndex + 1];
+          const nodeZ = positions[posIndex + 2];
+          tmpVec.set(nodeX, nodeY, nodeZ);
+          tmpProjected.copy(tmpVec).project(camera);
+          if (tmpProjected.z < -1 || tmpProjected.z > 1) continue;
+          const screenX = (tmpProjected.x + 1) * 0.5 * bounds.width;
+          const screenY = (1 - (tmpProjected.y + 1) * 0.5) * bounds.height;
+          const dx = pointerX - screenX;
+          const dy = pointerY - screenY;
+          const distSq = dx * dx + dy * dy;
+          const radius = radii[index];
+          const distToCamera = cameraPos.distanceTo(tmpVec);
+          const radiusPx = Math.max(2, (radius / Math.max(distToCamera, 1e-4)) * focal);
+          if (distSq <= radiusPx * radiusPx && distSq < closestDistSq) {
+            closestDistSq = distSq;
+            closestIndex = index;
+          }
+        }
+        if (closestIndex === -1) return null;
+        const nodeId = nodeIndexToIdRef.current[closestIndex];
+        return nodeByIdRef.current.get(nodeId) ?? null;
+      };
 
       const handleMove = (event: MouseEvent) => {
         if (!enablePointerInteraction) return;
@@ -470,27 +533,31 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
           hoverRafRef.current = null;
           const pending = pendingPointerRef.current;
           if (!pending) return;
-          const bounds = domElement.getBoundingClientRect();
-          pointer.x = ((pending.x - bounds.left) / bounds.width) * 2 - 1;
-          pointer.y = -((pending.y - bounds.top) / bounds.height) * 2 + 1;
-          const camera = cameraRef.current;
-          const mesh = nodeMeshRef.current;
-          if (!camera || !mesh) return;
-          raycaster.setFromCamera(pointer, camera);
-          const hits = raycaster.intersectObject(mesh, false);
           const previous = hoverStateRef.current.current;
-          if (hits.length > 0) {
-            const instanceId = hits[0].instanceId;
-            if (instanceId === undefined) return;
-            const nodeId = nodeIndexToIdRef.current[instanceId];
-            const node = nodeByIdRef.current.get(nodeId) ?? null;
-            if (node && node !== previous) {
+          const node = pickNodeAt(pending.x, pending.y);
+          if (node) {
+            lastHoverHitRef.current = {
+              node,
+              x: pending.x,
+              y: pending.y,
+              time: performance.now(),
+            };
+            if (node !== previous) {
               hoverStateRef.current = { current: node, previous };
               onNodeHover?.(node, previous);
             }
             return;
           }
           if (previous) {
+            const lastHit = lastHoverHitRef.current;
+            if (lastHit && lastHit.node === previous) {
+              const dt = performance.now() - lastHit.time;
+              const dx = pending.x - lastHit.x;
+              const dy = pending.y - lastHit.y;
+              if (dt < hoverGraceMs && dx * dx + dy * dy < hoverStickPx * hoverStickPx) {
+                return;
+              }
+            }
             hoverStateRef.current = { current: null, previous };
             onNodeHover?.(null, previous);
           }
@@ -498,63 +565,79 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
       };
 
       const handleClick = (event: MouseEvent) => {
+        const lastDragAt = lastDragAtRef.current;
+        if (lastDragAt !== null && performance.now() - lastDragAt < dragSuppressMs) return;
         if (!enablePointerInteraction) {
           onBackgroundClick?.(event);
           return;
         }
-        const mesh = nodeMeshRef.current;
         const camera = cameraRef.current;
-        if (!mesh || !camera) {
+        if (!camera) {
           onBackgroundClick?.(event);
           return;
         }
-        const bounds = domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-        pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        const hits = raycaster.intersectObject(mesh, false);
-        if (hits.length > 0) {
-          const instanceId = hits[0].instanceId;
-          if (instanceId === undefined) return;
-          const nodeId = nodeIndexToIdRef.current[instanceId];
-          const node = nodeByIdRef.current.get(nodeId);
-          if (node) {
-            onNodeClick?.(node, event);
-            return;
-          }
+        const node = pickNodeAt(event.clientX, event.clientY);
+        if (node) {
+          onNodeClick?.(node, event);
+          return;
         }
         onBackgroundClick?.(event);
       };
 
       const handleContext = (event: MouseEvent) => {
         event.preventDefault();
+        const lastDragAt = lastDragAtRef.current;
+        if (lastDragAt !== null && performance.now() - lastDragAt < dragSuppressMs) return;
         if (!enablePointerInteraction) {
           onBackgroundRightClick?.(event);
           return;
         }
-        const mesh = nodeMeshRef.current;
         const camera = cameraRef.current;
-        if (!mesh || !camera) {
+        if (!camera) {
           onBackgroundRightClick?.(event);
           return;
         }
-        const bounds = domElement.getBoundingClientRect();
-        pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
-        pointer.y = -((event.clientY - bounds.top) / bounds.height) * 2 + 1;
-        raycaster.setFromCamera(pointer, camera);
-        const hits = raycaster.intersectObject(mesh, false);
-        if (hits.length > 0) {
-          const instanceId = hits[0].instanceId;
-          if (instanceId === undefined) return;
-          const nodeId = nodeIndexToIdRef.current[instanceId];
-          const node = nodeByIdRef.current.get(nodeId);
-          if (node) {
-            onNodeRightClick?.(node, event);
-            return;
-          }
+        const node = pickNodeAt(event.clientX, event.clientY);
+        if (node) {
+          onNodeRightClick?.(node, event);
+          return;
         }
         onBackgroundRightClick?.(event);
       };
+
+      const handlePointerDown = (event: PointerEvent) => {
+        pointerDownRef.current = { x: event.clientX, y: event.clientY };
+        pointerMovedRef.current = false;
+      };
+
+      const handlePointerMove = (event: PointerEvent) => {
+        const start = pointerDownRef.current;
+        if (!start) return;
+        const dx = event.clientX - start.x;
+        const dy = event.clientY - start.y;
+        if (dx * dx + dy * dy > dragThresholdSq) {
+          pointerMovedRef.current = true;
+        }
+      };
+
+      const handlePointerUp = () => {
+        if (pointerMovedRef.current) {
+          lastDragAtRef.current = performance.now();
+        }
+        pointerDownRef.current = null;
+        pointerMovedRef.current = false;
+      };
+
+      const handlePointerCancel = () => {
+        pointerDownRef.current = null;
+        pointerMovedRef.current = false;
+      };
+
+      domElement.addEventListener('pointerdown', handlePointerDown);
+      domElement.addEventListener('pointermove', handlePointerMove);
+      domElement.addEventListener('pointerup', handlePointerUp);
+      domElement.addEventListener('pointerleave', handlePointerCancel);
+      domElement.addEventListener('pointercancel', handlePointerCancel);
 
       if (enablePointerInteraction) {
         domElement.addEventListener('mousemove', handleMove);
@@ -563,6 +646,11 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
       }
 
       return () => {
+        domElement.removeEventListener('pointerdown', handlePointerDown);
+        domElement.removeEventListener('pointermove', handlePointerMove);
+        domElement.removeEventListener('pointerup', handlePointerUp);
+        domElement.removeEventListener('pointerleave', handlePointerCancel);
+        domElement.removeEventListener('pointercancel', handlePointerCancel);
         domElement.removeEventListener('mousemove', handleMove);
         domElement.removeEventListener('click', handleClick);
         domElement.removeEventListener('contextmenu', handleContext);

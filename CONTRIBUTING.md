@@ -2,7 +2,6 @@
 
 ## setup
 - `pnpm install`
-- `cp .env.example .env.local`
 - `pnpm dev`
 
 ## expectations

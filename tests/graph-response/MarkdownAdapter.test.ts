@@ -3,7 +3,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { markdownToGraphResponse } from '@/lib/adapters/markdownToGraphResponse';
+import { markdownToGraphResponse } from '@intellea/graph-adapters';
 
 describe('markdownToGraphResponse', () => {
   it('builds a graph from headings and lists', () => {

@@ -1,121 +1,63 @@
-# intellea
+# intellea graph platform
 
-intellea is a graph-first interface that turns prompts and documents into interactive concept maps, helping users navigate large-model output without walls of text.
+intellea is a schema-first graph rendering platform for llm outputs. it turns GraphResponseV0 payloads into interactive 3d graphs that can be embedded anywhere.
 
-## app flow
+## what it includes
 
-- unauthenticated users see the landing page and can run a text-only demo
-- authenticated users create sessions, explore graphs, and expand concepts
-- subscriptions are required for full access
+- `@intellea/graph-schema` public schema + helpers
+- `@intellea/graph-renderer` react renderer + web component
+- `@intellea/graph-adapters` lightweight adapters (markdown → GraphResponseV0)
+- iframe embed shell (`/embed/graph`)
+- mcp tool for graph payload generation
 
-## features
+## integration surfaces
 
-- graph exploration with expand, pin, collapse, and focus
-- completion tracking, notes, and session export
-- graph controls for fit-to-view, smart labels, auto-rotate, and cluster coloring
-
-## stack
-
-- next.js 16 (app router), react 19, typescript, tailwind css v4
-- supabase auth + postgres
-- openai responses api, files api, and vector stores
-- groq (kimi k2) for fast text-only generation
-- redis (local or upstash) for caching and demo rate limiting
-- stripe subscriptions
-- openai realtime agents for voice navigation
-- workspace packages: `@intellea/graph-renderer` + `@intellea/graph-schema`
+- react renderer: `<GraphResponseRenderer graphResponse={payload} />`
+- web component: `<intellea-graph>` + `element.graphResponse = payload`
+- iframe: postMessage `{ type: 'intellea:graph-response', payload }`
+- mcp: `graph_response_from_markdown`
 
 ## docs
 
-- `docs/graph-platform-notes.md` current graph flow, interactions, and layout inventory
-- `docs/graph-response-schema.md` schema reference and versioning notes
-- `docs/graph-response-adapters.md` adapter overview and usage
-- `docs/graph-response-benchmarks.md` adapter benchmark notes
-- `docs/graph-embedding.md` minimal embed examples
-- `docs/graph-modes.md` mode semantics and intent
-- `docs/mcp.md` mcp tool usage
-- `docs/versioning.md` schema + renderer versioning policy
-- `docs/release-checklist.md` release steps
-- `docs/compatibility.md` runtime compatibility matrix
+- `docs/graph-response-schema.md`
+- `docs/graph-response-adapters.md`
+- `docs/graph-response-benchmarks.md`
+- `docs/graph-embedding.md`
+- `docs/graph-modes.md`
+- `docs/mcp.md`
+- `docs/versioning.md`
+- `docs/release-checklist.md`
+- `docs/compatibility.md`
 
-## embedding
+## examples
 
-- web component: `defineGraphResponseElement()` then render `<intellea-graph data='...'>` or set `element.graphResponse = payload`
-- iframe: `/embed/graph` accepts `postMessage` with `{ type: 'intellea:graph-response', payload }`
-- docs site: `/docs`
+- `examples/react` react renderer usage
+- `examples/next-app-router` next.js app router usage
+- `examples/web-component` vanilla web component usage
+- `examples/iframe` iframe embed usage
+- `examples/mcp` mcp client usage
 
 ## development
 
 ```bash
 pnpm install
-cp .env.example .env.local
 pnpm dev
 ```
 
-## environment variables
+- docs: `http://localhost:3000/docs`
+- embed shell: `http://localhost:3000/embed/graph`
 
-```env
-# core ai
-OPENAI_API_KEY=
-GROQ_API_KEY=
-
-# supabase
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
-
-# redis (pick one)
-REDIS_URL=
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
-
-# stripe
-STRIPE_SECRET_KEY=
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-STRIPE_WEBHOOK_SECRET=
-STRIPE_MONTHLY_PRICE_ID=
-STRIPE_YEARLY_PRICE_ID=
-NEXT_PUBLIC_STRIPE_MONTHLY_PRICE_ID=
-NEXT_PUBLIC_STRIPE_YEARLY_PRICE_ID=
-
-# app
-NEXT_PUBLIC_SITE_URL=
-ADMIN_SECRET_KEY=
-NEXT_PUBLIC_DEBUG=
-APP_DEBUG=
-```
-
-notes:
-- OPENAI_API_KEY is required. groq is used for faster text-only generation.
-- demo mode is text-only.
-
-## commands
+## scripts
 
 ```bash
-pnpm dev
-pnpm build
-pnpm start
 pnpm lint
-pnpm type-check
 pnpm test
-pnpm e2e
-pnpm debug:subscription user@example.com
+pnpm build
+pnpm benchmark:graph-response
+pnpm benchmark:graph-perf
+pnpm mcp:graph-response
 ```
 
-## contributing
+## debug
 
-- see `CONTRIBUTING.md` for dev expectations
-- see `CODE_OF_CONDUCT.md` for conduct
-
-## graph controls
-
-- click to focus a node
-- shift+click to expand a node
-- right click for pin/collapse/expand
-- use the overlay controls to fit the graph, toggle labels, auto-rotate, or switch to cluster colors
-
-## admin and debugging
-
-- admin api: `/api/admin/user` (bearer `ADMIN_SECRET_KEY`)
-- subscription debug script: `node debug-subscription.js user@example.com`
-- set `NEXT_PUBLIC_DEBUG=true` to show the graph perf overlay and debug graph loader
+set `NEXT_PUBLIC_DEBUG=true` to show the graph perf overlay in the embed shell.

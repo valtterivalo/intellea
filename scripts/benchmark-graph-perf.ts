@@ -3,7 +3,6 @@
  */
 
 import { performance } from 'node:perf_hooks';
-import { applyStableExpansionLayout } from '@/lib/expansionLayout';
 import { selectCoreNodeIds } from '@intellea/graph-renderer';
 
 type Node = {
@@ -87,19 +86,9 @@ const adjacency = buildAdjacency(graph.links);
 const labelSet = buildLabelAllowSet(adjacency, coreIds, 140);
 const adjacencyEnd = performance.now();
 
-const expansionStart = performance.now();
-const existingNodes = graph.nodes.slice(0, Math.max(1, nodeCount - 20));
-const newNodes = graph.nodes.slice(-20).map((node) => ({
-  id: node.id,
-  label: node.label,
-}));
-const laidOut = applyStableExpansionLayout(existingNodes, newNodes, existingNodes[0]?.id);
-const expansionEnd = performance.now();
-
 const ms = (value: number) => `${value.toFixed(2)}ms`;
 
 console.log('graph perf benchmark');
 console.log(`nodes: ${nodeCount}, links: ${linkCount}`);
 console.log(`selectCoreNodeIds: ${ms(coreEnd - coreStart)}`);
 console.log(`labelAllowSet: ${ms(adjacencyEnd - adjacencyStart)} (set size ${labelSet.size})`);
-console.log(`stable expansion layout: ${ms(expansionEnd - expansionStart)} (nodes ${laidOut.length})`);

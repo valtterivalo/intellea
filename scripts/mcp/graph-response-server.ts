@@ -5,7 +5,7 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import { markdownToGraphResponse } from '../../src/lib/adapters/markdownToGraphResponse';
+import { markdownToGraphResponse } from '@intellea/graph-adapters';
 const modeSchema = z.enum(['map', 'decision', 'plan', 'argument']);
 
 const server = new McpServer({

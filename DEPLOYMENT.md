@@ -1,30 +1,17 @@
 # deployment
 
-## 1) env vars
+## scope
 
-set all variables from `README.md`, plus production values for:
-- NEXT_PUBLIC_SITE_URL
-- STRIPE_* price ids and webhook secret
-- ADMIN_SECRET_KEY
+this repo is a docs + embed host for the graph platform packages.
 
-## 2) supabase auth
+## steps
 
-- site url: `https://www.intellea.app`
-- redirect url: `https://www.intellea.app/auth/callback`
+- build: `pnpm build`
+- serve: `pnpm start`
 
-## 3) stripe webhooks
+## routes
 
-endpoint: `https://www.intellea.app/api/stripe/webhook`
+- `/docs` documentation pages
+- `/embed/graph` iframe embed shell
 
-events:
-- `checkout.session.completed`
-- `customer.subscription.updated`
-- `customer.subscription.deleted`
-- `customer.subscription.trial_will_end`
-- `invoice.payment_failed`
-- `invoice.payment_succeeded`
-
-## 4) admin tools
-
-- admin api: `/api/admin/user` (bearer `ADMIN_SECRET_KEY`)
-- debug script: `node debug-subscription.js user@example.com`
+no required environment variables.
