@@ -15,6 +15,7 @@ const ExamplesDocsPage = () => {
           <p className="text-muted-foreground">
             minimal integrations for the renderer, web component, iframe, and mcp tool.
           </p>
+          <Link href="/examples" className="text-sm text-muted-foreground">open live examples</Link>
         </header>
 
         <section className="rounded-lg border bg-card p-4 space-y-2 text-sm text-muted-foreground">

@@ -29,6 +29,12 @@ export default function Home() {
             </Link>
             <Link
               className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
+              href="/examples"
+            >
+              browse examples
+            </Link>
+            <Link
+              className="rounded-md border border-border px-3 py-2 text-sm text-muted-foreground hover:text-foreground"
               href="/embed/graph"
             >
               open embed shell
