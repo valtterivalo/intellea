@@ -44,9 +44,13 @@ export class GraphResponseElement extends BaseElement {
   }
 
   disconnectedCallback(): void {
-    this.root?.unmount();
+    const root = this.root;
     this.root = null;
     this.container = null;
+    if (!root) return;
+    queueMicrotask(() => {
+      root.unmount();
+    });
   }
 
   attributeChangedCallback(name: string, oldValue: string | null, newValue: string | null): void {
