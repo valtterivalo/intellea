@@ -1,25 +1,28 @@
 /**
- * @fileoverview Next.js root layout for the graph platform docs site.
+ * @fileoverview Root layout — fonts, global styles, and persistent nav.
  * Exports: RootLayout, metadata
  */
 import type { Metadata } from 'next';
-import { Nunito, PT_Sans } from 'next/font/google';
+import { Instrument_Serif, IBM_Plex_Mono } from 'next/font/google';
+import { Nav } from '@/components/nav';
 import './globals.css';
 
-const nunito = Nunito({
-  variable: '--font-nunito',
+const instrumentSerif = Instrument_Serif({
+  variable: '--font-display',
   subsets: ['latin'],
+  weight: '400',
+  style: ['normal', 'italic'],
 });
 
-const ptSans = PT_Sans({
-  variable: '--font-pt-sans',
+const ibmPlexMono = IBM_Plex_Mono({
+  variable: '--font-body',
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: ['400', '500', '600'],
 });
 
 export const metadata: Metadata = {
   title: 'intellea graph platform',
-  description: 'schema-first graph rendering, embeddable anywhere.',
+  description: 'schema-first graph rendering for llm outputs. embeddable anywhere.',
 };
 
 export default function RootLayout({
@@ -29,8 +32,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${nunito.variable} ${ptSans.variable} antialiased relative`}>
-        <div className="texture" />
+      <body className={`${instrumentSerif.variable} ${ibmPlexMono.variable} antialiased`}>
+        <Nav />
         {children}
       </body>
     </html>
