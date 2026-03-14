@@ -23,7 +23,7 @@ const IframeExamplePage = () => {
         </section>
         <section className="rounded-lg border bg-card p-4">
           <div className="rounded-md bg-muted p-3 text-xs font-mono whitespace-pre-wrap">
-            {`<iframe id="graph" src="https://your-host.example.com/embed/graph" style="width:100%;height:600px;border:0"></iframe>\n\n<script type="module">\n  import payload from '../payloads/graph-response-v0.json' assert { type: 'json' };\n\n  const frame = document.querySelector('#graph');\n  if (!frame?.contentWindow) throw new Error('missing iframe');\n\n  frame.contentWindow.postMessage(\n    { type: 'intellea:graph-response', payload },\n    '*'\n  );\n</script>`}
+            {`<iframe id="graph" src="https://www.intellea.app/embed/graph" style="width:100%;height:600px;border:0"></iframe>\n\n<script type="module">\n  import payload from '../payloads/graph-response-v0.json' assert { type: 'json' };\n\n  const frame = document.querySelector('#graph');\n  if (!frame?.contentWindow) throw new Error('missing iframe');\n\n  frame.contentWindow.postMessage(\n    { type: 'intellea:graph-response', payload },\n    '*'\n  );\n</script>`}
           </div>
         </section>
       </div>

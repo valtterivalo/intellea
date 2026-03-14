@@ -81,12 +81,12 @@ const DocsPage = () => {
       {/* quick start */}
       <div className="border border-border p-6">
         <p className="text-[11px] tracking-[0.25em] uppercase text-muted-foreground/50 mb-4">quick start</p>
-        <div className="text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre">{`pnpm add @intellea/graph-renderer @intellea/graph-schema
+        <div className="text-xs font-mono text-muted-foreground leading-relaxed whitespace-pre">{`git clone https://github.com/valtterivalo/intellea.git
+cd intellea && pnpm install && pnpm dev
 
+# packages resolve via workspace:* — import directly:
 import { GraphResponseRenderer } from '@intellea/graph-renderer';
-import type { GraphResponseV0 } from '@intellea/graph-schema';
-
-<GraphResponseRenderer graphResponse={payload} />`}</div>
+import type { GraphResponseV0 } from '@intellea/graph-schema';`}</div>
       </div>
 
     </main>

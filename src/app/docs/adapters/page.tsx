@@ -18,10 +18,10 @@ const AdaptersDocsPage = () => {
         </header>
 
         <section className="rounded-lg border bg-card p-4 space-y-3">
-          <h2 className="text-lg font-semibold">install</h2>
-          <div className="rounded-md bg-muted p-3 text-xs font-mono whitespace-pre-wrap">
-            {`pnpm add @intellea/graph-adapters`}
-          </div>
+          <h2 className="text-lg font-semibold">setup</h2>
+          <p className="text-xs text-muted-foreground">
+            available via <code className="text-foreground/60">workspace:*</code> after cloning the repo. no separate install needed.
+          </p>
         </section>
 
         <section className="rounded-lg border bg-card p-4 space-y-3">

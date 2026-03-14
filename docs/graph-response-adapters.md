@@ -6,10 +6,7 @@ adapters convert arbitrary input into the `GraphResponseV0` schema. they let us 
 ## available adapters
 - `markdownToGraphResponse` converts markdown or plain text into a graph using simple heuristics
 
-install:
-```bash
-pnpm add @intellea/graph-adapters
-```
+available via `workspace:*` after cloning the repo.
 
 ## usage (typescript)
 ```ts

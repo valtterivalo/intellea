@@ -189,14 +189,29 @@ export default function Home() {
           {/* code content */}
           <div className="p-6 text-xs leading-6 overflow-x-auto" style={{ background: '#060810' }}>
 
-            {/* install */}
-            <div className="mb-6">
+            {/* clone + install */}
+            <div className="mb-6 space-y-1">
               <p>
                 <span style={{ color: 'rgba(10,255,217,0.5)' }}>$</span>
                 {' '}
-                <span style={{ color: '#566070' }}>pnpm add</span>
+                <span style={{ color: '#566070' }}>git clone</span>
                 {' '}
-                <span style={{ color: '#DDE4EF' }}>@intellea/graph-renderer @intellea/graph-schema</span>
+                <span style={{ color: '#DDE4EF' }}>https://github.com/valtterivalo/intellea.git</span>
+              </p>
+              <p>
+                <span style={{ color: 'rgba(10,255,217,0.5)' }}>$</span>
+                {' '}
+                <span style={{ color: '#566070' }}>cd</span>
+                {' '}
+                <span style={{ color: '#DDE4EF' }}>intellea</span>
+                {' '}
+                <span style={{ color: '#566070' }}>&&</span>
+                {' '}
+                <span style={{ color: '#566070' }}>pnpm install</span>
+                {' '}
+                <span style={{ color: '#566070' }}>&&</span>
+                {' '}
+                <span style={{ color: '#566070' }}>pnpm dev</span>
               </p>
             </div>
 
