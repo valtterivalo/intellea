@@ -5,7 +5,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['@intellea/graph-renderer', '@intellea/graph-schema'],
+  transpilePackages: ['@intellea/graph-renderer', '@intellea/graph-schema', '@intellea/graph-adapters'],
 };
 
 export default nextConfig;
