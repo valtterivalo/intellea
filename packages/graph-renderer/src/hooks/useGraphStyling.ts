@@ -307,16 +307,16 @@ export const useGraphStyling = ({
         combinedHighlightIds?.has(sourceId) && combinedHighlightIds?.has(targetId);
       const isEmphasisEdge = edgeType ? emphasisEdgeTypeSet.has(edgeType) : false;
       if (isFocusLink) {
-        return 'rgba(139, 125, 107, 0.8)';
+        return 'rgba(160, 185, 215, 0.6)';
       }
       if (isEmphasisEdge) {
-        return 'rgba(139, 125, 107, 0.7)';
+        return 'rgba(160, 185, 215, 0.5)';
       }
       if (isHighlighted) {
-        return 'rgba(139, 125, 107, 0.55)';
+        return 'rgba(160, 185, 215, 0.4)';
       }
       if (combinedHighlightIds) {
-        return 'rgba(139, 125, 107, 0.1)';
+        return 'rgba(160, 185, 215, 0.06)';
       }
       return themeColors.link;
     },

@@ -34,7 +34,7 @@ export const useGraphViewControls = ({
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
     controls.autoRotate = isAutoRotateEnabled;
-    controls.autoRotateSpeed = 0.6;
+    controls.autoRotateSpeed = 2.0;
   }, [graphRef, isAutoRotateEnabled, dimensions]);
 
   useEffect(() => {

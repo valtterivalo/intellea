@@ -33,15 +33,15 @@ interface VisualizationComponentProps {
   showPerfOverlay?: boolean;
 }
 
-// Define theme colors
+// Define theme colors — dark background matching the site theme
 const themeColors = {
-  background: '#FDF5E6',
-  nodeBase: '#8B7D6B',
-  nodeHover: '#D8C0A3',
-  nodeExpanding: '#FBBF24', // Used for active focus and expansion
-  nodeMuted: 'rgba(139, 125, 107, 0.12)',
-  link: 'rgba(139, 125, 107, 0.18)',
-  label: '#5D4037'
+  background: '#0D1118',
+  nodeBase: '#8B9DB5',
+  nodeHover: '#B8CAE0',
+  nodeExpanding: '#0AFFD9',
+  nodeMuted: 'rgba(140, 165, 200, 0.12)',
+  link: 'rgba(140, 165, 200, 0.22)',
+  label: '#C8D3E4',
 };
 
 // Legacy palette removed in favour of depth-based colours
@@ -213,7 +213,8 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
   }, [isPerfModeEnabled, fullNodeCount, renderNodeCount]);
 
   const antialiasEnabled = !isPerfModeEnabled || fullNodeCount < 1500;
-  const useLighting = !isPerfModeEnabled && fullNodeCount < 1200;
+  // decouple lighting from perf toggle to avoid full scene recreation on toggle
+  const useLighting = fullNodeCount < 1200;
 
   useEffect(() => {
     const renderer = graphRef.current?.renderer?.();
