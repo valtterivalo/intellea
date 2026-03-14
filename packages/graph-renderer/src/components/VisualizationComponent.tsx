@@ -40,7 +40,7 @@ const themeColors = {
   nodeHover: '#B8CAE0',
   nodeExpanding: '#0AFFD9',
   nodeMuted: 'rgba(140, 165, 200, 0.12)',
-  link: 'rgba(140, 165, 200, 0.22)',
+  link: 'rgba(140, 165, 200, 0.38)',
   label: '#C8D3E4',
 };
 
@@ -83,6 +83,10 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
       resumeAnimation: () => {
         if (!graphRef.current) throw new Error('Graph renderer is not ready');
         return graphRef.current.resumeAnimation();
+      },
+      renderOnce: () => {
+        if (!graphRef.current) throw new Error('Graph renderer is not ready');
+        return graphRef.current.renderOnce();
       },
       controls: () => {
         if (!graphRef.current) throw new Error('Graph renderer is not ready');
@@ -223,6 +227,7 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
       typeof window === 'undefined' ? 1 : window.devicePixelRatio || 1;
     const nextRatio = Math.min(deviceRatio, pixelRatioCap);
     renderer.setPixelRatio(nextRatio);
+    graphRef.current?.renderOnce();
   }, [graphRef, pixelRatioCap, dimensions.width, dimensions.height]);
 
   const {

@@ -21,6 +21,7 @@ export type GraphRendererHandle = {
   zoomToFit: (durationMs?: number, padding?: number) => void;
   pauseAnimation: () => void;
   resumeAnimation: () => void;
+  renderOnce: () => void;
   controls: () => OrbitControls | undefined;
   renderer: () => WebGLRenderer | undefined;
 };

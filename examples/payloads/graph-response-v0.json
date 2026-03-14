@@ -4,46 +4,117 @@
   "nodes": [
     {
       "id": "root",
-      "label": "graph platform surface",
+      "label": "graph platform",
       "type": "claim",
       "position": { "x": 0, "y": 0, "z": 0, "isFixed": true }
     },
     {
-      "id": "renderer",
-      "label": "react renderer",
+      "id": "rendering",
+      "label": "rendering",
       "type": "entity",
-      "position": { "x": 120, "y": 40, "z": -30 }
+      "position": { "x": 130, "y": 15, "z": 10 }
+    },
+    {
+      "id": "react-renderer",
+      "label": "react renderer",
+      "type": "detail",
+      "position": { "x": 195, "y": 50, "z": 35 }
     },
     {
       "id": "web-component",
       "label": "web component",
-      "type": "entity",
-      "position": { "x": -110, "y": -20, "z": 45 }
+      "type": "detail",
+      "position": { "x": 180, "y": -25, "z": -30 }
     },
     {
-      "id": "iframe",
-      "label": "iframe embed",
+      "id": "embedding",
+      "label": "embedding",
       "type": "entity",
-      "position": { "x": 40, "y": 90, "z": 60 }
+      "position": { "x": -25, "y": 130, "z": 15 }
     },
     {
-      "id": "mcp",
-      "label": "mcp tool",
+      "id": "iframe-shell",
+      "label": "iframe shell",
+      "type": "detail",
+      "position": { "x": -5, "y": 195, "z": 45 }
+    },
+    {
+      "id": "postmessage-api",
+      "label": "postMessage api",
+      "type": "detail",
+      "position": { "x": -65, "y": 175, "z": -20 }
+    },
+    {
+      "id": "adapters",
+      "label": "adapters",
       "type": "entity",
-      "position": { "x": -60, "y": 80, "z": -40 }
+      "position": { "x": -125, "y": -20, "z": 40 }
+    },
+    {
+      "id": "markdown-adapter",
+      "label": "markdown adapter",
+      "type": "detail",
+      "position": { "x": -185, "y": -55, "z": 60 }
+    },
+    {
+      "id": "schema",
+      "label": "schema",
+      "type": "entity",
+      "position": { "x": 35, "y": -120, "z": 50 }
+    },
+    {
+      "id": "graph-response-v0",
+      "label": "GraphResponseV0",
+      "type": "detail",
+      "position": { "x": 70, "y": -175, "z": 70 }
+    },
+    {
+      "id": "mode-variants",
+      "label": "mode variants",
+      "type": "detail",
+      "position": { "x": 5, "y": -170, "z": 20 }
+    },
+    {
+      "id": "tooling",
+      "label": "tooling",
+      "type": "entity",
+      "position": { "x": 10, "y": -25, "z": -130 }
+    },
+    {
+      "id": "mcp-server",
+      "label": "mcp server",
+      "type": "detail",
+      "position": { "x": 30, "y": -60, "z": -190 }
+    },
+    {
+      "id": "benchmarks",
+      "label": "benchmarks",
+      "type": "detail",
+      "position": { "x": -35, "y": 20, "z": -180 }
     }
   ],
   "edges": [
-    { "source": "root", "target": "renderer", "type": "relates_to" },
-    { "source": "root", "target": "web-component", "type": "relates_to" },
-    { "source": "root", "target": "iframe", "type": "relates_to" },
-    { "source": "root", "target": "mcp", "type": "relates_to" }
+    { "source": "root", "target": "rendering", "type": "relates_to" },
+    { "source": "root", "target": "embedding", "type": "relates_to" },
+    { "source": "root", "target": "adapters", "type": "relates_to" },
+    { "source": "root", "target": "schema", "type": "relates_to" },
+    { "source": "root", "target": "tooling", "type": "relates_to" },
+    { "source": "rendering", "target": "react-renderer", "type": "relates_to" },
+    { "source": "rendering", "target": "web-component", "type": "relates_to" },
+    { "source": "embedding", "target": "iframe-shell", "type": "relates_to" },
+    { "source": "embedding", "target": "postmessage-api", "type": "relates_to" },
+    { "source": "adapters", "target": "markdown-adapter", "type": "relates_to" },
+    { "source": "schema", "target": "graph-response-v0", "type": "relates_to" },
+    { "source": "schema", "target": "mode-variants", "type": "relates_to" },
+    { "source": "tooling", "target": "mcp-server", "type": "relates_to" },
+    { "source": "tooling", "target": "benchmarks", "type": "relates_to" },
+    { "source": "rendering", "target": "embedding", "type": "relates_to" },
+    { "source": "schema", "target": "adapters", "type": "relates_to" }
   ],
   "layout": { "algorithm": "force", "dimensions": 3 },
   "view": {
     "labelDensity": "medium",
-    "defaultFocusNodeId": "root",
-    "emphasisNodeIds": ["root"]
+    "defaultFocusNodeId": "root"
   },
   "meta": { "source": "examples" }
 }

@@ -226,6 +226,7 @@ const GraphCanvasRenderer = React.forwardRef<GraphRendererHandle, GraphCanvasRen
         controls.update();
         renderOnce();
       },
+      renderOnce,
       pauseAnimation,
       resumeAnimation,
       controls: () => controlsRef.current ?? undefined,
