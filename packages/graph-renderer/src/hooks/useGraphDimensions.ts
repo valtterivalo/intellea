@@ -20,7 +20,7 @@ export const useGraphDimensions = (
     if (isTestEnv) {
       return { width: 800, height: 600 };
     }
-    return { width: 0, height: 0 };
+    return { width: 800, height: 600 };
   });
 
   useEffect(() => {

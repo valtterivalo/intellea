@@ -27,6 +27,7 @@ interface GraphResponseRendererProps {
   showControls?: boolean;
   showPerfOverlay?: boolean;
   disableFocusEffects?: boolean;
+  useWebGPU?: boolean;
 }
 
 const modeDefaults: Record<
@@ -62,6 +63,7 @@ const GraphResponseRenderer: React.FC<GraphResponseRendererProps> = ({
   showControls = true,
   showPerfOverlay = true,
   disableFocusEffects = false,
+  useWebGPU = false,
 }) => {
   const graphData = useMemo(
     () => graphResponseToGraphData(graphResponse),
@@ -145,6 +147,7 @@ const GraphResponseRenderer: React.FC<GraphResponseRendererProps> = ({
       controller={controller}
       showControls={showControls}
       showPerfOverlay={showPerfOverlay}
+      useWebGPU={useWebGPU}
     />
   );
 };

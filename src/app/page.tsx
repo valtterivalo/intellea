@@ -28,6 +28,12 @@ const INTEGRATION_METHODS = [
   },
   {
     n: '04',
+    title: 'webgpu renderer',
+    desc: 'gpu-accelerated rendering for large graphs (10k+ nodes).',
+    href: '/examples/webgpu',
+  },
+  {
+    n: '05',
     title: 'mcp tool',
     desc: 'generate GraphResponseV0 from markdown for downstream apps.',
     href: '/examples/mcp',
@@ -137,7 +143,7 @@ export default function Home() {
         <p className="text-[11px] tracking-[0.25em] uppercase text-muted-foreground/50 mb-8">
           integration surfaces
         </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 border-l border-t border-border">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 border-l border-t border-border">
           {INTEGRATION_METHODS.map(({ n, title, desc, href }) => (
             <Link
               key={n}

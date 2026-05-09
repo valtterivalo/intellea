@@ -9,6 +9,7 @@ import GraphControlsOverlay from './GraphControlsOverlay';
 import GraphPerfOverlay from './graph/GraphPerfOverlay';
 import GraphContextMenu from './graph/GraphContextMenu';
 import GraphCanvasRenderer from './graph/GraphCanvasRenderer';
+import WebGPURenderer from './graph/WebGPURenderer';
 import type { GraphRendererHandle } from './graph/GraphRendererHandle';
 import { useGraphState, AppGraphNode } from '../hooks/useGraphState';
 import type { GraphData } from '@intellea/graph-schema';
@@ -31,6 +32,7 @@ interface VisualizationComponentProps {
   controller?: GraphController;
   showControls?: boolean;
   showPerfOverlay?: boolean;
+  useWebGPU?: boolean;
 }
 
 // Define theme colors — dark background matching the site theme
@@ -58,6 +60,7 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
       controller,
       showControls = true,
       showPerfOverlay = true,
+      useWebGPU = false,
     },
     forwardedRef
   ) {
@@ -100,6 +103,7 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
     []
   );
   const dimensions = useGraphDimensions(containerRef);
+
   const [isAutoRotateEnabled, setIsAutoRotateEnabled] = useState(false);
   const [labelVisibilityOverride, setLabelVisibilityOverride] = useState<boolean | null>(null);
   const areAllLabelsVisible =
@@ -321,8 +325,8 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
 
   if (dimensions.width === 0 || dimensions.height === 0) {
       return (
-          <div 
-              ref={containerRef} 
+          <div
+              ref={containerRef}
               className="w-full aspect-video bg-card rounded-md border border-border shadow-sm min-h-[300px] flex items-center justify-center"
               style={{ minHeight: '300px', position: 'relative' }}
           >
@@ -353,25 +357,47 @@ const VisualizationComponent = React.forwardRef<GraphRendererHandle, Visualizati
           alignItems: 'center',
           justifyContent: 'center'
         }}>
-          <GraphCanvasRenderer
-            ref={graphRef}
-            data={renderData}
-            width={dimensions.width}
-            height={dimensions.height}
-            backgroundColor={themeColors.background}
-            antialias={antialiasEnabled}
-            useLighting={useLighting}
-            getNodeColor={getNodeColor}
-            getNodeVal={getNodeVal}
-            getLinkColor={getLinkColor}
-            getNodeSprite={getNodeThreeObject}
-            enablePointerInteraction={shouldEnablePointerInteraction}
-            onNodeClick={handleNodeClick}
-            onNodeHover={handleNodeHover}
-            onNodeRightClick={handleNodeRightClick}
-            onBackgroundClick={handleBackgroundClick}
-            onBackgroundRightClick={handleContainerRightClick}
-          />
+          {useWebGPU ? (
+            <WebGPURenderer
+              ref={graphRef}
+              data={renderData}
+              width={dimensions.width}
+              height={dimensions.height}
+              backgroundColor={themeColors.background}
+              antialias={antialiasEnabled}
+              useLighting={useLighting}
+              getNodeColor={getNodeColor}
+              getNodeVal={getNodeVal}
+              getLinkColor={getLinkColor}
+              getNodeSprite={getNodeThreeObject}
+              enablePointerInteraction={shouldEnablePointerInteraction}
+              onNodeClick={handleNodeClick}
+              onNodeHover={handleNodeHover}
+              onNodeRightClick={handleNodeRightClick}
+              onBackgroundClick={handleBackgroundClick}
+              onBackgroundRightClick={handleContainerRightClick}
+            />
+          ) : (
+            <GraphCanvasRenderer
+              ref={graphRef}
+              data={renderData}
+              width={dimensions.width}
+              height={dimensions.height}
+              backgroundColor={themeColors.background}
+              antialias={antialiasEnabled}
+              useLighting={useLighting}
+              getNodeColor={getNodeColor}
+              getNodeVal={getNodeVal}
+              getLinkColor={getLinkColor}
+              getNodeSprite={getNodeThreeObject}
+              enablePointerInteraction={shouldEnablePointerInteraction}
+              onNodeClick={handleNodeClick}
+              onNodeHover={handleNodeHover}
+              onNodeRightClick={handleNodeRightClick}
+              onBackgroundClick={handleBackgroundClick}
+              onBackgroundRightClick={handleContainerRightClick}
+            />
+          )}
         </div>
         {shouldShowPerfStats && (
           <GraphPerfOverlay
